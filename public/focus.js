@@ -204,7 +204,7 @@
   return where ? name + ' · ' + where : name;
  }
  const answerKey = a => a ? a.title + '|' + a.answer : '';
- function headlineOf(a) { if (a?.breakdown) return a.title; const v = a?.facts?.[0]?.value, t = a?.title || ''; return v && t && v.length < 24 ? v + ' · ' + t : t; }
+ function headlineOf(a) { if (a?.breakdown || a?.insight) return a.title; const v = a?.facts?.[0]?.value, t = a?.title || ''; return v && t && v.length < 24 ? v + ' · ' + t : t; }
  function record() {
   if (!app || app.state.presenting) return;
   const v = viewOf(), base = keyOf(v);
@@ -215,7 +215,7 @@
   if (restoring !== null && trail[restoring]) { pointer = restoring; restoring = null; trail[pointer].view = v; schedule(); return; }
   restoring = null;
   if (pointer >= 0 && trail[pointer].key === key) { trail[pointer].view = v; if (pendingAnswer) { trail[pointer].answer = pendingAnswer; trail[pointer].voice = pendingVoice; trail[pointer].askedAt = Date.now(); pendingAnswer = null; looseAnswer = null; } schedule(); return; }
-  const entry = { key, view: v, label: pendingAnswer?.breakdown ? pendingAnswer.title : labelOf(v), answer: pendingAnswer, voice: pendingAnswer ? pendingVoice : false, start: !trail.length && !log.length, at: Date.now() };
+  const entry = { key, view: v, label: pendingAnswer?.breakdown || pendingAnswer?.insight ? pendingAnswer.title : labelOf(v), answer: pendingAnswer, voice: pendingAnswer ? pendingVoice : false, start: !trail.length && !log.length, at: Date.now() };
   trail.push(entry); log.push({ entry }); if (log.length > 120) log.shift(); pendingAnswer = null; looseAnswer = null;
   if (trail.length > 60) trail.shift();
   pointer = trail.length - 1; schedule();
@@ -225,7 +225,7 @@
  function restore(i, { announce = false } = {}) {
   const e = trail[i]; if (!e || !app) return false;
   restoring = i; notice = null; looseAnswer = null; pendingAnswer = null;
-  if (e.answer?.breakdown) { showStage(e.answer); stage.baseKey = keyOf(e.view); } else hideStage();
+  if (e.answer?.breakdown || e.answer?.insight) { showStage(e.answer); stage.baseKey = keyOf(e.view); } else hideStage();
   if (e.answer && window.WI_CONVERSATION?.showResponse) {
    const a = copy(e.answer); delete a.question; delete a.navigation; lastAnswer = answerKey(a);
    window.WI_CONVERSATION.showResponse(a).catch(() => {});
@@ -254,7 +254,7 @@
   for (let i = trail.length - 1; i >= 0 && idx < 0; i--) {
    if (i === pointer) continue; const v = trail[i].view;
    const bd = trail[i].answer?.breakdown;
-   if ((a.type === 'breakdown' && bd && bd.metricId === a.metricId && bd.dimension === data.breakdown?.dimension) || (a.type === 'metric' && !bd && v.page === 'investigate' && v.metric === a.metricId) || (a.type === 'scenario' && v.page === 'decide' && v.decide?.caseId === a.caseId) || (a.type === 'overview' && v.page === 'monitor' && v.domain === 'overview')) idx = i;
+   if ((a.type === 'insight' && trail[i].answer?.insight?.id === data.insight?.id) || (a.type === 'breakdown' && bd && bd.metricId === a.metricId && bd.dimension === data.breakdown?.dimension) || (a.type === 'metric' && !bd && v.page === 'investigate' && v.metric === a.metricId) || (a.type === 'scenario' && v.page === 'decide' && v.decide?.caseId === a.caseId) || (a.type === 'overview' && v.page === 'monitor' && v.domain === 'overview')) idx = i;
   }
   if (idx < 0) idx = textMatch(nav.target);
   return idx >= 0 ? restore(idx, { announce: true }) : false;
@@ -275,7 +275,68 @@
   if (/ d$/.test(f)) return nf.format(v) + ' d';
   return nf.format(v);
  }
+ function stageHead(eyebrow, title, where) {
+  const head = el('div', 'fx-stage-head'), titles = el('div');
+  titles.append(el('span', 'fx-stage-eyebrow', eyebrow), Object.assign(el('h2', null, title), { id: 'fx-stage-title' }));
+  if (where) titles.append(el('span', 'fx-stage-where', where));
+  const close = el('button', 'fx-stage-close'); close.type = 'button'; close.setAttribute('aria-label', 'Close'); close.innerHTML = svg.close;
+  close.addEventListener('click', () => { hideStage(); schedule(); });
+  head.append(titles, close); return head;
+ }
+ // A ranked bar list on a shared zero baseline; rows carry label, optional sub-line and tag, and value text.
+ function barList(rows, ariaLabel) {
+  const values = rows.filter(r => r.value !== null).map(r => r.value), lo = Math.min(0, ...values), hi = Math.max(0, ...values), span = hi - lo || 1, pos = v => ((v - lo) / span) * 100;
+  const list = el('ol', 'fx-bars'); list.setAttribute('aria-label', ariaLabel);
+  rows.forEach((r, i) => {
+   const li = el('li', 'fx-bar-row'); li.style.setProperty('--i', i); li.tabIndex = 0; li.dataset.tip = r.tip; li.setAttribute('aria-label', r.tip);
+   const name = el('span', 'fx-bar-label'); name.append(el('span', 'fx-bar-name', r.label));
+   if (r.sub || r.tag) { const sub = el('span', 'fx-bar-sub', r.sub || ''); if (r.tag) sub.append(el('span', 'fx-tag', r.tag)); name.append(sub); }
+   const track = el('div', 'fx-bar-track');
+   if (r.value !== null) { const bar = el('span', 'fx-bar'), a = pos(Math.min(0, r.value)), z = pos(Math.max(0, r.value)); bar.style.left = a + '%'; bar.style.width = Math.max(z - a, 0.6) + '%'; bar.style.transformOrigin = r.value < 0 ? 'right' : 'left'; track.append(bar); const v = el('span', 'fx-bar-val', r.valueText); if (r.valueDetail) v.append(el('span', 'fx-bar-detail', r.valueDetail)); v.style.left = `calc(${z}% + 8px)`; track.append(v); }
+   else track.append(el('span', 'fx-bar-none', r.valueText || 'Suppressed'));
+   li.append(name, track); list.append(li);
+  });
+  return list;
+ }
+ function renderInsight(answer) {
+  const ins = answer.insight, a = answer.action || {};
+  stageEl.replaceChildren(stageHead(['Insight', ins.id === 'costVariance' ? 'Workforce cost vs plan' : 'Onboarding and early exits', ins.periodLabel].filter(Boolean).join(' · '), answer.title, ins.where));
+  stageEl.append(el('p', 'fx-insight-lead', ins.headline || answer.answer));
+  // Labelled number tiles: label above, value, one-line caption. The onboarding chain reads left to right.
+  if (ins.tiles?.length) {
+   const tiles = el('div', ins.chain ? 'fx-chain' : 'fx-tiles');
+   ins.tiles.forEach((t, i) => {
+    if (ins.chain && i) tiles.append(Object.assign(el('span', 'fx-chain-arrow', '→'), { ariaHidden: 'true' }));
+    const tile = el('div', 'fx-chain-step'); tile.style.setProperty('--i', i);
+    tile.append(el('span', 'fx-tile-label', t.label), el('strong', null, t.value), el('span', 'fx-tile-caption', t.caption)); tiles.append(tile);
+   });
+   stageEl.append(tiles);
+  }
+  if (ins.id === 'costVariance') {
+   stageEl.append(el('h3', 'fx-insight-h', ins.chartTitle || 'Overspend'));
+   if (ins.rows.some(r => r.aboveThreshold)) { const key = el('p', 'fx-insight-key'); key.append(el('span', 'fx-tag', 'x.x% over plan'), ` = above the ${Math.round(ins.threshold * 100)}% review threshold`); stageEl.append(key); }
+   // Near the threshold, one decimal can hide which side a reading falls on (2.04% shows as 2.0%).
+   const near = r => Math.abs(r.pctOverPlan - ins.threshold) < 0.0005 ? (r.pctOverPlan * 100).toFixed(2) + '%' : r.pctFormatted;
+   stageEl.append(barList(ins.rows.map(r => ({ label: r.label, value: r.variance, valueText: r.formatted, valueDetail: r.share === null ? '' : `${Math.round(r.share * 100)}% of overspend`, sub: r.aboveThreshold ? '' : `${near(r)} over its plan`, tag: r.aboveThreshold ? `${near(r)} over plan` : '', tip: `${r.label}: ${r.formatted} over plan (${near(r)} of its plan${r.aboveThreshold ? ', above the 2% review threshold' : ''})` })), 'Overspend by ' + ins.dimension));
+  } else if (!ins.suppressed) {
+   const grid = el('div', 'fx-insight-grid');
+   if (ins.byFunction?.length) { const box = el('div', 'fx-insight-box'); box.append(el('h3', 'fx-insight-h', 'Estimated extra exits by function'), el('p', 'fx-insight-sub', 'Estimated from each function’s late vs on-time exit rates'), barList(ins.byFunction.map(r => ({ label: r.label, value: r.extra === null ? null : Math.round(r.extra * 10) / 10, valueText: r.extra === null ? 'Below display threshold' : `${Math.round(r.extra)} ${Math.round(r.extra) === 1 ? 'exit' : 'exits'}`, sub: `${Math.round(r.delayedShare * 100)}% started late`, tip: r.extra === null ? `${r.label}: groups below the privacy threshold` : `${r.label}: about ${Math.round(r.extra)} extra first-year exits; ${Math.round(r.delayedShare * 100)}% of ${r.hires} hires started late` })), 'Extra exits by function')); grid.append(box); }
+   if (ins.steps?.length) { const box = el('div', 'fx-insight-box'); box.append(el('h3', 'fx-insight-h', 'Average days per onboarding step'), el('p', 'fx-insight-sub', `Current onboarding cases · ${ins.stepsPeriod}`), barList(ins.steps.map(r => ({ label: r.label, value: r.days, valueText: `${r.days.toFixed(1)} d`, sub: `${r.cases.toLocaleString('en-US')} cases`, tip: `${r.label}: ${r.days.toFixed(1)} days on average across ${r.cases} closed cases` })), 'Average days per onboarding step')); grid.append(box); }
+   stageEl.append(grid);
+  }
+  const foot = el('div', 'fx-stage-foot');
+  // Only the onboarding insight has a lab that models a response (retention); the cost insight has none.
+  if (ins.id === 'onboardingExits' && !ins.suppressed && a.caseId && app?.openLab) { const go = el('button', 'fx-insight-go', 'Model an onboarding fix →'); go.type = 'button'; go.addEventListener('click', () => { enter(); app.openLab(a.caseId, a.metricId); }); foot.append(go); }
+  foot.append(el('span', null, 'Computed from synthetic governed data · no causal claim'));
+  stageEl.append(foot, el('p', 'fx-stage-def', ins.definition || ''));
+ }
+ const fmtMoney = v => '$' + (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'm' : Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + 'k' : Math.round(v));
  function showStage(answer) {
+  if (answer.insight) {
+   stage = { key: answerKey(answer), baseKey: null }; renderInsight(answer);
+   stageEl.classList.add('fx-animate'); clearTimeout(stageAnimTimer); stageAnimTimer = setTimeout(() => stageEl.classList.remove('fx-animate'), 1400);
+   keepStage(); return;
+  }
   const b = answer.breakdown; stage = { key: answerKey(answer), baseKey: null };
   const rows = b.rows, values = rows.filter(r => r.value !== null).map(r => r.value);
   const rate = !['count', 'usd'].includes(b.unit), ref = rate && b.overall ? b.overall.value : null;
@@ -343,7 +404,7 @@
  function land(answer) {
   const type = answer?.action?.type; if (!main || !type) return;
   requestAnimationFrame(() => {
-   const target = type === 'breakdown' ? stageEl : type === 'metric' ? main.querySelector('.wi-split .wi-panel') : type === 'scenario' ? main.querySelector('.wi-decide-case-body > .wi-grid3') || main.querySelector('.wi-lab-viz') : type === 'overview' ? main.querySelector('.wi-grid4') : null;
+   const target = type === 'breakdown' || type === 'insight' ? stageEl : type === 'metric' ? main.querySelector('.wi-split .wi-panel') : type === 'scenario' ? main.querySelector('.wi-decide-case-body > .wi-grid3') || main.querySelector('.wi-lab-viz') : type === 'overview' ? main.querySelector('.wi-grid4') : null;
    if (!target || !target.isConnected) return;
    target.classList.remove('fx-landed'); void target.offsetWidth; target.classList.add('fx-landed');
   });
@@ -410,7 +471,7 @@
   const data = window.WI_CONVERSATION?.getAnswer?.(), primary = q('#vc-actions .vc-primary');
   pendingVoice = Date.now() - lastVoiceAt < 90000;
   // Clarifications have no facts and stay in the sheet rather than moving the dashboard.
-  if (data?.breakdown && data.action?.type === 'breakdown' && app?.openMetric) {
+  if (((data?.breakdown && data.action?.type === 'breakdown') || (data?.insight && data.action?.type === 'insight')) && app?.openMetric) {
    pendingAnswer = data; looseAnswer = null; setSheet(false); enter(); showStage(data);
    app.openMetric(data.action.metricId); land(data); clearTimeout(recordTimer); recordTimer = setTimeout(record, 120);
   } else if (primary && data?.facts?.length) { pendingAnswer = data; looseAnswer = null; enter(); primary.click(); land(data); setSheet(false); clearTimeout(recordTimer); recordTimer = setTimeout(record, 120); }

@@ -153,6 +153,39 @@
 @media(max-width:760px){#wi-app .fx-stage{padding:16px}#wi-app .fx-bar-row{grid-template-columns:minmax(0,1fr);gap:3px;padding:4px 0}#wi-app .fx-bar-label{white-space:normal}#wi-app .fx-bar-track{margin-right:70px}#wi-app .fx-col-label{font-size:9.5px}}
 @media print{#wi-app .fx-stage-close,#wi-app .fx-stage-table{display:none}}
 
+/* Insight cards: a synthesis with its evidence, not a single number */
+#wi-app .fx-insight-lead{margin:0 0 16px;max-width:980px;font-size:18px;line-height:1.45;letter-spacing:-.2px;color:var(--fx-ink)}
+#wi-app .fx-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:0 0 20px}
+#wi-app .fx-tile-label{font-size:11px!important;letter-spacing:.8px;text-transform:uppercase;font-weight:700;color:var(--fx-muted)!important}
+#wi-app .fx-tile-caption{font-size:12.5px;color:#4c5549}
+#wi-app .fx-insight-h{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--fx-ink);letter-spacing:0}
+#wi-app .fx-insight-sub{margin:-2px 0 8px;font-size:11.5px;color:var(--fx-muted)}
+#wi-app .fx-bar-label{display:flex;flex-direction:column;gap:1px;min-width:0}
+#wi-app .fx-bar-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#wi-app .fx-bar-sub{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--fx-muted);white-space:nowrap}
+#wi-app .fx-bar-detail{font-weight:500;color:var(--fx-muted)}
+#wi-app .fx-bar-detail::before{content:" · "}
+@media(max-width:760px){#wi-app .fx-bar-val:has(.fx-bar-detail){display:flex;flex-direction:column;line-height:1.2;white-space:normal;width:84px}#wi-app .fx-bar-detail{font-size:10.5px}#wi-app .fx-bar-detail::before{content:none}}
+#wi-app .fx-insight-key{display:flex;align-items:center;gap:6px;margin:-6px 0 10px;font-size:12px;color:var(--fx-muted)}
+#wi-app .fx-tag{display:inline-block;border-radius:6px;background:var(--fx-ambersoft);color:var(--fx-amber);font-size:10.5px;font-weight:700;padding:1px 6px}
+#wi-app .fx-stage:has(.fx-bar-sub) .fx-bar-row{grid-template-columns:minmax(150px,220px) minmax(0,1fr);min-height:44px}
+#wi-app .fx-stage .fx-bar-track{margin-right:170px}
+#wi-app .fx-chain{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);align-items:stretch;gap:10px;margin:0 0 18px}
+#wi-app .fx-chain-step{display:flex;flex-direction:column;gap:6px;background:#f5f6f0;border:1px solid #e3e6da;border-radius:12px;padding:14px 16px}
+#wi-app .fx-chain-step strong{font-size:24px;font-weight:500;letter-spacing:-.6px;color:var(--fx-ink);font-variant-numeric:tabular-nums}
+#wi-app .fx-chain-step span{font-size:12.5px;line-height:1.4;color:#4c5549}
+#wi-app .fx-chain .fx-chain-step:last-child{background:#eef4e4;border-color:#cfdcbf}
+#wi-app .fx-tiles .fx-chain-step strong{font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#wi-app .fx-chain-arrow{align-self:center;font-size:18px;color:#8f9585}
+#wi-app .fx-insight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px}
+#wi-app .fx-insight-box{border:1px solid #ebece4;border-radius:12px;padding:14px 16px 10px}
+#wi-app .fx-insight-box .fx-insight-h{margin-bottom:4px}
+#wi-app .fx-insight-box .fx-bar-track{margin-right:120px}
+#wi-app .fx-insight-go{border:0;border-radius:20px;background:var(--fx-green);color:#fff;font:inherit;font-size:12.5px;font-weight:600;padding:9px 16px;min-height:38px;cursor:pointer}
+#wi-app .fx-stage-foot:has(.fx-insight-go){align-items:center}
+@media(max-width:760px){#wi-app .fx-chain{grid-template-columns:1fr}#wi-app .fx-chain-arrow{transform:rotate(90deg);justify-self:center}#wi-app .fx-stage .fx-bar-track,#wi-app .fx-insight-box .fx-bar-track{margin-right:90px}#wi-app .fx-insight-grid{grid-template-columns:1fr}#wi-app .fx-stage:has(.fx-bar-sub) .fx-bar-row{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:no-preference){#wi-app .fx-stage.fx-animate .fx-chain-step,#wi-app .fx-stage.fx-animate .fx-tiles .fx-chain-step{animation:fx-rise .4s ease-out both;animation-delay:calc(var(--i,0) * 120ms)}}
+
 /* Motion: the answer lands with one soft glow; charts build in on real view changes only */
 #wi-app .fx-landed{outline:2px solid #c9d8b8;outline-offset:2px;border-radius:14px}
 @keyframes fx-landed{0%{box-shadow:0 0 0 0 rgba(79,125,59,0);outline-color:transparent}18%{box-shadow:0 0 0 6px rgba(79,125,59,.30);outline-color:transparent}75%{box-shadow:0 0 0 16px rgba(79,125,59,0)}100%{box-shadow:0 0 0 16px rgba(79,125,59,0);outline-color:#c9d8b8}}

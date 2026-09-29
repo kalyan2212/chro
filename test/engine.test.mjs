@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { answer, backAnswer, cases, choices, demoPlan, dimensions, navigation, descriptor, limits, metricIds, modelPlan, routingSchema, scenario, summary, validatePlan, validateRequest } from '../engine.mjs';
+import { answer, backAnswer, cases, choices, demoPlan, dimensions, insightIds, navigation, descriptor, limits, metricIds, modelPlan, routingSchema, scenario, summary, validatePlan, validateRequest } from '../engine.mjs';
 
 const request = (question, scope = {}) => validateRequest({ question, scope });
 const plan = (intent, metricId = null, caseId = null, overrides = {}) => ({ intent, metricId, caseId, overrides });
@@ -170,4 +170,37 @@ test('breakdown plans are validated before any calculation', () => {
   assert.throws(() => validatePlan({ intent: 'metric', metricId: 'E03', caseId: null, overrides: {}, breakdown: { dimension: 'function', segments: null, sort: null, limit: null, window: null } }));
   const empty = Object.fromEntries(routingSchema.properties.overrides.required.map(x => [x, null]));
   assert.equal(modelPlan({ intent: 'breakdown', metricId: 'P01', caseId: null, overrides: empty, breakdown: { dimension: 'month', segments: null, sort: null, limit: null, window: 6 } }).breakdown.window, 6);
+});
+
+test('cost variance insight attributes the overspend by segment from trusted run rates', () => {
+  const ask = (question, scope = {}) => { const r = validateRequest({ question, scope }); return { plan: demoPlan(r), a: answer(r, demoPlan(r)) }; };
+  const { plan, a } = ask('Why are we over plan?');
+  assert.equal(plan.intent, 'insight'); assert.equal(plan.insight, 'costVariance'); assert.equal(a.action.type, 'insight');
+  const rows = a.insight.rows, total = a.insight.total.variance;
+  assert.equal(total, rows.reduce((t, r) => t + r.variance, 0));
+  assert.ok(Math.abs(rows.reduce((t, r) => t + r.share, 0) - 1) < 1e-9);
+  assert.equal(rows[0].segment, 'Engineering'); assert.match(a.answer, /Operations is furthest over its own plan at 4\.1%/);
+  assert.equal(ask('Why are we over budget?', { function: 'Engineering' }).a.insight.dimension, 'region');
+  assert.equal(ask('Show workforce cost versus plan').plan.intent, 'metric');
+});
+test('onboarding insight quantifies the delayed-start gap as an association, with privacy floors', () => {
+  const ask = (question, scope = {}) => { const r = validateRequest({ question, scope }); return answer(r, demoPlan(r)); };
+  const a = ask('Is onboarding linked to early exits?'), i = a.insight;
+  assert.equal(i.id, 'onboardingExits'); assert.equal(i.delayed, 360); assert.equal(i.hires, 1200);
+  assert.equal(Math.round(i.extraExits), 48); assert.equal(i.value, i.extraExits * i.replacementCost);
+  assert.match(a.answer, /association/); assert.match(a.boundary, /not proven to cause/);
+  assert.equal(i.byFunction.find(r => r.segment === 'Corporate').extra, null);
+  assert.equal(i.byFunction[0].segment, 'Customer services');
+  assert.equal(i.steps[0].label, 'Pay setup');
+  assert.equal(ask('Why are new hires leaving?').insight.id, 'onboardingExits');
+  assert.equal(ask('Onboarding and attrition in Corporate').insight.suppressed, true);
+  assert.equal(ask('Explain first-year retention').action.type, 'metric');
+});
+test('insight plans are validated and accepted from the strict model schema', () => {
+  const plan = { intent: 'insight', metricId: null, caseId: null, overrides: {}, insight: 'costVariance' };
+  assert.deepEqual(validatePlan(plan), plan);
+  for (const bad of [{ insight: 'mood' }, { metricId: 'E05' }, { intent: 'metric' }, { overrides: { effect: 1 } }]) assert.throws(() => validatePlan({ ...plan, ...bad }), undefined, JSON.stringify(bad));
+  const empty = Object.fromEntries(routingSchema.properties.overrides.required.map(x => [x, null]));
+  assert.equal(modelPlan({ intent: 'insight', metricId: null, caseId: null, overrides: empty, breakdown: null, insight: 'onboardingExits' }).insight, 'onboardingExits');
+  assert.deepEqual([...routingSchema.properties.insight.enum], [null, ...insightIds]);
 });
