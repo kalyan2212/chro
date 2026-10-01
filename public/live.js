@@ -76,6 +76,7 @@
  function command(run, type, extra = {}) { return send(run, { type, event_id: `ui_${crypto.randomUUID()}`, ...extra }); }
  function reportUsage(run, final = false) { $('#wl-usage').textContent = `Voice duration: ${Number.isFinite(run.seconds) ? run.seconds.toFixed(1) + ' s' : 'unavailable'} · ${final ? 'final' : 'latest observed; not final'}`; }
  function release(run) {
+  window.WI_VOICE_GUIDE?.stop();
   clearTimeout(run.startTimer); clearTimeout(run.closeTimer); clearTimeout(run.maxTimer); clearTimeout(run.disconnectTimer); clearTimeout(run.delegationTimer);
   run.pending?.abort(); run.startControl?.abort(); run.stream?.getTracks().forEach(track => track.stop());
   if (run.channel) { run.channel.onmessage = run.channel.onclose = run.channel.onerror = null; try { run.channel.close(); } catch {} }
@@ -129,6 +130,7 @@
   finally { $('#wl-report').disabled = false; }
  }
  function stop(reason = 'Finishing conversation…') {
+  window.WI_VOICE_GUIDE?.stop();
   const run = active; if (!run || closing) return;
   closing = true; run.pending?.abort(); clearTimeout(run.delegationTimer);
   $('#wl-audio').pause();
@@ -175,6 +177,7 @@
     if (shown === false) throw Error('The data changed during this lookup. Ask again to use the latest evidence.');
     run.answeredOffset = event.offset_ms;
     $('#wl-result').textContent = 'Validated visual briefing: ' + result.response.title + '. Exact figures and scenario assumptions appear in the evidence card.';
+    window.WI_VOICE_GUIDE?.prepare(result.response);
     send(run, result.event);
    } catch (error) {
     if (!current(run) || closing || ctrl.signal.aborted || order !== run.delegationOrder) return;
@@ -202,7 +205,8 @@
    failed(run, 'GPT-Live rejected a session command. Check model access and configuration, then start again.');
   } else if (event.type === 'session.input_transcript.delta' || event.type === 'session.output_transcript.delta') {
    if (!run.transcript.add(event)) return;
-   if (event.type === 'session.input_transcript.delta') { run.inputRevision++; cancelPending(run); }
+   if (event.type === 'session.input_transcript.delta') { window.WI_VOICE_GUIDE?.stop(); run.inputRevision++; cancelPending(run); }
+   else window.WI_VOICE_GUIDE?.speak(event.delta);
    $('#wl-user-caption').textContent = run.transcript.text('user').slice(-10000) || 'Waiting for speech…';
    $('#wl-ai-caption').textContent = run.transcript.text('assistant').slice(-10000) || 'Waiting for AI speech…';
   } else if (event.type === 'session.delegation.created') { void delegated(run, event); }

@@ -16,7 +16,7 @@ import { createDiagnostics, assertAPIKey, connectionError, applicationError, api
 
 const VERSION = '2.0.1';
 const FILES = new Map([['/', ['index.html', 'text/html; charset=utf-8']], ['/index.html', ['index.html', 'text/html; charset=utf-8']]]);
-for (const name of ['conversation','live','operations','workspace','investigations','experience','focus']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
+for (const name of ['conversation','live','operations','workspace','investigations','experience','focus','voice-guide']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
 const AUDIO = new Map([['audio/webm', 'webm'], ['audio/mp4', 'mp4'], ['audio/wav', 'wav'], ['audio/mpeg', 'mp3']]);
 const fail = (status, message) => Object.assign(new Error(message), { status });
 function json(res, status, value) { res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); }
