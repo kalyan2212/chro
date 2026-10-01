@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-01T19:13:38.297Z",
+  "browser": "154.0.8037.58",
+  "checks": [
+    "Microphone denial releases voice state, creates no session, and permits retry",
+    "Expired authentication is detected before microphone capture or voice-session allocation",
+    "Studio accepts the real visual answer and highlights its evidence; narration advances only after its matching injection acknowledgement",
+    "New speech cancels remaining narration; late acknowledgements cannot send stale beats",
+    "Scope change cancels stale narration, and final Stop releases microphone tracks and peer transport",
+    "No browser JavaScript errors or external provider requests"
+  ],
+  "browserErrors": [],
+  "externalProviderCalls": 0,
+  "physicalMicrophoneTested": false,
+  "actualAudioPlaybackTested": false,
+  "protocol": "Browser transport and microphone simulated; local question calculations and UI exercised"
+}

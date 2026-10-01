@@ -30,5 +30,5 @@
  root.addEventListener('click',e=>{if(e.target.closest?.('[data-go],[data-page],[data-inspect],[data-cell],[data-lab],[data-decide-case],[data-audience]'))stop();},true);
  root.addEventListener('change',e=>{if(e.target.closest?.('#wi-filters'))stop();},true);
  for(const name of ['wi-source-updated','pagehide'])addEventListener(name,stop);
- window.WI_VOICE_GUIDE=Object.freeze({prepare,speak,progress,stop});
+ window.WI_VOICE_GUIDE=Object.freeze({prepare:data=>window.WI_STUDIO?.active?window.WI_STUDIO.prepareGuide(data):prepare(data),speak:delta=>window.WI_STUDIO?.active?window.WI_STUDIO.speakGuide(delta):speak(delta),progress:ratio=>window.WI_STUDIO?.active?window.WI_STUDIO.progressGuide(ratio):progress(ratio),stop:()=>{stop();window.WI_STUDIO?.stopGuide();}});
 })();

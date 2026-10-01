@@ -20,7 +20,13 @@
    entries() { return entries.slice(); }
   };
  }
- function matches(result, sessionId, delegationId) { return result?.sessionId === sessionId && result?.delegationId === delegationId && result?.event?.type === 'session.commentary.append' && result.event.delegation_id === delegationId && typeof result.event.content === 'string' && result.event.content.length < 2000 && validId(result.event.event_id) && result.response && typeof result.response.answer === 'string'; }
+ const bytes = value => new TextEncoder().encode(value).length;
+ function matches(result, sessionId, delegationId) {
+  const valid = event => event?.type === 'session.commentary.append' && event.delegation_id === delegationId && typeof event.content === 'string' && event.content.length > 0 && event.content.length < 2000 && validId(event.event_id);
+  if (result?.sessionId !== sessionId || result?.delegationId !== delegationId || !valid(result?.event) || !result.response || typeof result.response.answer !== 'string') return false;
+  if (result.events == null) return true; // A previously deployed server may return only event.
+  return Array.isArray(result.events) && result.events.length > 0 && result.events.length <= 8 && result.events.every(event => valid(event) && bytes(event.content) <= 450) && new Set(result.events.map(event => event.event_id)).size === result.events.length && result.events[0].event_id === result.event.event_id && result.events[0].content === result.event.content;
+ }
  // Pure helpers also used by the protocol tests; no transport starts on page load.
  window.WI_LIVE_PROTOCOL = Object.freeze({ timeline, matches, snapshot });
  const host = document.getElementById('wi-live');
@@ -29,7 +35,7 @@
  host.innerHTML = `<section class="wl-panel" aria-labelledby="wl-heading">
   <div class="wl-header"><div><span class="wl-eyebrow">SYNTHETIC WORKFORCE INTELLIGENCE</span><h2 id="wl-heading">Talk through the evidence</h2><p>Speak naturally, interrupt, and explore the current dashboard with an AI voice.</p></div><div class="wl-header-actions"><span id="wl-mic" class="wl-mic">Microphone off</span><button type="button" id="wl-close">Close panel</button></div></div>
   <div class="wl-controls"><button type="button" id="wl-start">Start conversation</button><button type="button" id="wl-stop" disabled>Stop</button><button type="button" id="wl-mute" aria-pressed="false" disabled>Mute microphone</button></div>
-  <p id="wl-state" role="status" aria-live="polite">Checking continuous voice availability…</p>
+  <p id="wl-state" role="status" aria-live="polite">Checking continuous voice availability…</p><button type="button" id="wl-signin" hidden>Reload and sign in again</button>
   <div class="wl-details"><span id="wl-usage">Voice duration: —</span><span id="wl-playback">Speaker idle</span></div>
   <audio id="wl-audio" controls aria-label="Live AI voice playback"></audio>
   <p class="wl-note">AI-generated voice · all workforce figures are synthetic. Spoken wording and speech recognition can be imperfect; the evidence card contains the calculated result. Microphone audio streams while active. Mute keeps the paid session open; Stop ends it. Sessions stop after 15 minutes.</p>
@@ -53,6 +59,35 @@
  const context = () => api()?.getContext?.() || {};
  const history = () => (api()?.getHistory?.() || []).slice(-6).map(x => ({ role: x.role, text: String(x.text || '').slice(0,2000) }));
  const current = run => active === run && run.serial === serial;
+ function notify(type, detail) { window.dispatchEvent(new CustomEvent(type, { detail: snapshot(detail) })); }
+ function phase(run, value, detail = {}) {
+  if (run && run.phase === value && !Object.keys(detail).length) return;
+  if (run) run.phase = value;
+  notify('wi-voice-state', { phase: value, turnId: run?.turnId || null, ...detail });
+ }
+ function clearBeats(run) { clearTimeout(run.beatTimer); run.beatTimer = null; run.beats = null; }
+ function sendBeat(run) {
+  const queue = run.beats;
+  if (!queue || !current(run) || closing || queue.revision !== run.inputRevision || queue.scope !== JSON.stringify(scope())) { clearBeats(run); return; }
+  const event = queue.events[queue.index];
+  if (!event) { clearBeats(run); return; }
+  if (!send(run, event)) { clearBeats(run); return; }
+  notify('wi-voice-beat', { turnId: run.turnId, index: queue.index, total: queue.events.length, status: 'submitted' });
+  run.beatTimer = setTimeout(() => {
+   if (run.beats !== queue || !current(run)) return;
+   clearBeats(run);
+   $('#wl-result').textContent = 'The visual answer is ready. Voice has not acknowledged the remaining explanation; ask again if needed.';
+  }, 15000);
+ }
+ function acceptBeat(run, event) {
+  const queue = run.beats;
+  if (!queue || event.client_event_id !== queue.events[queue.index]?.event_id) return;
+  clearTimeout(run.beatTimer);
+  // An append acknowledgement confirms context injection, not spoken playback.
+  notify('wi-voice-beat', { turnId: run.turnId, index: queue.index, total: queue.events.length, status: 'accepted' });
+  queue.index++;
+  sendBeat(run);
+ }
  function controls() {
   $('#wl-start').disabled = !available || !!active || closing; $('#wl-stop').disabled = !active || closing; $('#wl-mute').disabled = !active?.ready || closing;
   $('#wl-check').disabled = !!active || checking;
@@ -77,6 +112,7 @@
  function reportUsage(run, final = false) { $('#wl-usage').textContent = `Voice duration: ${Number.isFinite(run.seconds) ? run.seconds.toFixed(1) + ' s' : 'unavailable'} · ${final ? 'final' : 'latest observed; not final'}`; }
  function release(run) {
   window.WI_VOICE_GUIDE?.stop();
+  clearBeats(run);
   clearTimeout(run.startTimer); clearTimeout(run.closeTimer); clearTimeout(run.maxTimer); clearTimeout(run.disconnectTimer); clearTimeout(run.delegationTimer);
   run.pending?.abort(); run.startControl?.abort(); run.stream?.getTracks().forEach(track => track.stop());
   if (run.channel) { run.channel.onmessage = run.channel.onclose = run.channel.onerror = null; try { run.channel.close(); } catch {} }
@@ -97,6 +133,8 @@
   $('#wl-help').open = true;
   const finalization = run.sessionId ? 'Final session usage is unconfirmed.' : run.sessionRequested ? 'Voice startup and final session usage are unconfirmed.' : 'Voice setup did not reach the server.';
   state(message + ' Microphone released. ' + finalization); reportUsage(run);
+  $('#wl-signin').hidden = run.failureCode !== 'HTTP_401';
+  phase(run, 'error', { code: run.failureCode || null, message });
   if (!run.sessionId) $('#wl-usage').textContent = 'Voice duration: unavailable · session startup not confirmed';
   release(run); void serverClose(run.sessionId);
  }
@@ -132,6 +170,7 @@
  function stop(reason = 'Finishing conversation…') {
   window.WI_VOICE_GUIDE?.stop();
   const run = active; if (!run || closing) return;
+  clearBeats(run); phase(run, 'stopped');
   closing = true; run.pending?.abort(); clearTimeout(run.delegationTimer);
   $('#wl-audio').pause();
   run.stream?.getTracks().forEach(track => { track.enabled = false; }); run.muted = true; micStatus(run); controls();
@@ -146,11 +185,29 @@
   $('#wl-result').textContent = 'New speech received. The earlier result will not replace the current view.';
   command(run, 'session.thinking.append', { delegation_id: null, content: 'New user speech arrived while a lookup was running. The application cancelled the previous result. Delegate the latest complete question again when ready.' });
  }
+ function syncContext(event) {
+  const run = active; if (!run?.ready || closing) return;
+  const selected = context(), values = { scope: scope(), metric: selected.metricId || null, scenario: selected.caseId || null };
+  const key = JSON.stringify(values);
+  // An explicit application navigation/question event invalidates pending work
+  // even when it keeps the same filters (for example Home or a typed follow-up).
+  const forced = event?.type === 'wi-context-changed' || event?.force === true;
+  if (key === run.contextKey && !forced) return;
+  const changed = !!run.contextKey || forced; run.contextKey = key;
+  if (changed) {
+   run.pending?.abort(); run.pending = null; ++run.delegationOrder; clearTimeout(run.delegationTimer); clearBeats(run); window.WI_VOICE_GUIDE?.stop();
+   command(run, 'session.instructions.append', { delegation_id: null, content: 'The user changed the question or dashboard selection. Stop the previous explanation and use the latest selection for the next question. Earlier pending results have been discarded.' });
+   phase(run, 'listening', { reason: 'context-changed' });
+  }
+  const content = 'Current synthetic dashboard selection: ' + key + '. Use this to understand references; delegate all requested facts and calculations.';
+  if (bytes(content) <= 450) command(run, 'session.thinking.append', { delegation_id: null, content });
+ }
  async function delegated(run, event) {
   const delegationId = event.delegation?.id;
   if (!current(run) || closing || !validId(delegationId) || event.delegation?.target !== 'client' || run.seenDelegations.has(delegationId)) return;
   if (!Number.isFinite(event.offset_ms) || event.offset_ms < 0) return;
-  run.seenDelegations.add(delegationId); run.pending?.abort(); clearTimeout(run.delegationTimer);
+  run.seenDelegations.add(delegationId); run.pending?.abort(); clearTimeout(run.delegationTimer); clearBeats(run); run.delegationOffset = event.offset_ms;
+  run.turnId = delegationId; phase(run, 'thinking');
   const order = ++run.delegationOrder;
   // Metadata carries no utterance. A short drain lets already-in-flight transcript
   // fragments arrive; it is not a claim that a transcript turn is complete.
@@ -166,22 +223,26 @@
    $('#wl-result').textContent = 'Checking the governed synthetic evidence…';
    try {
     const res = await fetch('/api/live/delegate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(45000)]), body: JSON.stringify({ sessionId: run.sessionId, delegationId, question, scope: scope(), context: context(), history: history() }) });
-    if (!res.ok) { let error; try { error = (await res.json()).error; } catch {} throw Error(error || `Evidence lookup failed (${res.status}).`); }
+    if (!res.ok) { let error; try { error = (await res.json()).error; } catch {} if (res.status === 401) { run.failureCode = 'HTTP_401'; failed(run, 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.'); return; } throw Error(error || `Evidence lookup failed (${res.status}).`); }
     const value = await res.json();
     if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder || scopeAtStart !== JSON.stringify(scope()) || contextAtStart !== JSON.stringify(context())) return;
     if (!matches(value, run.sessionId, delegationId)) throw Error('The evidence response did not match this conversation.');
     const result = snapshot(value);
     if (!api()?.showResponse) throw Error('The visual briefing is unavailable.');
-    const shown = await api().showResponse(result.response, { isCurrent: () => current(run) && !closing && !ctrl.signal.aborted && revision === run.inputRevision && order === run.delegationOrder && scopeAtStart === JSON.stringify(scope()) });
+    const shown = await api().showResponse(result.response, { origin: 'voice', isCurrent: () => current(run) && !closing && !ctrl.signal.aborted && revision === run.inputRevision && order === run.delegationOrder && scopeAtStart === JSON.stringify(scope()) });
     if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder) return;
     if (shown === false) throw Error('The data changed during this lookup. Ask again to use the latest evidence.');
     run.answeredOffset = event.offset_ms;
     $('#wl-result').textContent = 'Validated visual briefing: ' + result.response.title + '. Exact figures and scenario assumptions appear in the evidence card.';
     window.WI_VOICE_GUIDE?.prepare(result.response);
-    send(run, result.event);
+    run.contextKey = JSON.stringify({ scope: scope(), metric: context().metricId || null, scenario: context().caseId || null });
+    notify('wi-voice-answer', { response: result.response, turnId: delegationId, beatCount: result.events?.length || 1 });
+    run.beats = { events: result.events || [result.event], index: 0, revision, scope: JSON.stringify(scope()) };
+    sendBeat(run);
    } catch (error) {
     if (!current(run) || closing || ctrl.signal.aborted || order !== run.delegationOrder) return;
     $('#wl-result').textContent = error.message || 'Evidence lookup failed. Please try again.';
+    phase(run, 'error', { message: $('#wl-result').textContent });
     command(run, 'session.commentary.append', { delegation_id: delegationId, content: 'The evidence lookup did not complete. No new result is verified. Please ask again.' });
    } finally { if (run.pending === ctrl) run.pending = null; }
   }, 300);
@@ -191,11 +252,13 @@
   if (event.type === 'session.started') {
    if (run.sessionId && event.session?.id && event.session.id !== run.sessionId) { failed(run, 'Session identity mismatch.'); return; }
    run.ready = true; run.stage = 'voice.conversation'; clearTimeout(run.startTimer); controls(); state('Connected. You can speak and interrupt naturally.');
-   command(run, 'session.instructions.append', { delegation_id: null, content: 'Greet the caller now in English. Introduce yourself as an AI assistant using synthetic workforce data, ask which metric or scenario to explore, then listen. Delegate all business facts.' });
+   command(run, 'session.instructions.append', { delegation_id: null, content: 'Greet the caller now in English. Introduce yourself briefly as their AI workforce collaborator using synthetic data. Offer to find a priority, compare teams, or model a decision; then listen. Delegate all business facts and follow-ups.' });
+   syncContext(); phase(run, 'listening');
   } else if (event.type === 'session.closed') {
    if (Number.isFinite(event.usage?.seconds) && event.usage.seconds >= 0) run.seconds = event.usage.seconds;
    reportUsage(run, Number.isFinite(event.usage?.seconds));
    state(`Conversation ended (${String(event.reason || 'closed')}). ${Number.isFinite(event.usage?.seconds) ? 'Final voice duration received.' : 'Voice duration was not supplied.'}`);
+   phase(run, 'stopped');
    const id = run.sessionId; release(run); void serverClose(id);
   } else if (event.type === 'session.usage.updated') {
    if (Number.isFinite(event.usage?.seconds) && event.usage.seconds >= 0) run.seconds = event.usage.seconds;
@@ -205,11 +268,19 @@
    failed(run, 'GPT-Live rejected a session command. Check model access and configuration, then start again.');
   } else if (event.type === 'session.input_transcript.delta' || event.type === 'session.output_transcript.delta') {
    if (!run.transcript.add(event)) return;
-   if (event.type === 'session.input_transcript.delta') { window.WI_VOICE_GUIDE?.stop(); run.inputRevision++; cancelPending(run); }
-   else window.WI_VOICE_GUIDE?.speak(event.delta);
+   if (event.type === 'session.input_transcript.delta') {
+    window.WI_VOICE_GUIDE?.stop(); run.inputRevision++; clearBeats(run); cancelPending(run);
+    // A fresh utterance may arrive in the short transcript-drain window, before
+    // there is an HTTP request to abort. Do not start that outdated lookup.
+    if (Number.isFinite(run.delegationOffset) && event.start_ms > run.delegationOffset) { clearTimeout(run.delegationTimer); ++run.delegationOrder; }
+    phase(run, 'listening', { reason: 'input-transcript' });
+   }
+   else { window.WI_VOICE_GUIDE?.speak(event.delta); phase(run, 'speaking'); }
+   notify('wi-voice-transcript', { text: event.delta, role: event.type === 'session.input_transcript.delta' ? 'user' : 'assistant', turnId: run.turnId || null, ...(event.type === 'session.input_transcript.delta' ? { utteranceText: run.transcript.text('user', run.answeredOffset).slice(-2000), inputRevision: run.inputRevision } : {}) });
    $('#wl-user-caption').textContent = run.transcript.text('user').slice(-10000) || 'Waiting for speech…';
    $('#wl-ai-caption').textContent = run.transcript.text('assistant').slice(-10000) || 'Waiting for AI speech…';
-  } else if (event.type === 'session.delegation.created') { void delegated(run, event); }
+  } else if (event.type === 'session.commentary.appended') { acceptBeat(run, event); }
+  else if (event.type === 'session.delegation.created') { void delegated(run, event); }
  }
  async function waitICE(pc, signal) {
   if (pc.iceGatheringState === 'complete') return;
@@ -225,12 +296,16 @@
   if (active || !available || closing) return;
   if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) { state('Continuous voice needs a WebRTC browser with microphone access on localhost or HTTPS.'); return; }
   window.dispatchEvent(new Event('wi-stop-media')); api()?.cancel?.();
-  const run = { serial: ++serial, stage:'browser.microphone', sessionRequested:false, pc: null, stream: null, channel: null, ready: false, muted: false, sessionId: null, pending: null, startControl: new AbortController(), seconds: null, transcript: timeline(), inputRevision: 0, delegationOrder: 0, answeredOffset: -1, seenDelegations: new Set() };
+  const run = { serial: ++serial, stage:'workspace.authentication', sessionRequested:false, pc: null, stream: null, channel: null, ready: false, muted: false, sessionId: null, pending: null, startControl: new AbortController(), seconds: null, transcript: timeline(), inputRevision: 0, delegationOrder: 0, answeredOffset: -1, seenDelegations: new Set(), turnId: null, beats: null };
   lastClientFailure = null;
-  active = run; controls(); state('Requesting microphone access…'); $('#wl-result').textContent = 'Waiting for your question.';
+  active = run; controls(); state('Checking workspace sign-in…'); phase(run, 'connecting'); $('#wl-signin').hidden = true; $('#wl-result').textContent = 'Waiting for your question.';
   $('#wl-user-caption').textContent = 'Your speech will appear here.'; $('#wl-ai-caption').textContent = 'Spoken captions will appear here.'; reportUsage(run);
   run.startTimer = setTimeout(() => failed(run, 'Conversation startup timed out.'),45000);
   try {
+   const authenticated = await fetch('/api/status', { signal: run.startControl.signal, cache: 'no-store' });
+   if (!authenticated.ok) { run.failureCode = `HTTP_${authenticated.status}`; throw Error(authenticated.status === 401 ? 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.' : 'Could not verify workspace access. Refresh this page and try again.'); }
+   if (!current(run) || closing) return;
+   run.stage = 'browser.microphone'; state('Requesting microphone access…');
    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
    if (!current(run) || closing) { stream.getTracks().forEach(track => track.stop()); return; }
    run.stream = stream; micStatus(run); stream.getAudioTracks().forEach(track => track.addEventListener('ended', () => { if (current(run) && !closing) failed(run,'Microphone disconnected.'); },{once:true}));
@@ -262,7 +337,7 @@
     let detail; try { detail = await res.json(); } catch {}
     run.failureCode = typeof detail?.code === 'string' && /^[A-Z_]{1,60}$/.test(detail.code) ? detail.code : `HTTP_${res.status}`;
     run.diagnosticId = typeof detail?.diagnosticId === 'string' && /^[a-f0-9-]{36}$/.test(detail.diagnosticId) ? detail.diagnosticId : null;
-    throw Error((detail?.error || `Voice startup failed (${res.status}).`) + ` [${run.failureCode}]`);
+    throw Error((res.status === 401 ? 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.' : detail?.error || `Voice startup failed (${res.status}).`) + ` [${run.failureCode}]`);
    }
    const data = await res.json();
    if (!validId(data.session?.id) || data.transport?.type !== 'webrtc' || typeof data.transport.sdp !== 'string') throw Error('Invalid voice session response.');
@@ -278,23 +353,27 @@
  $('#wl-start').addEventListener('click',start); $('#wl-stop').addEventListener('click',() => stop());
  $('#wl-check').addEventListener('click',checkConnection); $('#wl-report').addEventListener('click',downloadReport);
  $('#wl-close').addEventListener('click',closePanel);
+ $('#wl-signin').addEventListener('click',() => window.location.reload());
  host.addEventListener('keydown',event => { if (event.key === 'Escape') { event.preventDefault?.(); closePanel(); } });
  $('#wl-mute').addEventListener('click',() => {
   const run = active; if (!run?.ready || closing) return;
   run.muted = !run.muted; run.stream?.getAudioTracks().forEach(track => { track.enabled = !run.muted; }); micStatus(run);
   // Local track state is authoritative for this UI. No claim of server mute acknowledgment.
   state(run.muted ? 'Microphone muted locally. Voice session remains active and billed.' : 'Microphone active. You can speak.');
+  phase(run, run.muted ? 'muted' : 'listening');
  });
  $('#wl-audio').addEventListener('playing',() => { if (active) $('#wl-playback').textContent = 'AI voice playback active'; });
  $('#wl-audio').addEventListener('pause',() => { if (active) $('#wl-playback').textContent = 'AI voice playback paused'; });
  window.addEventListener('wi-stop-media',() => stop('Switching conversation mode. Finishing continuous voice…'));
  window.addEventListener('wi-source-updated',() => stop('Source data refreshed. Finishing this conversation; start again using the new evidence.'));
+ window.addEventListener('wi-context-changed',syncContext);
+ document.getElementById('wi-app')?.addEventListener?.('change',syncContext);
  window.addEventListener('offline',() => { if (active) failed(active,'Browser network connection is offline.'); });
- window.addEventListener('pagehide',() => { const run = active; if (!run) return; try { command(run,'session.close'); } catch {} void serverClose(run.sessionId,true); release(run); });
- window.WI_LIVE = Object.freeze({ open: openPanel, close: closePanel, stop, isActive: () => !!active });
- fetch('/api/status').then(res => { if (!res.ok) throw Error(); return res.json(); }).then(data => {
+ window.addEventListener('pagehide',() => { const run = active; if (!run) return; try { command(run,'session.close'); } catch {} void serverClose(run.sessionId,true); phase(run, 'stopped'); release(run); });
+ window.WI_LIVE = Object.freeze({ open: openPanel, close: closePanel, start, stop, syncContext, isActive: () => !!active });
+ fetch('/api/status').then(res => { if (!res.ok) throw Object.assign(Error(),{status:res.status}); return res.json(); }).then(data => {
   available = data.live?.available === true || data.continuousVoice === true;
   $('#wl-version').textContent = typeof data.version === 'string' ? '· App ' + data.version : '';
   state(available ? 'Ready. Start a conversation to enable your microphone.' : 'Continuous voice is unavailable. Configure the server API key and GPT-Live access; typed questions remain available.'); controls();
- }).catch(() => { available = false; state('Could not check continuous voice availability.'); controls(); });
+ }).catch(error => { available = false; $('#wl-signin').hidden = error.status !== 401; state(error.status === 401 ? 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.' : 'Could not check continuous voice availability.'); controls(); });
 })();

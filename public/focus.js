@@ -463,6 +463,7 @@
  // A new answer takes the dashboard to its view; the capsule keeps the headline. Answers without a view open the sheet.
  let lastAnswer = '';
  new MutationObserver(() => {
+  if (window.WI_STUDIO?.active) return;
   const now = hasAnswer() ? q('#vc-title').textContent + '|' + (q('#vc-answer')?.textContent || '') : '';
   if (!now) { lastAnswer = ''; return; }
   if (now === lastAnswer) return;

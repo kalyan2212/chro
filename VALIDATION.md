@@ -57,3 +57,10 @@ The earlier release evidence above is retained as history. The current in-place 
 ## Cloud persistence continuation — 28 September 2026
 
 The expanded suite passes 88 tests, including Cloud Storage generation checks, concurrent journal writes, restoration in a new runtime, and preservation of confirmed state after a failed write. The existing local source and workspace objects were copied to the private GCP bucket and successfully read back. Browser inspection and screenshots are recorded separately in `docs/CONTINUATION-REVIEW.md` and `docs/REDESIGN.md`; the historical release statements above describe the earlier release only. See `docs/DEPLOYMENT-GCP.md` for cloud deployment status and limits.
+
+
+## Intelligence Studio — October 1, 2026
+
+The release passed **127 automated tests**, **18 Studio browser checks**, **6 simulated voice browser checks**, and the existing13-journey workspace browser regression plus narration/shared-link checks. Screenshots were inspected at1920×1080 and390px, with responsive checks also at1366 and768px. Verified flows include context and assumption retention, all six calculated charts, percent-unit clarification, compound-step integrity, Back, persistent investigation/decision saves, original lineage, source refresh, reduced motion and access to the original workspace. See [Studio report](docs/studio/report.json) and [voice protocol report](docs/studio-voice/report.json).
+
+A separate **real-provider** trial used generated speech input through WebRTC. It transcribed the retention question, opened the matching scene, spoke six avoided exits and minus $90,000 net, received measurable audio, and closed with final24.0-second provider usage. [Sanitized evidence](docs/studio-voice/provider-report.json). This does not establish physical microphone/speaker compatibility, exhaustive question coverage or production HR governance. Saved records remain drafts, all data remains synthetic, and transcript emphasis is approximate.

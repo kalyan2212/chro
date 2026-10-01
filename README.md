@@ -1,5 +1,9 @@
 # Workforce Intelligence — synthetic CHRO decision workspace
 
+**The default experience is now Intelligence Studio.** Ask naturally, explore a coordinated evidence canvas, keep assumptions through follow-ups, and save investigations or decision drafts. The original detailed dashboard remains under **Workspace**. See the [Studio guide](docs/STUDIO.md), [browser verification](docs/studio/report.json), and [real-provider voice result](docs/studio-voice/provider-report.json).
+
+![Intelligence Studio](docs/studio/01-home.png)
+
 A runnable executive demonstration for Monitor → Investigate → Decide. It combines 38 mapped People/HR Operations views, 50 metric inspectors, six transparent scenario labs, a bounded conversation, a synthetic Workday-style report adapter, and a saved decision workspace. Every workforce number belongs to **fictional Meridian Group**. No Workday tenant, payroll, employee record, company identity provider, or production entitlement is connected.
 
 The application implements both turn-based voice and a GPT-Live WebRTC path. OpenAI and optional Claude calls require separate API projects and model access; configuration alone does not verify that they work. The included tests exercise local logic and mock HTTP responses. Real API, microphone, speaker, browser recording, Docker and target-device behavior require their own verification before a presentation.

@@ -69,6 +69,8 @@ export function validateRequest(body) {
   const scope = scopeOf(body.scope);
   // Verbal filters take precedence over the current dashboard selection in both modes.
   let lower = body.question.toLowerCase();
+  // Everyday spoken names map to the existing governed dimensions, never new populations.
+  lower = lower.replace(/\bsales(?:\s+and\s+marketing)?\b(?!\s*&\s*marketing)/g, 'sales & marketing').replace(/\bcustomer service\b(?!s)/g, 'customer services');
   const mentions = {};
   // "Last/past N months" asks for a monthly trend window, not a verbal period filter.
   let window = null;
@@ -94,6 +96,20 @@ export function validateRequest(body) {
     if (typeof body.context !== 'object' || Array.isArray(body.context)) throw new Error('Invalid context');
     if (body.context.metricId != null) { if (!metricIds.includes(body.context.metricId)) throw new Error('Invalid metric context'); context.metricId = body.context.metricId; }
     if (body.context.caseId != null) { if (!cases.includes(body.context.caseId)) throw new Error('Invalid case context'); context.caseId = body.context.caseId; }
+    if (body.context.overrides != null) {
+      if (!context.caseId) throw new Error('Scenario assumptions need a case context');
+      context.overrides = validatePlan({intent:'scenario', metricId:null, caseId:context.caseId, overrides:body.context.overrides}).overrides;
+    }
+    if (body.context.insightId != null) { if (!insightIds.includes(body.context.insightId)) throw new Error('Invalid insight context'); context.insightId = body.context.insightId; }
+    if (body.context.sourceVersion != null) {
+      if (typeof body.context.sourceVersion !== 'string' || !/^[a-zA-Z0-9:_-]{1,160}$/.test(body.context.sourceVersion)) throw new Error('Invalid context source version');
+      context.sourceVersion = body.context.sourceVersion;
+    }
+    if (body.context.pendingAssumption != null) {
+      const pending = body.context.pendingAssumption;
+      if (!pending || pending.kind !== 'retention-unit' || typeof pending.value !== 'number' || !Number.isFinite(pending.value) || pending.value < 0 || pending.value > 100 || Object.keys(pending).sort().join(',') !== 'kind,value') throw new Error('Invalid pending assumption');
+      context.pendingAssumption = {kind:'retention-unit', value:pending.value};
+    }
   }
   const history = body.history ?? [];
   if (!Array.isArray(history) || history.length > 6 || history.some(x => !x || !['user', 'assistant'].includes(x.role) || typeof x.text !== 'string' || x.text.length > 2000)) throw new Error('Invalid history');

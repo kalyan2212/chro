@@ -65,3 +65,14 @@ Production substitution requires authorized source queries, real identity and ro
 ## Continuation contract: investigations
 
 Authenticated `GET /api/investigations` lists saved investigations; `POST /api/investigations` validates the active source revision and freezes server-calculated evidence. Immutable, deduplicated records persist in an additive `investigations` array in schema-1 `workspace.json`, preserving existing decisions/audit events. Limits: 100 investigations, 50 pins per investigation, 500-character question and 4000-character notes. Stale revisions/pins return 409. Workspace exports include investigations. See [docs/INVESTIGATIONS.md](docs/INVESTIGATIONS.md) for the complete request and reload boundaries.
+
+
+## Studio conversation and presentation — October 2026
+
+Authenticated GET /api/studio/bootstrap returns {response,catalog}: a deterministic executive overview plus all 50 metric IDs, labels and definitions. It never calls a model. The Studio adds six scenario entries to this catalogue.
+
+/api/ask accepts bounded conversation context: metricId, caseId, validated overrides, insightId, sourceVersion and pendingAssumption for a retention-unit clarification. A stale context revision returns409, even if the outer sourceVersion is current. Supported deterministic follow-ups reuse explicit scenario assumptions; only the requested fields change. Unknown language may use the existing strict model router. Unsupported compound steps produce a clarification instead of silently executing a subset.
+
+Answers add conversation plus presentation:{version,scene,headline,takeaway,beats,nextQuestions,sourceVersion,chart?}. Beats reference answer fact indexes and evidence IDs. Scenario chart rows come from the same server calculator. Explicit supported compound requests add workflow, an ordered array of complete answers. No presentation field authorizes saving, approving or executing decisions.
+
+Live delegation preserves event for compatibility and adds up to8 bounded events. The browser sends subsequent narration only after the matching injection acknowledgement. An acknowledgement does not indicate audio playback completion. New speech, explicit navigation, scope changes and Stop invalidate pending analysis and queued narration. Transcript-based emphasis is approximate. Studio changes no saved-state schema, credentials or approval status.

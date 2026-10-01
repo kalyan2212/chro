@@ -1,0 +1,67 @@
+{
+  "schema": "chro-studio-provider-verification.v1",
+  "at": "2026-10-01T19:08:28.564Z",
+  "environment": "Isolated local server and headless Chrome using the real configured OpenAI provider",
+  "generatedInput": true,
+  "physicalMicrophoneTested": false,
+  "physicalSpeakerTested": false,
+  "inputMethod": "Synthetic question generated through the application speech endpoint, decoded in Chrome, and injected into a real WebRTC stream using a continuously running WebAudio graph.",
+  "question": "Model retention with a zero point five percentage point reduction.",
+  "recognizedQuestion": "Model retention with a zero point five percentage point reduction",
+  "spokenAnswerTranscript": "Got it—checking that scenario. Modeled for the next twelve hundred hires and their first year outcomes, a half-point reduction avoids about six exits, gross value about a hundred fifty thousand. With a two-forty program cost, net's around minus ninety thousand.",
+  "spokenResultVerified": true,
+  "scene": "$90,000 below break-even.",
+  "verified": [
+    "Real session.started acknowledged in browser",
+    "Real spoken scenario covers six avoided exits and the ninety-thousand-dollar downside in a complete sentence"
+  ],
+  "http": [
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/live/session",
+      "status": 201
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    }
+  ],
+  "narration": {
+    "submitted": 2,
+    "accepted": 2,
+    "acknowledgementMeaning": "Context injection accepted, not exact audio playback completion"
+  },
+  "output": {
+    "maximumAudioRms": 0.13910885222996244,
+    "analyserSamples": 225,
+    "rtp": [
+      {
+        "type": "inbound-rtp",
+        "kind": "audio",
+        "bytesReceived": 137037,
+        "packetsReceived": 1034
+      },
+      {
+        "type": "outbound-rtp",
+        "kind": "audio",
+        "bytesSent": 47797,
+        "packetsSent": 1105
+      }
+    ]
+  },
+  "final": {
+    "active": false,
+    "status": "Conversation ended (close_requested). Final voice duration received.",
+    "providerReportedUsage": "Voice duration: 24.0 s · final"
+  },
+  "screenshot": "provider-retention.png",
+  "limits": [
+    "No physical microphone or speaker was used.",
+    "One fixed retention question is verified; this is not exhaustive conversational coverage.",
+    "Emphasis follows transcript matching and is approximate.",
+    "This verifies the current local build against the provider; it does not independently verify the deployed Cloud Run revision."
+  ]
+}

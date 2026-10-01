@@ -86,6 +86,26 @@ test('all scenario briefs pack complete calculated facts with their conditional 
   assert.ok(result.response.facts.filter(f=>f.label!=='Assumptions').some(f=>result.event.content.includes(`${f.label}: ${f.value}.`)),caseId);
  }
 });
+test('rich narration preserves all scenario observations across independently bounded verified beats',async t=>{
+ const {live}=service({ask:async body=>answer(body,{intent:'scenario',metricId:null,caseId:body.context.caseId,overrides:{}},'api')});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ for(const caseId of ['retention','skills','delivery','continuity','service','capacity']){
+  const result=await live.delegate({sessionId:'live_1',delegationId:'rich_'+caseId,question:'Explain this scenario',context:{caseId}});
+  assert.ok(result.events.length>1 && result.events.length<=8);
+  assert.deepEqual(result.event,result.events[0]);assert.ok(Object.isFrozen(result.events));
+  assert.equal(result.narration.count,result.events.length);assert.equal(result.narration.synchronization,'transcript-estimate');
+  assert.equal(new Set(result.events.map(event=>event.event_id)).size,result.events.length);
+  const combined=result.events.map(event=>event.content).join(' ');
+  for(const event of result.events){assert.ok(Buffer.byteLength(event.content)<=450);assert.equal(event.delegation_id,'rich_'+caseId);}
+  for(const fact of result.response.facts.filter(f=>f.label!=='Assumptions'))assert.ok(combined.includes(`${fact.label}: ${fact.value}.`),`${caseId}: ${fact.label}`);
+ }
+});
+test('multi-beat narration never slices multibyte or numeric statements to meet its byte bound',async t=>{
+ const full='Validated result: 12.3%.',tooLong='検証'.repeat(100)+' 999.9%.';
+ const {live}=service({ask:async body=>({...await governed(body),answer:full+' '+tooLong,facts:[{label:'Scoped result',value:'12.3%'},{label:'Oversize indivisible definition',value:tooLong}],evidence:[]})});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ const result=await live.delegate({sessionId:'live_1',delegationId:'rich_utf8',...request});
+ assert.ok(result.events.every(event=>Buffer.byteLength(event.content)<=450));
+ assert.ok(result.events.some(event=>event.content.includes(full)));assert.equal(result.events.some(event=>event.content.includes('999.9')),false);
+});
 test('new delegation cancels earlier work and late results cannot escape',async t => {
  const old=deferred(); let call=0,oldSignal;
  const {live}=service({ask:async (body,signal) => { if(++call===1){oldSignal=signal;return old.promise;} return governed(body); }}); t.after(() => live.shutdown());
@@ -119,7 +139,7 @@ test('startup cancelled after response closes the orphan session',async () => {
 });
 
 const source=readFileSync(new URL('../public/live.js',import.meta.url),'utf8');
-function browser({permissionPending=false,playBlocked=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null}={}) {
+function browser({permissionPending=false,playBlocked=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null,multiBeat=false,statusCode=200}={}) {
  class Element {
   constructor(){this.listeners=new Map();this.attrs={};this.textContent='';this.disabled=false;this.classList={toggle(){}};this.srcObject=null;this.paused=true;}
   addEventListener(type,fn){this.listeners.set(type,fn);} fire(type,value={}){return this.listeners.get(type)?.(value);} setAttribute(k,v){this.attrs[k]=v;} focus(){this.focused=true;}
@@ -127,7 +147,7 @@ function browser({permissionPending=false,playBlocked=false,delegatePending=fals
   appendChild(child){this.child=child;} click(){downloads.push({href:this.href,download:this.download});} remove(){this.removed=true;}
   pause(){this.paused=true;} async play(){if(playBlocked)throw Error('autoplay');this.paused=false;}
  }
- const nodes=new Map(),host=new Element(),requests=[],peers=[],shown=[],timers=new Map(),listeners=new Map(),streams=[],downloads=[],blobs=[],permission=deferred(),delegation=deferred(),render=deferred(); let timerId=0;
+ const nodes=new Map(),host=new Element(),requests=[],peers=[],shown=[],timers=new Map(),listeners=new Map(),streams=[],downloads=[],blobs=[],emitted=[],permission=deferred(),delegation=deferred(),render=deferred(); let timerId=0;
  const connectionReport={schema:'workforce-connection-report.v1',appVersion:'2.0.1',recentErrors:[],lastConnectionCheck:{status:'metadata_reachable',message:'Metadata endpoint reached. Voice still needs a session test.'}};
  const anchor={before(button){this.inserted=button;}},root={querySelector:selector=>selector==='#wi-present'?anchor:null};
  const stream=()=>{const track={enabled:true,readyState:'live',addEventListener(){},stop(){this.readyState='ended';}};const s={getTracks:()=>[track],getAudioTracks:()=>[track]};streams.push(s);return s;};
@@ -138,9 +158,9 @@ function browser({permissionPending=false,playBlocked=false,delegatePending=fals
   close(){this.connectionState='closed';} addEventListener(){} removeEventListener(){}
  }
  const scope={function:'all',region:'all',period:'quarter'};
- const window={RTCPeerConnection:Peer,addEventListener:(type,fn)=>listeners.set(type,fn),dispatchEvent:e=>listeners.get(e.type)?.(e),WI_CONVERSATION:{cancel(){},getScope:()=>scope,getContext:()=>({}),getHistory:()=>[],async showResponse(data,options){if(renderPending)await render.promise;if(options?.isCurrent&&!options.isCurrent())return false;shown.push(data);return true;}}};
+ const window={RTCPeerConnection:Peer,addEventListener:(type,fn)=>listeners.set(type,fn),dispatchEvent:e=>{emitted.push(e);return listeners.get(e.type)?.(e);},WI_CONVERSATION:{cancel(){},getScope:()=>scope,getContext:()=>({}),getHistory:()=>[],async showResponse(data,options){if(renderPending)await render.promise;if(options?.isCurrent&&!options.isCurrent())return false;shown.push(data);return true;}}};
  const fetch=async(url,init)=>{
-  requests.push({url,init}); if(url==='/api/status')return {ok:true,json:async()=>({version:'2.0.1',live:{available:true}})};
+  requests.push({url,init}); if(url==='/api/status')return {ok:statusCode===200,status:statusCode,json:async()=>({version:'2.0.1',live:{available:true}})};
   if(url==='/api/diagnostics'||url==='/api/diagnostics/connection')return {ok:true,json:async()=>structuredClone(connectionReport)};
   if(url==='/api/live/session'&&sessionFailure)return {ok:false,status:502,json:async()=>structuredClone(sessionFailure)};
   if(url==='/api/live/session')return {ok:true,json:async()=>({session:{id:'live_browser'},transport:{type:'webrtc',sdp:SDP},maxSessionMs:900000})};
@@ -148,14 +168,15 @@ function browser({permissionPending=false,playBlocked=false,delegatePending=fals
   if(url==='/api/live/delegate'){
    const body=JSON.parse(init.body); const data=await governed(validateRequest(body));
    const value={sessionId:body.sessionId,delegationId:body.delegationId,response:data,event:{type:'session.commentary.append',event_id:'result_mock',delegation_id:body.delegationId,content:data.answer}};
+   if(multiBeat){value.event.content='Synthetic data. The validated result is ready.';value.events=[value.event,{...value.event,event_id:'result_mock_2',content:'First-year exits use a mature cohort denominator.'},{...value.event,event_id:'result_mock_3',content:'This is an association, not a causal conclusion.'}];}
    if(delegatePending)await delegation.promise; return {ok:true,json:async()=>value};
   }
   throw Error('Unexpected URL '+url);
  };
- vm.runInNewContext(source,{window,document:{getElementById:id=>id==='wi-live'?host:id==='wi-app'&&toolbar?root:null,createElement:()=>new Element(),body:new Element()},navigator:{mediaDevices:{getUserMedia:()=>permissionPending?permission.promise:Promise.resolve(stream())},sendBeacon:(url,body)=>{requests.push({url,body,beacon:true});return true;}},RTCPeerConnection:Peer,MediaStream:class{},Event:class{constructor(type){this.type=type;}},fetch,Blob,URL:{createObjectURL:blob=>{blobs.push(blob);return 'blob:report-'+blobs.length;},revokeObjectURL(){}},AbortController,AbortSignal,structuredClone,crypto:webcrypto,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)});
+ vm.runInNewContext(source,{window,document:{getElementById:id=>id==='wi-live'?host:id==='wi-app'&&toolbar?root:null,createElement:()=>new Element(),body:new Element()},navigator:{mediaDevices:{getUserMedia:()=>permissionPending?permission.promise:Promise.resolve(stream())},sendBeacon:(url,body)=>{requests.push({url,body,beacon:true});return true;}},RTCPeerConnection:Peer,MediaStream:class{},Event:class{constructor(type){this.type=type;}},CustomEvent:class{constructor(type,{detail}){this.type=type;this.detail=detail;}},TextEncoder,fetch,Blob,URL:{createObjectURL:blob=>{blobs.push(blob);return 'blob:report-'+blobs.length;},revokeObjectURL(){}},AbortController,AbortSignal,structuredClone,crypto:webcrypto,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)});
  const event=value=>peers.at(-1).channel.onmessage?.({data:JSON.stringify(value)});
  const fireTimers=async ms=>{for(const [id,t]of [...timers])if(t.ms===ms){timers.delete(id);await t.fn();}await tick();};
- return {window,scope,requests,peers,shown,timers,streams,host,downloads,blobs,toolbar:anchor.inserted,node:s=>host.querySelector(s),event,fireTimers,setSessionFailure:value=>{sessionFailure=value;},resolvePermission:()=>permission.resolve(stream()),resolveDelegate:()=>delegation.resolve(),resolveRender:()=>render.resolve(),async start(){await tick();window.WI_LIVE.open();await host.querySelector('#wl-start').fire('click');event({type:'session.started',session:{id:'live_browser'}});await tick();}};
+ return {window,scope,requests,peers,shown,timers,streams,host,downloads,blobs,emitted,toolbar:anchor.inserted,node:s=>host.querySelector(s),event,fireTimers,setStatus:value=>{statusCode=value;},setSessionFailure:value=>{sessionFailure=value;},resolvePermission:()=>permission.resolve(stream()),resolveDelegate:()=>delegation.resolve(),resolveRender:()=>render.resolve(),async start(){await tick();window.WI_LIVE.open();await host.querySelector('#wl-start').fire('click');event({type:'session.started',session:{id:'live_browser'}});await tick();}};
 }
 test('voice startup failure releases media, exposes connection help, exports safe context and permits a retry',async()=>{
  const failure={error:'The server could not verify the API certificate.',code:'TLS_TRUST',diagnosticId:'22222222-2222-4222-8222-222222222222'};
@@ -189,7 +210,7 @@ test('transcripts preserve exact spaces, repeated words and overlap independentl
  assert.equal(t.add({type:'session.input_transcript.delta',delta:'bad',start_ms:-1,end_ms:2}),false);
 });
 test('late permission after Stop is released without creating a session',async()=>{
- const h=browser({permissionPending:true});await tick();const start=h.node('#wl-start').fire('click');h.node('#wl-stop').fire('click');h.resolvePermission();await start;
+ const h=browser({permissionPending:true});await tick();const start=h.node('#wl-start').fire('click');await tick();h.node('#wl-stop').fire('click');h.resolvePermission();await start;
  assert.equal(h.streams[0].getTracks()[0].readyState,'ended');assert.equal(h.peers.length,0);assert.equal(h.requests.some(x=>x.url==='/api/live/session'),false);assert.equal(h.timers.size,0);
 });
 test('WebRTC starts via HTTP and waits for session.started; blocked autoplay is explicit',async()=>{
@@ -206,10 +227,66 @@ test('browser assembles delegation question from transcript and displays only co
  const result=h.peers[0].channel.sent.find(x=>x.type==='session.commentary.append');assert.equal(result.delegation_id,'item_voice');
  h.event({type:'session.closed',usage:{seconds:4}});
 });
+test('richer voice beats wait for their own injection acknowledgements and emit honest presentation events',async()=>{
+ const h=browser({multiBeat:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_beats',target:'client'}});await h.fireTimers(300);
+ const spoken=()=>h.peers[0].channel.sent.filter(event=>event.type==='session.commentary.append');
+ assert.equal(spoken().length,1);
+ const answerEvent=h.emitted.find(event=>event.type==='wi-voice-answer');assert.equal(answerEvent.detail.turnId,'item_beats');assert.equal(answerEvent.detail.beatCount,3);assert.ok(Object.isFrozen(answerEvent.detail.response));
+ h.event({type:'session.commentary.appended',client_event_id:'foreign_result'});assert.equal(spoken().length,1);
+ h.event({type:'session.commentary.appended',client_event_id:'result_mock'});assert.equal(spoken().length,2);
+ h.event({type:'session.commentary.appended',client_event_id:'result_mock'});assert.equal(spoken().length,2);
+ assert.equal(h.emitted.some(event=>event.type==='wi-voice-state'&&event.detail.phase==='speaking'),false);
+ h.event({type:'session.output_transcript.delta',delta:'The retention result',start_ms:400,end_ms:900});
+ assert.equal(h.emitted.at(-1).type,'wi-voice-transcript');assert.equal(h.emitted.at(-1).detail.role,'assistant');assert.ok(h.emitted.some(event=>event.type==='wi-voice-state'&&event.detail.phase==='speaking'));
+ h.event({type:'session.commentary.appended',client_event_id:'result_mock_2'});assert.equal(spoken().length,3);
+ h.event({type:'session.commentary.appended',client_event_id:'result_mock_3'});assert.equal([...h.timers.values()].some(timer=>timer.ms===15000),false);
+ h.event({type:'session.closed',usage:{seconds:4}});assert.equal(h.timers.size,0);
+});
+test('speech, manual scope change and Stop each discard queued narration before late acknowledgements',async()=>{
+ for(const interrupt of ['speech','scope','stop']){
+  const h=browser({multiBeat:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_cancel_beats',target:'client'}});await h.fireTimers(300);
+  if(interrupt==='speech')h.event({type:'session.input_transcript.delta',delta:'actually headcount',start_ms:400,end_ms:600});
+  else if(interrupt==='scope'){h.scope.region='EMEA';h.window.dispatchEvent({type:'wi-context-changed'});assert.match(h.peers[0].channel.sent.at(-2).content,/Stop the previous explanation/);}
+  else h.node('#wl-stop').fire('click');
+  h.event({type:'session.commentary.appended',client_event_id:'result_mock'});
+  assert.equal(h.peers[0].channel.sent.filter(event=>event.type==='session.commentary.append').length,1,interrupt);
+  h.event({type:'session.closed',usage:{seconds:4}});assert.equal(h.timers.size,0);
+ }
+});
+test('missing injection acknowledgement does not blindly flush remaining narration or claim playback completion',async()=>{
+ const h=browser({multiBeat:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_no_ack',target:'client'}});await h.fireTimers(300);await h.fireTimers(15000);
+ assert.equal(h.peers[0].channel.sent.filter(event=>event.type==='session.commentary.append').length,1);assert.match(h.node('#wl-result').textContent,/has not acknowledged/);
+ h.event({type:'session.commentary.appended',client_event_id:'result_mock'});assert.equal(h.peers[0].channel.sent.filter(event=>event.type==='session.commentary.append').length,1);
+ h.event({type:'session.closed',usage:{seconds:4}});
+});
+test('voice verifies current sign-in before microphone capture and exposes recovery after expiry',async()=>{
+ const h=browser();await tick();h.setStatus(401);await h.node('#wl-start').fire('click');
+ assert.equal(h.streams.length,0);assert.equal(h.peers.length,0);assert.equal(h.requests.some(request=>request.url==='/api/live/session'),false);
+ assert.equal(h.node('#wl-signin').hidden,false);assert.match(h.node('#wl-state').textContent,/Reload this page and sign in again/);assert.equal(h.window.WI_LIVE.isActive(),false);assert.equal(h.timers.size,0);
+ assert.equal(h.emitted.at(-1).detail.code,'HTTP_401');assert.equal(h.emitted.at(-1).detail.phase,'error');
+ h.setStatus(200);await h.start();assert.equal(h.node('#wl-signin').hidden,true);h.event({type:'session.closed',usage:{seconds:1}});
+ const initial=browser({statusCode:401});await tick();assert.equal(initial.node('#wl-signin').hidden,false);assert.equal(initial.node('#wl-start').disabled,true);
+});
+test('multi-beat protocol rejects oversized UTF-8, duplicate identity and mismatched primary events',()=>{
+ const h=browser(),event={type:'session.commentary.append',event_id:'result_one',delegation_id:'item_one',content:'Synthetic data.'};
+ const result={sessionId:'session_one',delegationId:'item_one',response:{answer:'Verified'},event,events:[event]};
+ const matches=value=>h.window.WI_LIVE_PROTOCOL.matches(value,'session_one','item_one');
+ assert.equal(matches(result),true);
+ assert.equal(matches({...result,events:[event,event]}),false);
+ assert.equal(matches({...result,events:[{...event,content:'検'.repeat(151)}]}),false);
+ assert.equal(matches({...result,events:[{...event,event_id:'result_other'}]}),false);
+ assert.equal(matches({...result,events:[]}),false);
+});
 test('new speech aborts pending backend work and discards late response',async()=>{
  const h=browser({delegatePending:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_old',target:'client'}});
  const work=h.fireTimers(300);await tick();h.event({type:'session.input_transcript.delta',delta:' actually headcount',start_ms:400,end_ms:600});h.resolveDelegate();await work;
  assert.equal(h.shown.length,0);assert.equal(h.requests.find(r=>r.url==='/api/live/delegate').init.signal.aborted,true);assert.equal(h.peers[0].channel.sent.some(x=>x.type==='session.commentary.append'),false);
+ h.event({type:'session.closed',usage:{seconds:4}});
+});
+test('an interruption during the transcript drain never launches an outdated lookup',async()=>{
+ const h=browser();await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_drain',target:'client'}});
+ h.event({type:'session.input_transcript.delta',delta:'actually headcount',start_ms:400,end_ms:600});await h.fireTimers(300);
+ assert.equal(h.requests.some(request=>request.url==='/api/live/delegate'),false);assert.equal(h.shown.length,0);
  h.event({type:'session.closed',usage:{seconds:4}});
 });
 test('interruption during asynchronous visual refresh prevents stale view mutation',async()=>{

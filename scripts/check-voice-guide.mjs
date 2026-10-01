@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 const server=createServer({apiKey:'',fetchImpl:()=>{throw Error('No provider calls');}});await server.ready;await new Promise(r=>server.listen(0,'127.0.0.1',r));const base=`http://127.0.0.1:${server.address().port}`;
 const browser=await chromium.launch({executablePath:process.env.CHRO_BROWSER||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
-try{const page=await browser.newPage({viewport:{width:1920,height:1080}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base);await page.waitForFunction(()=>window.WI_VOICE_GUIDE);
+try{const page=await browser.newPage({viewport:{width:1920,height:1080}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base+'/?workspace=1');await page.waitForFunction(()=>window.WI_VOICE_GUIDE);
 const response=await page.request.post(base+'/api/ask',{data:{question:'Model retention with 0.5 pp reduction',scope:{function:'all',region:'all',period:'quarter'}}});assert.equal(response.status(),200);const data=await response.json();assert.ok(data.facts.length);
 await page.evaluate(async data=>{await window.WI_CONVERSATION.showResponse(data);window.WI_VOICE_GUIDE.prepare(data);},data);await page.waitForTimeout(700);
 assert.equal(await page.locator('#voice-guide').isVisible(),true);assert.ok(await page.locator('.vg-spotlight').count());

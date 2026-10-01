@@ -13,7 +13,7 @@ const checks=[],errors=[];
 const record=name=>{checks.push(name);console.log('PASS',name);};
 try{
  const page=await browser.newPage({viewport:{width:1920,height:1080}});page.on('pageerror',e=>errors.push(e.message));
- await page.goto(base);await page.waitForFunction(()=>window.WI_INVESTIGATIONS);
+ await page.goto(base+'/?workspace=1');await page.waitForFunction(()=>window.WI_INVESTIGATIONS);
  // Reproduce original screenshots from preserved source, without replacing the working application.
  const baseline=await browser.newPage({viewport:{width:1920,height:1080}});
  await baseline.route(base+'/',async route=>{const original=await readFile('docs/review-originals/public-index.html','utf8');const current=await (await route.fetch()).text();const boot=current.match(/<script id="wi-dataset-bootstrap">[\s\S]*?<\/script>/)[0];await route.fulfill({contentType:'text/html',body:original.replace('<!-- wi-dataset-bootstrap -->',boot)});});

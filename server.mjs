@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { contextualPlan, contextualWorkflow, isCompoundRequest, inheritAssumptions, enrichAnswer } from './intelligence.mjs';
 import { createCloudState } from './cloud-state.mjs';
 import { investigationDraft } from './investigations.mjs';
 import { readFile, rm } from 'node:fs/promises';
@@ -16,7 +17,7 @@ import { createDiagnostics, assertAPIKey, connectionError, applicationError, api
 
 const VERSION = '2.0.1';
 const FILES = new Map([['/', ['index.html', 'text/html; charset=utf-8']], ['/index.html', ['index.html', 'text/html; charset=utf-8']]]);
-for (const name of ['conversation','live','operations','workspace','investigations','experience','focus','voice-guide']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
+for (const name of ['conversation','live','operations','workspace','investigations','experience','focus','voice-guide','studio','studio-charts']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
 const AUDIO = new Map([['audio/webm', 'webm'], ['audio/mp4', 'mp4'], ['audio/wav', 'wav'], ['audio/mpeg', 'mp3']]);
 const fail = (status, message) => Object.assign(new Error(message), { status });
 function json(res, status, value) { res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); }
@@ -70,6 +71,8 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
     let request; try { request = validateRequest(input); } catch (e) { throw fail(400, e.message); }
     const snapshot = workday.snapshot();
     if (input.sourceVersion && input.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'The source data changed. Refresh the dataset and ask again.');
+    if (request.context?.sourceVersion && request.context.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'Conversation evidence belongs to an earlier source revision. Refresh and ask again.');
+    hydrateDataset(snapshot);
     const nav = navigation(request.question);
     if (nav && !nav.target) {
       const result = backAnswer(request, mode);
@@ -77,8 +80,10 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       return result;
     }
     const routed = nav ? { ...request, question: nav.target } : request;
-    let plan;
-    if (mode === 'demo' || retentionExample(routed.question)) plan = demoPlan(routed);
+    const workflow = contextualWorkflow(routed);
+    let plan = workflow?.at(-1)?.plan || (isCompoundRequest(routed)?{intent:'clarify',metricId:null,caseId:null,overrides:{}}:contextualPlan(routed));
+    if (plan) { /* A validated analytical action needs no model routing. */ }
+    else if (mode === 'demo' || retentionExample(routed.question)) plan = demoPlan(routed);
     else {
       const payload = { model: 'gpt-6-astra', reasoning: { effort: 'low' }, store: false, instructions: routingInstructions,
         input: JSON.stringify({ question: routed.question, scope: request.scope, context: request.context, history: request.history }),
@@ -95,7 +100,13 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
     if (signal?.aborted) throw fail(499, 'Question cancelled');
     if (workday.snapshot().sourceVersion !== snapshot.sourceVersion) throw fail(409, 'Source data changed during analysis. Ask again using the refreshed data.');
     hydrateDataset(snapshot);
-    const result = answer(request, plan, mode);
+    plan = inheritAssumptions(request, plan);
+    const result = enrichAnswer(request, answer(request, plan, mode));
+    if (workflow?.length) {
+      result.workflow = workflow.map(step => {const stepRequest=validateRequest({question:step.question,scope:step.scope});return enrichAnswer(stepRequest,answer(stepRequest,step.plan,mode));});
+      const final = result.workflow.at(-1);
+      Object.assign(result,final,{question:request.question,workflow:result.workflow});
+    }
     if (nav) result.navigation = { type: 'back', target: nav.target, intent: plan.intent };
     await journal.log('question.answered', { mode, action: result.action.type, metricId: result.action.metricId, caseId: result.action.caseId, sourceVersion: snapshot.sourceVersion });
     return result;
@@ -119,7 +130,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       const entryNavigation = req.method === 'GET' && ['/', '/index.html'].includes(path) && req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document';
       if (req.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(req.headers['sec-fetch-site']) && !entryNavigation) throw fail(403, 'Cross-site requests are not allowed');
       if (!path || path.includes('%') || path.includes('\\') || path.includes('..')) throw fail(404, 'Not found');
-      if (FILES.has(path) || /^\/api\/(?:login|logout|status|ask|transcribe|speech|audit|decisions|investigations|review|live\/(?:session|delegate|close)|diagnostics(?:\/connection)?|workday\/(?:sync|status|report)|data\/snapshot)$/.test(path)) requestPath = FILES.has(path) ? 'static.asset' : path;
+      if (FILES.has(path) || /^\/api\/(?:login|logout|status|ask|transcribe|speech|audit|decisions|investigations|review|live\/(?:session|delegate|close)|diagnostics(?:\/connection)?|workday\/(?:sync|status|report)|data\/snapshot|studio\/bootstrap)$/.test(path)) requestPath = FILES.has(path) ? 'static.asset' : path;
       if (path === '/health' && req.method === 'GET') { await ready; return json(res, 200, { ok: true, synthetic: true, version: VERSION }); }
       if (path === '/api/login' && req.method === 'POST') {
         const value = await readJSON(req, 3000);
@@ -144,6 +155,12 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
         workday: workday.status(), authentication: auth.enabled ? 'password' : 'local-demo', persistence: objectStore ? 'cloud-storage' : storageDir ? 'disk' : 'memory',
         disclosure: mode === 'api' ? 'Server key configured; entitlement needs a live test. GPT-Live continuous conversation and recorded GPT-Transcribe → Astra → AI speech are available to configure.' : 'Synthetic Workday-connected demo. No live model call. Browser voice is available where supported; real microphone transcription, continuous voice and narrated answers require API access.'
       });
+      if (req.method === 'GET' && path === '/api/studio/bootstrap') {
+        const snapshot=workday.snapshot();hydrateDataset(snapshot);
+        const request=validateRequest({question:'Give me an overview'});
+        const response=enrichAnswer(request,answer(request,{intent:'overview',metricId:null,caseId:null,overrides:{}},mode));
+        return json(res,200,{response,catalog:metricIds.map(id=>{const d=descriptor(id,request.scope);return {id,label:d.label,definition:d.definition};})});
+      }
       if (req.method === 'GET' && path === '/api/workday/status') return json(res, 200, workday.status());
       if (req.method === 'GET' && path === '/api/data/snapshot') return json(res, 200, workday.snapshot());
       if (req.method === 'GET' && path === '/api/workday/report') {

@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-01T19:15:44.238Z",
+  "checks": [
+    "Default Studio displays server-calculated signals at1920×1080",
+    "Explore searches all50 metric definitions and6 scenario labs",
+    "Evidence question creates an investigation scene and cohort chart",
+    "Follow-ups retain the metric while changing comparison dimensions",
+    "Half-point downside exposes −$90k prominently and a signed economics chart",
+    "Editable assumptions and natural follow-ups retain the changed budget",
+    "Back restores the earlier assumptions without a new analysis request",
+    "Investigations and draft decisions persist across reload with original lineage",
+    "Ambiguous percent gets a targeted clarification and short reply resolves it",
+    "Narration highlights the existing scene and cleans up without a second overlay",
+    "Compound question preserves both analytical steps",
+    "Opening a workflow step keeps the visible evidence and spoken briefing aligned",
+    "Delegated voice back restores an existing scene",
+    "All six labs produce charts from server calculations",
+    "1366/768/390px layouts have no page overflow; reduced motion is honored",
+    "Detailed workspace and Studio remain mutually accessible",
+    "Source refresh clears stale conversation lineage and allows a fresh question",
+    "No browser JavaScript errors"
+  ],
+  "errors": [],
+  "externalProviderCalls": 0,
+  "physicalMicrophoneVerified": false
+}

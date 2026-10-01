@@ -27,6 +27,8 @@ jobs:
           npm run test:browser
           node scripts/check-shared-link.mjs
           node scripts/check-voice-guide.mjs
+          node scripts/check-studio.mjs
+          node scripts/check-studio-voice.mjs
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: test
