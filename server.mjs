@@ -6,7 +6,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { resolve, join } from 'node:path';
-import { answer, backAnswer, navigation, demoPlan, modelPlan, routingInstructions, routingSchema, validateRequest, exportDataset, hydrateDataset, effectiveAssumptions, scenario, descriptor, metricIds, scopeOf } from './engine.mjs';
+import { answer, backAnswer, navigation, retentionExample, demoPlan, modelPlan, routingInstructions, routingSchema, validateRequest, exportDataset, hydrateDataset, effectiveAssumptions, scenario, descriptor, metricIds, scopeOf } from './engine.mjs';
 import { createWorkday } from './workday.mjs';
 import { createLiveService } from './live.mjs';
 import { createReviewService } from './review.mjs';
@@ -78,7 +78,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
     }
     const routed = nav ? { ...request, question: nav.target } : request;
     let plan;
-    if (mode === 'demo') plan = demoPlan(routed);
+    if (mode === 'demo' || retentionExample(routed.question)) plan = demoPlan(routed);
     else {
       const payload = { model: 'gpt-6-astra', reasoning: { effort: 'low' }, store: false, instructions: routingInstructions,
         input: JSON.stringify({ question: routed.question, scope: request.scope, context: request.context, history: request.history }),

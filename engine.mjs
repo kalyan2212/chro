@@ -166,7 +166,17 @@ function insightFor(lower) {
   if (/\bonboarding\b.*\b(?:exits?|attrition|leav\w*|retention|turnover|quit\w*)\b|\b(?:exits?|attrition|leav\w*|retention|turnover)\b.*\bonboarding\b|\bwhy\b.*\b(?:new hires|new joiners|first[- ]year)\b.*\b(?:leav\w*|exit\w*|quit\w*|attrition)\b/.test(lower)) return 'onboardingExits';
   return null;
 }
+// Recognize the documented downside example before probabilistic routing. Never drop extra assumptions.
+export function retentionExample(question) {
+ const q=String(question).toLowerCase().trim().replace(/[?.!]+$/, '').replace(/[-\u2010-\u2014]/g,' ').replace(/\s+/g,' ');
+ const match=q.match(/^(?:please )?(?:model|simulate|test|calculate|show)(?: me)?(?: the)? (?:first year )?retention(?: scenario)? (?:with |at |for )?(?:a |an )?(0\.5|zero point five|point five|half(?: a)?)\s*(percentage points?|percent points?|pp|percent|percentage|%|point)(?: (?:reduction|decrease|downside|improvement))?$/);
+ if(!match)return null;
+ return /^(?:percent|percentage|%)$/.test(match[2])?'ambiguous':'points';
+}
+
 export function demoPlan(request) {
+  const example=retentionExample(request.question);
+  if(example)return example==='points'?route('scenario',null,'retention',{effect:0.5}):route('clarify');
   const lower = request.question.toLowerCase(), insight = request.mentions ? null : insightFor(lower);
   if (insight) return { intent: 'insight', metricId: null, caseId: null, overrides: {}, insight };
   const hints = breakdownHints(lower, request);
@@ -450,6 +460,12 @@ export function answer(request, rawPlan, mode = 'demo') {
     out.followups = ['Explain first-year retention', 'What is the workforce cost variance?', 'Model the HR service scenario'];
   } else {
     out.title = 'Choose a supported question';
+    if(retentionExample(request.question)==='ambiguous') {
+      out.title='Do you mean 0.5 percentage points?';
+      out.answer='Do you mean a 0.5 percentage-point reduction in first-year exits, or a 0.5 percent relative reduction? These are different assumptions. For the documented downside, say: Model retention with a 0.5 percentage-point reduction.';
+      out.followups=['Model retention with a 0.5 percentage-point reduction'];
+      out.sourceVersion=D.sourceVersion;return clone(out);
+    }
     const split = requestedSplit(request.question);
     if (split) {
       out.title = `A split by ${split} is not available yet`;

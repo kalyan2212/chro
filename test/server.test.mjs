@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { createServer } from '../server.mjs';
-import { routingSchema } from '../engine.mjs';
+import { routingSchema, retentionExample } from '../engine.mjs';
 
 async function setup(t, options = {}) {
   const server = createServer({ apiKey: '', ...options });
@@ -108,4 +108,17 @@ test('mocked API routes breakdowns while the server computes every segment', asy
   const res = await post(url, '/api/ask', { question: 'Where is attrition highest?' }); const a = await res.json();
   assert.equal(res.status, 200); assert.equal(a.action.type, 'breakdown'); assert.equal(a.breakdown.rows.length, 2);
   assert.ok(a.breakdown.rows[0].value >= a.breakdown.rows[1].value);
+});
+
+test('documented spoken retention example is deterministic in API mode and percent gets a unit clarification', async t => {
+ const {url}=await setup(t,{apiKey:'sk-test-not-used',fetchImpl:()=>{throw Error('Standard example must not call a router');}});
+ for(const question of ['Model retention with a 0.5 percentage-point reduction','model retention with zero point five percentage points','model retention with half a percentage point']){
+  const res=await post(url,'/api/ask',{question});assert.equal(res.status,200);const data=await res.json();assert.equal(data.action.type,'scenario');assert.equal(data.action.caseId,'retention');assert.equal(data.action.overrides.effect,0.5);assert.match(JSON.stringify(data.facts),/90/);
+ }
+ const r=await post(url,'/api/ask',{question:'model retention with 0.5 percent'});assert.equal(r.status,200);const data=await r.json();assert.match(data.title,/0.5 percentage points/);assert.match(data.answer,/relative/);assert.equal(data.facts.length,0);assert.equal(data.followups[0],'Model retention with a 0.5 percentage-point reduction');
+});
+
+test('retention shortcut preserves ambiguity and does not discard other assumptions',()=>{
+ assert.equal(retentionExample('model retention with 0.5%'),'ambiguous');
+ for(const q of ['Model retention with 0.5 percentage points and cost 100000','Model retention with 0.5 relative percent','Model retention with 5 percentage points','Model retention with 0.5 percentage points for individual employees'])assert.equal(retentionExample(q),null);
 });
