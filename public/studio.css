@@ -107,7 +107,7 @@ body.studio-active #wi-app{max-width:none;margin:0;padding:0;background:transpar
 #studio .st-wave i:nth-child(2),#studio .st-wave i:nth-child(4){height:10px}
 #studio .st-wave i:nth-child(3){height:14px}
 #studio .st-dock-note{text-align:center;font-size:10px;color:#7f899c;margin-top:9px;letter-spacing:.02em}
-#studio .st-live-caption{font-size:12px;line-height:1.6;color:#d1dbec;margin-top:16px;padding:14px;background:#b3f0d008;border-left:2px solid var(--st-green)}
+
 #studio .st-history{display:flex;gap:6px;overflow:auto;margin:0 0 24px;max-width:100%}
 #studio .st-history button{font-size:11px;padding:7px 12px;border:1px solid var(--st-line);border-radius:20px;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis;color:var(--st-muted)}
 #studio .st-history [aria-current=true]{border-color:#8f85b7;color:var(--st-lilac)}

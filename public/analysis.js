@@ -29,7 +29,6 @@
   if(data.analysis.unknowns.length){const unknowns=el('details','an-unknowns');unknowns.append(el('summary',null,'What we still need to know'));const list=el('ul');data.analysis.unknowns.forEach(x=>list.append(el('li',null,x)));unknowns.append(list);reasoning.append(unknowns);}
   if(!data.panels.length){canvas.append(el('div','an-empty', 'Continue the discussion to bring workforce evidence onto the canvas.'));}
   layout.append(reasoning,canvas);root.append(layout);const next=el('nav','an-next');next.setAttribute('aria-label','Continue the investigation');data.analysis.followups.slice(0,4).forEach(q=>next.append(button(q+' ↗',()=>actions.ask(q),'st-button')));root.append(next,el('p','st-boundary',data.boundary));
-  const caption=el('div','an-caption');caption.id='st-caption';caption.hidden=true;root.append(caption);
   active={root,data,selected:null,select,highlightFact};if(data.panels.length)select(data.panels[0].id);return root;
  }
  function scopeName(s){return s?[s.function==='all'?'All functions':s.function,s.region==='all'?'All regions':s.region,s.period].join(' · '):'Scenario population';}

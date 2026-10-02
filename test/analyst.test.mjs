@@ -126,7 +126,7 @@ test('voice synthesis is concise while preserving all tools, reasoning and evide
     const result=await analyze({request:{...request('Compare staffing and automation, then propose an experiment'),...marker},snapshot,upstream:async payload=>{
       assert.equal(payload.max_output_tokens,2500);assert.equal(payload.reasoning.effort,'medium');
       assert.deepEqual(payload.tools,textPayload.tools);assert.deepEqual(payload.text.format,textPayload.text.format);
-      assert.match(payload.instructions,/full catalogue, tools and subject-matter scope/);assert.match(payload.instructions,/summary within 45 words/);
+      assert.match(payload.instructions,/full catalogue, tools and subject-matter scope/);assert.match(payload.instructions,/summary within 25 words/);
       assert.equal(JSON.parse(payload.input.find(item=>item.role==='user').content[0].text).request.channel,'voice');
       if(++round===1)return calls({name:'calculate_scenario',call_id:'voice_staff',args:{caseId:'service',overrides:{servicePlan:'staff'}}},{name:'calculate_scenario',call_id:'voice_automation',args:{caseId:'service',overrides:{servicePlan:'automate'}}});
       return finished(narrative({sections:[{kind:'finding',title:'Compare conditional queue clearance',text:'Staffing clears the queue in month 3; automation clears it in month 5.',evidenceRefs:toolItems(payload).map(item=>item.refId)},{kind:'recommendation',title:'Test the mechanism',text:'Diagnose routing and capacity before committing to either investment.',evidenceRefs:[]}]}));

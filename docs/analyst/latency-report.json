@@ -1,0 +1,315 @@
+{
+  "schema": "chro-analyst-latency-evaluation.v1",
+  "question": "Now compare staffing and automation for the HR service queue. Which experiment would you recommend and why?",
+  "channel": "voice",
+  "model": "gpt-6-astra",
+  "reasoningEffort": "medium",
+  "serviceTier": "Default; no premium service_tier requested",
+  "comparisonControls": {
+    "sameQuestion": true,
+    "sameHistory": true,
+    "sameScope": true,
+    "sameSourceVersion": true,
+    "providerSampling": "One successful baseline and one successful sample per implementation revision; not randomized or statistically conclusive"
+  },
+  "changes": [
+    "Compact model-facing catalogue retains all 50 metric definitions, 38 display definitions, six scenario definitions and all bounded assumptions.",
+    "Model tool results include trusted facts, definitions, assumptions, comparisons and chart values once; full UI evidence registry remains unchanged.",
+    "Voice summary guidance of 25 words and normally three short sections; typed synthesis proportional to question complexity.",
+    "Strict scenario schema selects only the chosen case fields instead of generating nulls for all six cases."
+  ],
+  "trials": [
+    {
+      "id": "baseline",
+      "at": "2026-10-02T17:45:34.586Z",
+      "verdict": "pass",
+      "milliseconds": 35150,
+      "apiRounds": 2,
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "milliseconds": 12966,
+          "tools": [
+            "inspect_metrics",
+            "calculate_scenario",
+            "calculate_scenario"
+          ],
+          "requestBytes": 66581,
+          "catalogBytes": 44817,
+          "toolResultBytes": 0,
+          "usage": {
+            "input_tokens": 13288,
+            "input_tokens_details": {
+              "cache_write_tokens": 278,
+              "cached_tokens": 13007
+            },
+            "output_tokens": 370,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 13658
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "milliseconds": 21749,
+          "tools": [],
+          "requestBytes": 95001,
+          "catalogBytes": 44817,
+          "toolResultBytes": 23994,
+          "usage": {
+            "input_tokens": 20040,
+            "input_tokens_details": {
+              "cache_write_tokens": 6752,
+              "cached_tokens": 13285
+            },
+            "output_tokens": 773,
+            "output_tokens_details": {
+              "reasoning_tokens": 59
+            },
+            "total_tokens": 20813
+          }
+        }
+      ],
+      "answer": {
+        "headline": "Test staffing first; automation needs a stronger productivity case",
+        "summary": "I’d recommend a time-limited staffing experiment. Under the shared assumptions, staffing clears the hypothetical queue sooner and costs less in year one than automation. Validate that advantage against real case mix and service quality before committing permanently.",
+        "sectionKinds": [
+          "finding",
+          "finding",
+          "recommendation",
+          "limitation"
+        ],
+        "panelCount": 2,
+        "evidenceCount": 8
+      },
+      "failure": null
+    },
+    {
+      "id": "compact-payload-and-shorter-synthesis",
+      "at": "2026-10-02T17:49:02.791Z",
+      "verdict": "pass",
+      "milliseconds": 37279,
+      "apiRounds": 2,
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "milliseconds": 11092,
+          "tools": [
+            "calculate_scenario",
+            "calculate_scenario",
+            "inspect_metrics"
+          ],
+          "requestBytes": 39677,
+          "catalogBytes": 20187,
+          "toolResultBytes": 0,
+          "usage": {
+            "input_tokens": 8327,
+            "input_tokens_details": {
+              "cache_write_tokens": 8324,
+              "cached_tokens": 0
+            },
+            "output_tokens": 370,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 8697
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "milliseconds": 25636,
+          "tools": [],
+          "requestBytes": 51624,
+          "catalogBytes": 20187,
+          "toolResultBytes": 8757,
+          "usage": {
+            "input_tokens": 11119,
+            "input_tokens_details": {
+              "cache_write_tokens": 2792,
+              "cached_tokens": 8324
+            },
+            "output_tokens": 573,
+            "output_tokens_details": {
+              "reasoning_tokens": 123
+            },
+            "total_tokens": 11692
+          }
+        }
+      ],
+      "answer": {
+        "headline": "Test staffing first: lower modeled cost and faster queue clearance",
+        "summary": "I recommend a time-limited staffing experiment; under the default assumptions, it clears the hypothetical queue sooner and costs less than automation.",
+        "sectionKinds": [
+          "finding",
+          "recommendation",
+          "limitation"
+        ],
+        "panelCount": 2,
+        "evidenceCount": 8
+      },
+      "failure": null
+    },
+    {
+      "id": "case-specific-scenario-schema",
+      "at": "2026-10-02T17:54:05.269Z",
+      "verdict": "pass",
+      "milliseconds": 33591,
+      "apiRounds": 4,
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "milliseconds": 6124,
+          "tools": [
+            "calculate_scenario"
+          ],
+          "requestBytes": 39703,
+          "catalogBytes": 20187,
+          "toolResultBytes": 0,
+          "usage": {
+            "input_tokens": 8264,
+            "input_tokens_details": {
+              "cache_write_tokens": 8261,
+              "cached_tokens": 0
+            },
+            "output_tokens": 70,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 8334
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "milliseconds": 7635,
+          "tools": [
+            "calculate_scenario"
+          ],
+          "requestBytes": 42643,
+          "catalogBytes": 20187,
+          "toolResultBytes": 2156,
+          "usage": {
+            "input_tokens": 8927,
+            "input_tokens_details": {
+              "cache_write_tokens": 663,
+              "cached_tokens": 8261
+            },
+            "output_tokens": 71,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 8998
+          }
+        },
+        {
+          "number": 3,
+          "http": 200,
+          "milliseconds": 3753,
+          "tools": [
+            "inspect_metrics"
+          ],
+          "requestBytes": 45578,
+          "catalogBytes": 20187,
+          "toolResultBytes": 4304,
+          "usage": {
+            "input_tokens": 9590,
+            "input_tokens_details": {
+              "cache_write_tokens": 663,
+              "cached_tokens": 8924
+            },
+            "output_tokens": 50,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 9640
+          }
+        },
+        {
+          "number": 4,
+          "http": 200,
+          "milliseconds": 15597,
+          "tools": [],
+          "requestBytes": 50956,
+          "catalogBytes": 20187,
+          "toolResultBytes": 8757,
+          "usage": {
+            "input_tokens": 10881,
+            "input_tokens_details": {
+              "cache_write_tokens": 1291,
+              "cached_tokens": 9515
+            },
+            "output_tokens": 587,
+            "output_tokens_details": {
+              "reasoning_tokens": 116
+            },
+            "total_tokens": 11468
+          }
+        }
+      ],
+      "answer": {
+        "headline": "Test staffing first; automation needs stronger evidence to justify its cost",
+        "summary": "Recommend a time-boxed staffing experiment: the model clears the queue sooner with lower first-year funding than automation.",
+        "sectionKinds": [
+          "finding",
+          "recommendation",
+          "limitation"
+        ],
+        "panelCount": 2,
+        "evidenceCount": 8
+      },
+      "failure": null
+    }
+  ],
+  "transportFailure": {
+    "id": "first-schema-attempt-network-failure",
+    "at": "2026-10-02T17:52:50.863Z",
+    "verdict": "fail",
+    "milliseconds": 10863,
+    "apiRounds": 1,
+    "rounds": [
+      {
+        "number": 1,
+        "http": null,
+        "milliseconds": null,
+        "tools": [],
+        "requestBytes": null,
+        "catalogBytes": null,
+        "toolResultBytes": null,
+        "usage": null
+      }
+    ],
+    "answer": null,
+    "failure": {
+      "status": null,
+      "message": "fetch failed",
+      "repairDetail": null
+    }
+  },
+  "observations": {
+    "catalogBytes": {
+      "before": 44817,
+      "after": 20187
+    },
+    "baselineSynthesisMs": 21749,
+    "finalSynthesisMs": 15597,
+    "finalComparison": "The final sample was only modestly faster overall because it serialized independent tool calls into three rounds. Smaller inputs and shorter output do not establish a substantial total latency improvement.",
+    "quality": "All completed samples passed source and numeric verification and retained staffing/automation economics, conditional-model caveats and a proposed experiment.",
+    "followup": "Explicit independent-tool batching guidance was added after these standard-tier measurements; this report does not claim a measured improvement from that final prompt adjustment."
+  },
+  "boundaries": [
+    "These direct provider measurements exclude microphone capture, transcription, WebRTC transport and speech generation.",
+    "Provider queueing, caching and stochastic tool choices differ between samples.",
+    "No credentials, authorization headers, image bytes, encrypted reasoning or raw function arguments are included."
+  ],
+  "postBenchmarkHardening": [
+    "Model-facing results preserve complete privacy and availability explanations for suppressed, withheld, protected-subgroup and other nonnumeric status cards.",
+    "Scenario runtime validation rejects every override key outside the selected case, including null-valued keys, before removing unchanged inputs.",
+    "Both cases are covered by passing targeted tests. These small validation changes were made after the reported provider measurements; no additional paid benchmark was run."
+  ]
+}

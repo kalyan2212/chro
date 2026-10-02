@@ -6,7 +6,7 @@
  const head=document.createElement('div');head.className='vg-head';
  const status=document.createElement('span');status.className='vg-status';
  const close=document.createElement('button');close.type='button';close.textContent='Hide guide';close.addEventListener('click',()=>stop());head.append(status,close);
- const title=document.createElement('h2'),scope=document.createElement('p'),facts=document.createElement('div'),caption=document.createElement('p');scope.className='vg-scope';facts.className='vg-facts';caption.className='vg-caption';panel.append(head,title,scope,facts,caption);root.append(panel);
+ const title=document.createElement('h2'),scope=document.createElement('p'),facts=document.createElement('div');scope.className='vg-scope';facts.className='vg-facts';panel.append(head,title,scope,facts);root.append(panel);
  let answer=null,transcript='',index=-1,epoch=0,target=null;
  const normalize=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
  function clearTarget(){target?.classList.remove('vg-spotlight');target=null;}
@@ -20,12 +20,12 @@
  function prepare(data){
   stop();if(!data?.facts?.length)return;answer=structuredClone(data);answer.facts=answer.facts.slice(0,12);const run=++epoch;
   title.textContent=data.title;scope.textContent=[data.scope?.function==='all'?'All functions':data.scope?.function,data.scope?.region==='all'?'All regions':data.scope?.region,data.scope?.period==='quarter'?'Q3 2026':data.scope?.period].filter(Boolean).join(' · ')+' · Synthetic evidence';
-  status.textContent='Evidence ready';caption.textContent='Highlights follow available speech transcripts; timing may differ from audio.';
+  status.textContent='Evidence ready';
   facts.replaceChildren();answer.facts.forEach((f,i)=>{const b=document.createElement('button');b.type='button';b.className='vg-fact'+(String(f.value).length>32?' vg-long':'');const label=document.createElement('span'),value=document.createElement('strong'),note=document.createElement('small');label.textContent=f.label;value.textContent=f.value;note.textContent=f.note||'';b.append(label,value,note);b.addEventListener('click',()=>focusFact(i));facts.append(b);});
   panel.hidden=false;root.classList.add('vg-active');focusFact(0);setTimeout(()=>{if(epoch===run)spotlight();},200);
  }
- function speak(delta){if(!answer)return;transcript=(transcript+String(delta)).slice(-1600);status.textContent='Speaking · transcript guide';caption.textContent=transcript.slice(-220);const text=normalize(transcript);let best=-1,at=-1;answer.facts.forEach((f,i)=>{const label=normalize(f.label);if(label.length<4)return;const p=text.lastIndexOf(label);if(p>at){at=p;best=i;}});if(best>=0)focusFact(best);}
- function progress(ratio){if(!answer)return;status.textContent='Playing · approximate reading guide';caption.textContent='Evidence order follows playback progress; this is not word-level alignment.';focusFact(Math.min(answer.facts.length-1,Math.floor(Math.max(0,ratio)*answer.facts.length)));}
+ function speak(delta){if(!answer)return;transcript=(transcript+String(delta)).slice(-1600);status.textContent='Speaking · follow the highlighted evidence';const text=normalize(transcript);let best=-1,at=-1;answer.facts.forEach((f,i)=>{const label=normalize(f.label);if(label.length<4)return;const p=text.lastIndexOf(label);if(p>at){at=p;best=i;}});if(best>=0)focusFact(best);}
+ function progress(ratio){if(!answer)return;status.textContent='Playing · follow the highlighted evidence';focusFact(Math.min(answer.facts.length-1,Math.floor(Math.max(0,ratio)*answer.facts.length)));}
  function stop(){++epoch;clearTarget();panel.hidden=true;root.classList.remove('vg-active');answer=null;transcript='';index=-1;}
  root.addEventListener('click',e=>{if(e.target.closest?.('[data-go],[data-page],[data-inspect],[data-cell],[data-lab],[data-decide-case],[data-audience]'))stop();},true);
  root.addEventListener('change',e=>{if(e.target.closest?.('#wi-filters'))stop();},true);

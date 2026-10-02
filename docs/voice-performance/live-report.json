@@ -1,0 +1,87 @@
+{
+  "schema": "chro-caption-free-live-proof.v1",
+  "at": "2026-10-02T17:57:05.697Z",
+  "environment": "Isolated local application, real configured AI provider, Chrome at 1920×1080 and real WebRTC",
+  "generatedSpeechInput": true,
+  "physicalMicrophoneTested": false,
+  "physicalSpeakerTested": false,
+  "question": "Compare staffing and automation for the HR service queue. Which experiment would you recommend and why?",
+  "recognizedQuestion": "Compare staffing and automation for the HR service queue. Which experiment would you recommend, and why",
+  "backendQuestion": "Compare staffing and automation for the HR service queue. Which experiment would you recommend, and why",
+  "backendQuestionMatchesRecognized": true,
+  "secondsOfGeneratedQuestion": 5.76,
+  "secondsFromSpeechStartToAnalysis": 31.167,
+  "secondsFromQuestionEndToAnalysis": 25.407,
+  "secondsFromAnalysisToSpeech": 1.044,
+  "secondsFromBackendRequestToFirstCommentary": 23.625,
+  "assistantCaptionNodes": 0,
+  "internalAssistantTranscriptEvents": 97,
+  "evidenceFocusPreserved": true,
+  "focusChanges": [
+    {
+      "millisecondsAfterAnalysis": 1095,
+      "scrollY": 0,
+      "panel": "panel-1",
+      "fact": "0",
+      "sectionTop": null,
+      "sectionBottom": null
+    },
+    {
+      "millisecondsAfterAnalysis": 3396,
+      "scrollY": 475,
+      "panel": "panel-1",
+      "section": "2",
+      "fact": "0",
+      "sectionTop": 356,
+      "sectionBottom": 574
+    },
+    {
+      "millisecondsAfterAnalysis": 8473,
+      "scrollY": 251,
+      "panel": "panel-1",
+      "section": "0",
+      "fact": "0",
+      "sectionTop": 120,
+      "sectionBottom": 338
+    }
+  ],
+  "maximumReceivedAudioRms": 0.15050919184495498,
+  "acknowledgedCommentaryBeats": 8,
+  "spokenExcerpt": "Checking the service queue. The synthetic evidence shows that the automation scenario, assuming a 15% productivity gain, clears an independent, hypothetical queue in month 5 for 240,000 first-year. Two added agents clear it in month 3 for 163,200. Those model results are conditional, not predictions for the real queue, which grew 23.1% in July to September. The faster, lower cost option is staffing. I'd suggest piloting two agents for 12 weeks against a similar queue, then scale only if backlog, SLAs, and satisfaction move the right way. What time frame feels right for you?",
+  "populationLanguageChecks": {
+    "independentHypotheticalLanguage": true,
+    "modelPopulation420": false,
+    "observedPopulation320": false,
+    "conditionalLanguage": true
+  },
+  "http": [
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/live/session",
+      "status": 201
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    }
+  ],
+  "browserErrors": [],
+  "providerProtocolErrors": [],
+  "final": {
+    "active": false,
+    "state": "Conversation ended (close_requested). Final voice duration received.",
+    "usage": "Voice duration: 82.0 s · final",
+    "peersClosed": true,
+    "microphoneTracksEnded": true
+  },
+  "limits": [
+    "This is one actual-provider sample, not a latency guarantee or statistically controlled comparison.",
+    "Generated speech was injected into a real WebRTC microphone stream; physical microphone and speaker hardware were not tested.",
+    "Output transcripts remain internal to guide evidence focus; there is no visible assistant speech transcript in the interface.",
+    "Topic highlights estimate the current subject; injection acknowledgements do not prove exact audio playback or word-level synchronization."
+  ],
+  "screenshot": "live-1920.png"
+}

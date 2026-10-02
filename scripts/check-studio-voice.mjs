@@ -137,13 +137,16 @@ try {
  await active.page.waitForFunction(() => window.__voiceHarness.commentary().length === 2);
  const speakingBeforeTranscript = await active.page.evaluate(() => window.__voiceHarness.events.some(event => event.type === 'wi-voice-state' && event.detail.phase === 'speaking'));
  assert.equal(speakingBeforeTranscript, false, 'An acknowledgement must not be labeled audible playback');
- await active.page.evaluate(() => window.__voiceHarness.emit({ type: 'session.output_transcript.delta', delta: 'The first-year retention evidence', start_ms: 1100, end_ms: 1700 }));
+ await active.page.evaluate(() => window.__voiceHarness.emit({ type: 'session.output_transcript.delta', delta: 'The first-year retention evidence VOICE_ONLY_PROBE_NO_CAPTIONS', start_ms: 1100, end_ms: 1700 }));
  await active.page.waitForFunction(() => window.__voiceHarness.events.some(event => event.type === 'wi-voice-state' && event.detail.phase === 'speaking'));
  assert.equal(await active.page.evaluate(() => window.__voiceHarness.events.find(event => event.type === 'wi-voice-answer').detail.beatCount), 3);
  assert.equal(await active.page.evaluate(() => window.__voiceHarness.events.filter(event => event.type === 'wi-voice-transcript' && event.detail.role === 'user').at(-1).detail.utteranceText), 'What is first-year retention?');
  assert.equal(await active.page.evaluate(() => window.WI_STUDIO.active), true);
  assert.match(await active.page.locator('#st-stage h1').innerText(), /First-year exit rate/i);
  assert.equal(await active.page.locator('.st-fact[aria-current="true"]').count(), 1);
+ assert.equal(await active.page.locator('#st-caption,.an-caption,.vg-caption,#wl-ai-caption').count(), 0);
+ assert.equal(await active.page.evaluate(() => document.body.innerText.includes('VOICE_ONLY_PROBE_NO_CAPTIONS')), false, 'assistant speech must not appear in visible captions');
+ assert.equal(await active.page.evaluate(() => window.__voiceHarness.events.some(event => event.type === 'wi-voice-transcript' && event.detail.role === 'assistant' && event.detail.text.includes('VOICE_ONLY_PROBE_NO_CAPTIONS'))), true, 'internal assistant transcript events still support evidence focus');
  await active.page.locator('#wi-live').screenshot({ path: output + '/verified-narration.png' });
  record('Studio accepts the real visual answer and highlights its evidence; narration advances only after its matching injection acknowledgement');
 

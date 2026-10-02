@@ -1,11 +1,11 @@
 {
-  "checkedAt": "2026-10-02T15:44:34.044Z",
+  "checkedAt": "2026-10-02T17:52:02.783Z",
   "checks": [
     "Board perspective reaches request; actual recorded Astra response renders findings and calculated panels",
     "Evidence panel selection updates follow-up context and visible chart",
     "Claim citation navigates to its calculated evidence panel",
     "Downloaded brief maps every cited reference to its scope, revision and metric definitions",
-    "Narration transcript cues highlight a finding and its panel, then clear",
+    "Internal narration cues highlight written evidence without displaying spoken captions, then clear",
     "Panel investigation persists across reload with server-calculated lineage",
     "Saved breakdowns preserve Engineering and Sales segment observations instead of only the aggregate",
     "Direct assumption recalculation excludes the attached image while keeping it available for analysis",

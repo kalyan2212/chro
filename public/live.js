@@ -41,7 +41,7 @@
   <audio id="wl-audio" controls aria-label="Live AI voice playback"></audio>
   <p class="wl-note">AI-generated voice · all workforce figures are synthetic. Spoken wording and speech recognition can be imperfect; the evidence card contains the calculated result. Microphone audio streams while active. Mute keeps the paid session open; Stop ends it. Sessions stop after 15 minutes.</p>
   <details id="wl-help" class="wl-help"><summary>Connection help <span id="wl-version"></span></summary><p>The browser media test checks recording on this computer. This separate check asks the server to reach the OpenAI model-metadata endpoint; it does not start a voice session or generate audio.</p><div class="wl-controls"><button type="button" id="wl-check">Check API connection</button><button type="button" id="wl-report">Download connection report</button></div><p id="wl-diagnostic-state" role="status" aria-live="polite">The report contains error categories and runtime metadata. It excludes API keys, audio, transcripts and workforce records.</p></details>
-  <details class="wl-transcripts"><summary>Live transcript — approximate, may contain errors</summary><div class="wl-caption-grid"><div><h3>You</h3><p id="wl-user-caption">Your speech will appear here.</p></div><div><h3>AI voice</h3><p id="wl-ai-caption">Spoken captions will appear here.</p></div></div></details>
+  <details class="wl-transcripts"><summary>Your voice input — approximate, may contain errors</summary><div class="wl-caption-grid wl-input-only"><div><h3>You</h3><p id="wl-user-caption">Your speech will appear here.</p></div></div></details>
   <p id="wl-result" class="wl-result" aria-live="polite">Ask about a metric or a scenario. Validated answers also update the visual briefing.</p>
  </section>`;
  const $ = selector => host.querySelector(selector);
@@ -320,7 +320,6 @@
    else { window.WI_VOICE_GUIDE?.speak(event.delta); phase(run, 'speaking'); }
    notify('wi-voice-transcript', { text: event.delta, role: event.type === 'session.input_transcript.delta' ? 'user' : 'assistant', turnId: run.turnId || null, ...(event.type === 'session.input_transcript.delta' ? { utteranceText: run.transcript.text('user', run.answeredOffset).slice(-2000), inputRevision: run.inputRevision } : {}) });
    $('#wl-user-caption').textContent = run.transcript.text('user').slice(-10000) || 'Waiting for speech…';
-   $('#wl-ai-caption').textContent = run.transcript.text('assistant').slice(-10000) || 'Waiting for AI speech…';
   } else if (event.type === 'session.commentary.appended') { acceptBeat(run, event); }
   else if (event.type === 'session.delegation.created') { void delegated(run, event); }
  }
@@ -341,7 +340,7 @@
   const run = { serial: ++serial, stage:'workspace.authentication', sessionRequested:false, pc: null, stream: null, channel: null, ready: false, muted: false, sessionId: null, pending: null, startControl: new AbortController(), seconds: null, transcript: timeline(), inputRevision: 0, delegationOrder: 0, answeredOffset: -1, seenDelegations: new Set(), turnId: null, beats: null, recoveryNeeded: false, recoveryAttempts: 0, recoveryTimer: null, delegationTimer: null };
   lastClientFailure = null;
   active = run; controls(); state('Checking workspace sign-in…'); phase(run, 'connecting'); $('#wl-signin').hidden = true; $('#wl-result').textContent = 'Waiting for your question.';
-  $('#wl-user-caption').textContent = 'Your speech will appear here.'; $('#wl-ai-caption').textContent = 'Spoken captions will appear here.'; reportUsage(run);
+  $('#wl-user-caption').textContent = 'Your speech will appear here.'; reportUsage(run);
   run.startTimer = setTimeout(() => failed(run, 'Conversation startup timed out.'),45000);
   try {
    const authenticated = await fetch('/api/status', { signal: run.startControl.signal, cache: 'no-store' });

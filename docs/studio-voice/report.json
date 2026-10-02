@@ -1,6 +1,6 @@
 {
-  "at": "2026-10-01T19:13:38.297Z",
-  "browser": "154.0.8037.58",
+  "at": "2026-10-02T17:49:04.198Z",
+  "browser": "154.0.8037.95",
   "checks": [
     "Microphone denial releases voice state, creates no session, and permits retry",
     "Expired authentication is detected before microphone capture or voice-session allocation",
