@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-02T15:07:58.516Z",
+  "checkedAt": "2026-10-02T15:44:34.044Z",
   "checks": [
     "Board perspective reaches request; actual recorded Astra response renders findings and calculated panels",
     "Evidence panel selection updates follow-up context and visible chart",
@@ -8,6 +8,7 @@
     "Narration transcript cues highlight a finding and its panel, then clear",
     "Panel investigation persists across reload with server-calculated lineage",
     "Saved breakdowns preserve Engineering and Sales segment observations instead of only the aggregate",
+    "Direct assumption recalculation excludes the attached image while keeping it available for analysis",
     "User-selected chart is normalized, previewed and sent only while attached",
     "Changing perspective cancels an in-flight typed answer and retains the previous scene",
     "Adding or removing an attachment cancels stale typed analysis",
