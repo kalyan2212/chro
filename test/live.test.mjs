@@ -66,6 +66,24 @@ test('rejects unknown sessions, arbitrary paths and invalid delegation IDs',asyn
  await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'item_1?redirect=x',...request}),{status:400});
  assert.equal(calls.length,1);
 });
+
+test('application-owned recovery preserves its internal correlation while emitting only null provider delegation IDs',async t=>{
+ const {live}=service();t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ for(const recovery of ['true',1,null,{}])await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'recovery_invalid',recovery,...request}),{status:400});
+ await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'item_not_recovery',recovery:true,...request}),{status:400});
+ const result=await live.delegate({sessionId:'live_1',delegationId:'recovery_valid',recovery:true,...request});
+ assert.equal(result.recovery,true);assert.equal(result.delegationId,'recovery_valid');assert.ok(result.events.every(event=>event.delegation_id===null));
+ assert.ok(Object.isFrozen(result));assert.ok(result.response.facts.length);
+ await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'recovery_valid',recovery:true,...request}),{status:409});
+});
+
+test('backend permits only two unsuccessful automatic recoveries until a fresh delegated turn',async t=>{
+ let calls=0;const {live}=service({ask:async()=>{calls++;throw Error('Controlled evidence failure');}});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ for(let i=1;i<=2;i++)await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'recovery_'+i,recovery:true,...request}),/Controlled evidence failure/);
+ await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'recovery_3',recovery:true,...request}),{status:429});assert.equal(calls,2);
+ await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'item_new_turn',...request}),/Controlled evidence failure/);
+ await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'recovery_new_turn',recovery:true,...request}),/Controlled evidence failure/);assert.equal(calls,4);
+});
 test('spoken backend content preserves whole decimal facts and never slices a long fact',async t => {
  let words='The rate is 12.3% with a 0.5 percentage-point scenario change.';
  const {live}=service({ask:async body=>({...await governed(body),answer:words})});t.after(()=>live.shutdown());await live.create({sdp:SDP});
@@ -209,7 +227,7 @@ test('startup cancelled after response closes the orphan session',async () => {
 });
 
 const source=readFileSync(new URL('../public/live.js',import.meta.url),'utf8');
-function browser({permissionPending=false,playBlocked=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null,multiBeat=false,statusCode=200,attachedImage=null,selectedAudience='chro'}={}) {
+function browser({permissionPending=false,playBlocked=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null,multiBeat=false,statusCode=200,attachedImage=null,selectedAudience='chro',delegateStatus=200}={}) {
  class Element {
   constructor(){this.listeners=new Map();this.attrs={};this.textContent='';this.disabled=false;this.classList={toggle(){}};this.srcObject=null;this.paused=true;}
   addEventListener(type,fn){this.listeners.set(type,fn);} fire(type,value={}){return this.listeners.get(type)?.(value);} setAttribute(k,v){this.attrs[k]=v;} focus(){this.focused=true;}
@@ -236,8 +254,9 @@ function browser({permissionPending=false,playBlocked=false,delegatePending=fals
   if(url==='/api/live/session')return {ok:true,json:async()=>({session:{id:'live_browser'},transport:{type:'webrtc',sdp:SDP},maxSessionMs:900000})};
   if(url==='/api/live/close')return {ok:true};
   if(url==='/api/live/delegate'){
+   if(delegateStatus!==200)return {ok:false,status:delegateStatus,json:async()=>({error:'Controlled evidence error'})};
    const body=JSON.parse(init.body); const data=await governed(validateRequest(body));
-   const value={sessionId:body.sessionId,delegationId:body.delegationId,response:data,event:{type:'session.commentary.append',event_id:'result_mock',delegation_id:body.delegationId,content:data.answer}};
+   const value={sessionId:body.sessionId,delegationId:body.delegationId,...(body.recovery?{recovery:true}:{}),response:data,event:{type:'session.commentary.append',event_id:'result_mock',delegation_id:body.recovery?null:body.delegationId,content:data.answer}};
    if(multiBeat){value.event.content='Synthetic data. The validated result is ready.';value.events=[value.event,{...value.event,event_id:'result_mock_2',content:'First-year exits use a mature cohort denominator.'},{...value.event,event_id:'result_mock_3',content:'This is an association, not a causal conclusion.'}];value.narration={beats:value.events.map((_,index)=>({index,panelId:'cohort',title:'Cohort evidence',kind:'finding'}))};}
    if(delegatePending)await delegation.promise; return {ok:true,json:async()=>value};
   }
@@ -373,6 +392,69 @@ test('an interruption during the transcript drain never launches an outdated loo
  h.event({type:'session.input_transcript.delta',delta:'actually headcount',start_ms:400,end_ms:600});await h.fireTimers(300);
  assert.equal(h.requests.some(request=>request.url==='/api/live/delegate'),false);assert.equal(h.shown.length,0);
  h.event({type:'session.closed',usage:{seconds:4}});
+});
+
+test('continued speech after an early delegation recovers the complete question without provider re-delegation',async()=>{
+ for(const beforeRequest of [true,false]){
+  const h=browser({delegatePending:!beforeRequest,multiBeat:true});await h.start();
+  h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_early',target:'client'}});
+  const original=beforeRequest?null:h.fireTimers(300);await tick();
+  h.event({type:'session.input_transcript.delta',delta:' Explain the cohort too.',start_ms:400,end_ms:700});
+  if(!beforeRequest){h.resolveDelegate();await original;}
+  await h.fireTimers(900);await tick();
+  const requests=h.requests.filter(request=>request.url==='/api/live/delegate'),body=JSON.parse(requests.at(-1).init.body);
+  assert.equal(body.recovery,true);assert.match(body.delegationId,/^recovery_/);assert.equal(body.question,'What is retention? Explain the cohort too.');assert.equal(h.shown.length,1);
+  const first=h.peers[0].channel.sent.find(event=>event.type==='session.commentary.append');assert.equal(first.delegation_id,null);
+  h.event({type:'session.delegation.created',offset_ms:650,delegation:{id:'item_late',target:'client'}});
+  h.event({type:'session.commentary.appended',client_event_id:'result_mock'});assert.equal(h.peers[0].channel.sent.filter(event=>event.type==='session.commentary.append').length,2);
+  h.event({type:'session.closed',usage:{seconds:4}});assert.equal(h.timers.size,0);
+ }
+});
+
+test('new provider delegation cancels pending application recovery and only its current answer can render',async()=>{
+ const h=browser({delegatePending:true});await h.start();
+ h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_early',target:'client'}});
+ h.event({type:'session.input_transcript.delta',delta:' Explain the cohort.',start_ms:400,end_ms:700});await h.fireTimers(900);
+ const recovery=h.requests.find(request=>request.url==='/api/live/delegate');assert.equal(JSON.parse(recovery.init.body).recovery,true);
+ h.event({type:'session.delegation.created',offset_ms:800,delegation:{id:'item_new',target:'client'}});const work=h.fireTimers(300);await tick();
+ assert.equal(recovery.init.signal.aborted,true);h.resolveDelegate();await work;assert.equal(h.shown.length,1);
+ assert.equal(h.peers[0].channel.sent.filter(event=>event.type==='session.commentary.append').at(-1).delegation_id,'item_new');
+ h.event({type:'session.closed',usage:{seconds:4}});
+});
+
+test('forced context changes discard unanswered speech and stop pending recovery; Stop also clears recovery',async()=>{
+ for(const action of ['context','stop']){
+  const h=browser();await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_old',target:'client'}});
+  h.event({type:'session.input_transcript.delta',delta:' Explain the cohort.',start_ms:400,end_ms:700});
+  if(action==='context')h.window.dispatchEvent({type:'wi-context-changed'});else h.node('#wl-stop').fire('click');
+  await h.fireTimers(900);h.event({type:'session.delegation.created',offset_ms:600,delegation:{id:'item_late',target:'client'}});await h.fireTimers(300);
+  assert.equal(h.requests.some(request=>request.url==='/api/live/delegate'),false,action);
+  h.event({type:'session.closed',usage:{seconds:4}});assert.equal(h.timers.size,0);
+ }
+});
+
+test('two interrupted recovery attempts end in a visible listening-state error with a working Stop',async()=>{
+ const h=browser({delegatePending:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_early',target:'client'}});
+ for(let i=0;i<3;i++){h.event({type:'session.input_transcript.delta',delta:' More context.',start_ms:400+i*400,end_ms:600+i*400});await h.fireTimers(900);}
+ assert.equal(h.requests.filter(request=>request.url==='/api/live/delegate').length,2);assert.match(h.node('#wl-result').textContent,/two recovery attempts/);
+ const status=h.emitted.filter(event=>event.type==='wi-voice-state').at(-1);assert.equal(status.detail.phase,'listening');assert.equal(status.detail.reason,'recovery-exhausted');assert.equal(h.node('#wl-stop').disabled,false);
+ h.resolveDelegate();await tick();assert.equal(h.shown.length,0);h.node('#wl-stop').fire('click');h.event({type:'session.closed',usage:{seconds:4}});assert.equal(h.timers.size,0);
+});
+
+test('recoverable evidence errors retain listening controls while rejected close releases all media',async()=>{
+ const h=browser({delegateStatus:502});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_error',target:'client'}});await h.fireTimers(300);
+ assert.equal(h.emitted.filter(event=>event.type==='wi-voice-state').at(-1).detail.phase,'listening');assert.match(h.node('#wl-result').textContent,/Controlled evidence error/);assert.equal(h.node('#wl-stop').disabled,false);
+ h.node('#wl-stop').fire('click');h.event({type:'error',error:{type:'invalid_request_error',code:'invalid_event'}});assert.equal(h.window.WI_LIVE.isActive(),false);assert.equal(h.streams[0].getTracks()[0].readyState,'ended');assert.match(h.node('#wl-state').textContent,/did not acknowledge the close command/);assert.equal(h.timers.size,0);
+});
+
+test('null commentary requires an explicit requested recovery and its own HTTP correlation',()=>{
+ const h=browser(),event={type:'session.commentary.append',event_id:'result_recovery',delegation_id:null,content:'Verified result.'};
+ const result={sessionId:'session_one',delegationId:'recovery_one',recovery:true,response:{answer:'Verified'},event,events:[event]};
+ assert.equal(h.window.WI_LIVE_PROTOCOL.matches(result,'session_one','recovery_one',true),true);
+ assert.equal(h.window.WI_LIVE_PROTOCOL.matches(result,'session_one','recovery_one'),false);
+ assert.equal(h.window.WI_LIVE_PROTOCOL.matches({...result,recovery:'true'},'session_one','recovery_one',true),false);
+ assert.equal(h.window.WI_LIVE_PROTOCOL.matches(result,'session_one','recovery_other',true),false);
+ assert.equal(h.window.WI_LIVE_PROTOCOL.matches({...result,event:{...event,delegation_id:'recovery_one'}},'session_one','recovery_one',true),false);
 });
 test('interruption during asynchronous visual refresh prevents stale view mutation',async()=>{
  const h=browser({renderPending:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_render',target:'client'}});

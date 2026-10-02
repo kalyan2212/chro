@@ -191,7 +191,7 @@ export function createLiveService({ apiKey = '', fetchImpl = globalThis.fetch, a
       if (!response.ok) throw await apiResponseError(response, stage);
       const data = await readJSON(response); id = data?.session?.id;
       if (!validId(id) || sessions.has(id) || closed.has(id)) throw fail(502, 'Invalid or duplicate Live session identity');
-      const session = { seed: snapshot(seed), pending: null, sequence: 0, delegations: new Set(), closing: false, timer: null };
+      const session = { seed: snapshot(seed), pending: null, sequence: 0, delegations: new Set(), recoveries: 0, closing: false, timer: null };
       sessions.set(id, session);
       session.timer = setTimeout(() => { close(id).catch(() => {}); }, maxSessionMs); session.timer.unref?.();
       if (data?.transport?.type !== 'webrtc' || !validSDP(data?.transport?.sdp)) { await close(id); throw fail(502, 'Invalid Live SDP answer'); }
@@ -204,9 +204,13 @@ export function createLiveService({ apiKey = '', fetchImpl = globalThis.fetch, a
   async function delegate(body = {}, signal) {
     const { sessionId, delegationId } = body;
     const session = current(sessionId);
+    if (body.recovery !== undefined && typeof body.recovery !== 'boolean') throw fail(400, 'Recovery must be a boolean');
+    const recovery = body.recovery === true;
     if (!validId(delegationId)) throw fail(400, 'Invalid delegation ID');
+    if (recovery && !delegationId.startsWith('recovery_')) throw fail(400, 'Invalid recovery correlation ID');
     if (session.delegations.has(delegationId)) throw fail(409, 'Delegation already received');
     if (session.delegations.size >= 200) throw fail(429, 'Session delegation limit reached. Start a new conversation.');
+    if (recovery && session.recoveries >= 2) throw fail(429, 'Automatic voice recovery reached its limit. Ask again or type your question.');
     if (typeof ask !== 'function') throw fail(503, 'The governed question service is unavailable');
     const request = requestOf({ question: body.question, scope: body.scope ?? session.seed.scope, context: body.context ?? session.seed.context, history: body.history ?? session.seed.history });
     // Image contents are validated by the same application ask boundary as typed
@@ -215,6 +219,7 @@ export function createLiveService({ apiKey = '', fetchImpl = globalThis.fetch, a
     if (typeof body.sourceVersion === 'string') request.sourceVersion=body.sourceVersion;
     if (body.audience != null) request.audience=body.audience;
     session.delegations.add(delegationId); session.pending?.abort();
+    session.recoveries = recovery ? session.recoveries + 1 : 0;
     const control = new AbortController(); session.pending = control;
     const sequence = ++session.sequence;
     const combined = AbortSignal.any([control.signal, AbortSignal.timeout(delegationTimeoutMs), ...(signal ? [signal] : [])]);
@@ -225,8 +230,11 @@ export function createLiveService({ apiKey = '', fetchImpl = globalThis.fetch, a
       if (!response || typeof response.answer !== 'string' || !Array.isArray(response.facts) || !response.action || typeof response.title !== 'string') throw fail(502, 'Question service returned an invalid evidence response');
       const data = snapshot(response);
       const plan=analysisSpeech(data);
-      const events = plan.map(({content}) => ({ type: 'session.commentary.append', event_id: `result_${randomUUID()}`, delegation_id: delegationId, content }));
-      const result = snapshot({ sessionId, delegationId, response: data, event: events[0], events, narration: { mode: 'verified-beats', count: events.length, synchronization: 'transcript-estimate', beats:plan.map(({content,...cue},index)=>({index,...cue})) } });
+      // Application-owned transcript work has an internal correlation ID, not a
+      // provider delegation. Official Live append events use null in this case.
+      const events = plan.map(({content}) => ({ type: 'session.commentary.append', event_id: `result_${randomUUID()}`, delegation_id: recovery ? null : delegationId, content }));
+      const result = snapshot({ sessionId, delegationId, ...(recovery ? { recovery: true } : {}), response: data, event: events[0], events, narration: { mode: 'verified-beats', count: events.length, synchronization: 'transcript-estimate', beats:plan.map(({content,...cue},index)=>({index,...cue})) } });
+      session.recoveries = 0;
       emit('live.delegation.completed', { sessionId, delegationId });
       return result;
     } finally { if (session.pending === control) session.pending = null; }

@@ -21,8 +21,9 @@
   };
  }
  const bytes = value => new TextEncoder().encode(value).length;
- function matches(result, sessionId, delegationId) {
-  const valid = event => event?.type === 'session.commentary.append' && event.delegation_id === delegationId && typeof event.content === 'string' && event.content.length > 0 && event.content.length < 2000 && validId(event.event_id);
+ function matches(result, sessionId, delegationId, recovery = false) {
+  if ((result?.recovery === true) !== recovery) return false;
+  const valid = event => event?.type === 'session.commentary.append' && event.delegation_id === (recovery ? null : delegationId) && typeof event.content === 'string' && event.content.length > 0 && event.content.length < 2000 && validId(event.event_id);
   if (result?.sessionId !== sessionId || result?.delegationId !== delegationId || !valid(result?.event) || !result.response || typeof result.response.answer !== 'string') return false;
   if (result.events == null) return true; // A previously deployed server may return only event.
   return Array.isArray(result.events) && result.events.length > 0 && result.events.length <= 8 && result.events.every(event => valid(event) && bytes(event.content) <= 450) && new Set(result.events.map(event => event.event_id)).size === result.events.length && result.events[0].event_id === result.event.event_id && result.events[0].content === result.event.content;
@@ -68,6 +69,7 @@
   notify('wi-voice-state', { phase: value, turnId: run?.turnId || null, ...detail });
  }
  function clearBeats(run) { clearTimeout(run.beatTimer); run.beatTimer = null; run.beats = null; }
+ function clearRecovery(run) { clearTimeout(run.recoveryTimer); run.recoveryTimer = null; run.recoveryNeeded = false; }
  function sendBeat(run) {
   const queue = run.beats;
   if (!queue || !current(run) || closing || queue.revision !== run.inputRevision || queue.scope !== JSON.stringify(scope())) { clearBeats(run); return; }
@@ -115,6 +117,7 @@
  function release(run) {
   window.WI_VOICE_GUIDE?.stop();
   clearBeats(run);
+  clearRecovery(run);
   clearTimeout(run.startTimer); clearTimeout(run.closeTimer); clearTimeout(run.maxTimer); clearTimeout(run.disconnectTimer); clearTimeout(run.delegationTimer);
   run.pending?.abort(); run.startControl?.abort(); run.stream?.getTracks().forEach(track => track.stop());
   if (run.channel) { run.channel.onmessage = run.channel.onclose = run.channel.onerror = null; try { run.channel.close(); } catch {} }
@@ -173,7 +176,7 @@
   window.WI_VOICE_GUIDE?.stop();
   const run = active; if (!run || closing) return;
   clearBeats(run); phase(run, 'stopped');
-  closing = true; run.pending?.abort(); clearTimeout(run.delegationTimer);
+  closing = true; run.pending?.abort(); clearTimeout(run.delegationTimer); run.delegationTimer = null; clearRecovery(run);
   $('#wl-audio').pause();
   run.stream?.getTracks().forEach(track => { track.enabled = false; }); run.muted = true; micStatus(run); controls();
   if (run.ready && run.channel?.readyState === 'open') {
@@ -184,8 +187,29 @@
  function cancelPending(run) {
   if (!run.pending) return;
   run.pending.abort(); run.pending = null;
-  $('#wl-result').textContent = 'New speech received. The earlier result will not replace the current view.';
-  command(run, 'session.thinking.append', { delegation_id: null, content: 'New user speech arrived while a lookup was running. The application cancelled the previous result. Delegate the latest complete question again when ready.' });
+  run.recoveryNeeded = true;
+  $('#wl-result').textContent = 'Listening to your continued question. The earlier result will not replace the current view.';
+  command(run, 'session.thinking.append', { delegation_id: null, content: 'The user continued speaking. The application will discard the earlier result and investigate the complete updated question after speech settles. No new result is verified yet.' });
+ }
+ function scheduleRecovery(run) {
+  clearTimeout(run.recoveryTimer);
+  if (!run.recoveryNeeded || !current(run) || closing) return;
+  const revision = run.inputRevision, order = run.delegationOrder;
+  run.recoveryTimer = setTimeout(() => {
+   run.recoveryTimer = null;
+   if (!current(run) || closing || !run.recoveryNeeded || revision !== run.inputRevision || order !== run.delegationOrder) return;
+   if (run.recoveryAttempts >= 2) {
+    run.recoveryNeeded = false;
+    $('#wl-result').textContent = 'Voice could not settle this request after two recovery attempts. Please repeat the complete question or type it below.';
+    phase(run, 'listening', { reason: 'recovery-exhausted', message: $('#wl-result').textContent });
+    command(run, 'session.instructions.append', { delegation_id: null, content: 'The application stopped automatic recovery after repeated changes. No result is verified. Ask the caller to repeat the complete question or type it; do not keep saying that you are checking.' });
+    return;
+   }
+   const through = run.transcript.entries().filter(entry => entry.role === 'user' && entry.end > run.answeredOffset).reduce((end, entry) => Math.max(end, entry.end), -1);
+   if (through < 0) { run.recoveryNeeded = false; return; }
+   run.recoveryAttempts++;
+   void delegated(run, { offset_ms: through, delegation: { id: `recovery_${crypto.randomUUID()}`, target: 'client' } }, true);
+  }, 900);
  }
  function syncContext(event) {
   const run = active; if (!run?.ready || closing) return;
@@ -197,50 +221,58 @@
   if (key === run.contextKey && !forced) return;
   const changed = !!run.contextKey || forced; run.contextKey = key;
   if (changed) {
-   run.pending?.abort(); run.pending = null; ++run.delegationOrder; clearTimeout(run.delegationTimer); clearBeats(run); window.WI_VOICE_GUIDE?.stop();
+   run.pending?.abort(); run.pending = null; ++run.delegationOrder; clearTimeout(run.delegationTimer); run.delegationTimer = null; clearRecovery(run); clearBeats(run); window.WI_VOICE_GUIDE?.stop();
+   run.answeredOffset = run.transcript.entries().filter(entry => entry.role === 'user').reduce((end, entry) => Math.max(end, entry.end), run.answeredOffset);
+   run.delegationOffset = null; run.recoveryAttempts = 0;
    command(run, 'session.instructions.append', { delegation_id: null, content: 'The user changed the question or dashboard selection. Stop the previous explanation and use the latest selection for the next question. Earlier pending results have been discarded.' });
    phase(run, 'listening', { reason: 'context-changed' });
   }
   const content = 'Current synthetic dashboard selection: ' + key + '. Use this to understand references; delegate all requested facts and calculations.';
   if (bytes(content) <= 450) command(run, 'session.thinking.append', { delegation_id: null, content });
  }
- async function delegated(run, event) {
+ async function delegated(run, event, recovery = false) {
   const delegationId = event.delegation?.id;
   if (!current(run) || closing || !validId(delegationId) || event.delegation?.target !== 'client' || run.seenDelegations.has(delegationId)) return;
   if (!Number.isFinite(event.offset_ms) || event.offset_ms < 0) return;
-  run.seenDelegations.add(delegationId); run.pending?.abort(); clearTimeout(run.delegationTimer); clearBeats(run); run.delegationOffset = event.offset_ms;
+  if (event.offset_ms <= run.answeredOffset) return;
+  run.seenDelegations.add(delegationId); run.pending?.abort(); clearTimeout(run.delegationTimer); run.delegationTimer = null; clearRecovery(run); clearBeats(run); run.delegationOffset = event.offset_ms;
+  if (!recovery) run.recoveryAttempts = 0;
   run.turnId = delegationId; phase(run, 'thinking');
   const order = ++run.delegationOrder;
   // Metadata carries no utterance. A short drain lets already-in-flight transcript
   // fragments arrive; it is not a claim that a transcript turn is complete.
-  run.delegationTimer = setTimeout(async () => {
+  const execute = async () => {
+   run.delegationTimer = null;
    if (!current(run) || closing || order !== run.delegationOrder) return;
     const question = run.transcript.text('user', run.answeredOffset, event.offset_ms).trim();
     // A transcript delta can start before the delegation offset and end after
     // it. Its whole text belongs to this question; consume that same span when
     // the result succeeds so the final word cannot leak into the next turn.
     const questionThrough = run.transcript.entries().filter(entry => entry.role === 'user' && entry.end > run.answeredOffset && entry.start <= event.offset_ms).reduce((end, entry) => Math.max(end, entry.end), event.offset_ms);
+   if (!question && run.answeredOffset >= 0) { phase(run, 'listening'); return; }
+   const providerId = recovery ? null : delegationId;
    if (!question || question.length > 2000) {
-    command(run, 'session.commentary.append', { delegation_id: delegationId, content: 'I could not safely assemble that question from the speech transcript. Please ask a short, specific metric or scenario question again.' });
+    command(run, 'session.commentary.append', { delegation_id: providerId, content: 'I could not safely assemble that question from the speech transcript. Please ask a short, specific metric or scenario question again.' });
     $('#wl-result').textContent = 'Transcript was incomplete or too long. Please repeat a short question.'; return;
    }
    const revision = run.inputRevision, ctrl = new AbortController(); run.pending = ctrl;
    const scopeAtStart = JSON.stringify(scope()), contextAtStart = JSON.stringify(context()), imageAtStart=attachedImage(), audienceAtStart=audience();
    $('#wl-result').textContent = 'Investigating your question across the available evidence…';
    phase(run,'thinking',{message:'Investigating your question across the available evidence. You can interrupt to change direction.'});
-   command(run,'session.thinking.append',{delegation_id:delegationId,content:'The backend analyst is investigating the question. No result is verified yet. Briefly acknowledge the lookup if useful, then wait for the verified explanation; do not invent progress or findings.'});
+   command(run,'session.thinking.append',{delegation_id:providerId,content:'The backend analyst is investigating the question. No result is verified yet. Briefly acknowledge the lookup if useful, then wait for the verified explanation; do not invent progress or findings.'});
    try {
-    const res = await fetch('/api/live/delegate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(110000)]), body: JSON.stringify({ sessionId: run.sessionId, delegationId, question, scope: scope(), context: context(), history: history(), audience:audienceAtStart, sourceVersion:window.WI_DATA?.sourceVersion, ...(imageAtStart?{image:imageAtStart}:{}) }) });
+    const res = await fetch('/api/live/delegate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(110000)]), body: JSON.stringify({ sessionId: run.sessionId, delegationId, ...(recovery ? { recovery: true } : {}), question, scope: scope(), context: context(), history: history(), audience:audienceAtStart, sourceVersion:window.WI_DATA?.sourceVersion, ...(imageAtStart?{image:imageAtStart}:{}) }) });
     if (!res.ok) { let error; try { error = (await res.json()).error; } catch {} if (res.status === 401) { run.failureCode = 'HTTP_401'; failed(run, 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.'); return; } throw Error(error || `Evidence lookup failed (${res.status}).`); }
     const value = await res.json();
     if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder || scopeAtStart !== JSON.stringify(scope()) || contextAtStart !== JSON.stringify(context()) || imageAtStart?.dataUrl !== attachedImage()?.dataUrl || audienceAtStart!==audience()) return;
-    if (!matches(value, run.sessionId, delegationId)) throw Error('The evidence response did not match this conversation.');
+    if (!matches(value, run.sessionId, delegationId, recovery)) throw Error('The evidence response did not match this conversation.');
     const result = snapshot(value);
     if (!api()?.showResponse) throw Error('The visual briefing is unavailable.');
     const shown = await api().showResponse(result.response, { origin: 'voice', isCurrent: () => current(run) && !closing && !ctrl.signal.aborted && revision === run.inputRevision && order === run.delegationOrder && scopeAtStart === JSON.stringify(scope()) && imageAtStart?.dataUrl === attachedImage()?.dataUrl && audienceAtStart===audience() });
     if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder) return;
     if (shown === false) throw Error('The data changed during this lookup. Ask again to use the latest evidence.');
      run.answeredOffset = questionThrough;
+    run.recoveryAttempts = 0;
     $('#wl-result').textContent = 'Validated visual briefing: ' + result.response.title + '. Exact figures and scenario assumptions appear in the evidence card.';
     window.WI_VOICE_GUIDE?.prepare(result.response);
     run.contextKey = JSON.stringify({ scope: scope(), metric: context().metricId || null, scenario: context().caseId || null, audience:audience() });
@@ -250,10 +282,11 @@
    } catch (error) {
     if (!current(run) || closing || ctrl.signal.aborted || order !== run.delegationOrder) return;
     $('#wl-result').textContent = error.message || 'Evidence lookup failed. Please try again.';
-    phase(run, 'error', { message: $('#wl-result').textContent });
-    command(run, 'session.commentary.append', { delegation_id: delegationId, content: 'The evidence lookup did not complete. No new result is verified. Please ask again.' });
+    phase(run, 'listening', { reason: 'evidence-error', message: $('#wl-result').textContent });
+    command(run, 'session.commentary.append', { delegation_id: providerId, content: 'The evidence lookup did not complete. No new result is verified. Please ask again.' });
    } finally { if (run.pending === ctrl) run.pending = null; }
-  }, 300);
+  };
+  if (recovery) void execute(); else run.delegationTimer = setTimeout(execute, 300);
  }
  function eventReceived(run, event) {
   if (!current(run)) return;
@@ -272,15 +305,16 @@
    if (Number.isFinite(event.usage?.seconds) && event.usage.seconds >= 0) run.seconds = event.usage.seconds;
    reportUsage(run);
   } else if (event.type === 'error') {
-   run.failureCode = 'LIVE_EVENT_ERROR';
-   failed(run, 'GPT-Live rejected a session command. Check model access and configuration, then start again.');
+   run.failureCode = closing ? 'LIVE_CLOSE_ERROR' : 'LIVE_EVENT_ERROR';
+   failed(run, closing ? 'Voice did not acknowledge the close command.' : 'GPT-Live rejected a session command. Check model access and configuration, then start again.');
   } else if (event.type === 'session.input_transcript.delta' || event.type === 'session.output_transcript.delta') {
    if (!run.transcript.add(event)) return;
    if (event.type === 'session.input_transcript.delta') {
     window.WI_VOICE_GUIDE?.stop(); run.inputRevision++; clearBeats(run); cancelPending(run);
     // A fresh utterance may arrive in the short transcript-drain window, before
     // there is an HTTP request to abort. Do not start that outdated lookup.
-    if (Number.isFinite(run.delegationOffset) && event.start_ms > run.delegationOffset) { clearTimeout(run.delegationTimer); ++run.delegationOrder; }
+    if (Number.isFinite(run.delegationOffset) && event.start_ms > run.delegationOffset) { if (run.delegationTimer != null) run.recoveryNeeded = true; clearTimeout(run.delegationTimer); run.delegationTimer = null; ++run.delegationOrder; }
+    scheduleRecovery(run);
     phase(run, 'listening', { reason: 'input-transcript' });
    }
    else { window.WI_VOICE_GUIDE?.speak(event.delta); phase(run, 'speaking'); }
@@ -304,7 +338,7 @@
   if (active || !available || closing) return;
   if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) { state('Continuous voice needs a WebRTC browser with microphone access on localhost or HTTPS.'); return; }
   window.dispatchEvent(new Event('wi-stop-media')); api()?.cancel?.();
-  const run = { serial: ++serial, stage:'workspace.authentication', sessionRequested:false, pc: null, stream: null, channel: null, ready: false, muted: false, sessionId: null, pending: null, startControl: new AbortController(), seconds: null, transcript: timeline(), inputRevision: 0, delegationOrder: 0, answeredOffset: -1, seenDelegations: new Set(), turnId: null, beats: null };
+  const run = { serial: ++serial, stage:'workspace.authentication', sessionRequested:false, pc: null, stream: null, channel: null, ready: false, muted: false, sessionId: null, pending: null, startControl: new AbortController(), seconds: null, transcript: timeline(), inputRevision: 0, delegationOrder: 0, answeredOffset: -1, seenDelegations: new Set(), turnId: null, beats: null, recoveryNeeded: false, recoveryAttempts: 0, recoveryTimer: null, delegationTimer: null };
   lastClientFailure = null;
   active = run; controls(); state('Checking workspace sign-in…'); phase(run, 'connecting'); $('#wl-signin').hidden = true; $('#wl-result').textContent = 'Waiting for your question.';
   $('#wl-user-caption').textContent = 'Your speech will appear here.'; $('#wl-ai-caption').textContent = 'Spoken captions will appear here.'; reportUsage(run);

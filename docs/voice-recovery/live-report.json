@@ -1,0 +1,90 @@
+{
+  "schema": "chro-live-recovery-proof.v1",
+  "at": "2026-10-02T17:14:00.985Z",
+  "environment": "Isolated local application with actual configured AI provider and real browser WebRTC",
+  "generatedSpeechInput": true,
+  "physicalMicrophoneTested": false,
+  "physicalSpeakerTested": false,
+  "controlledContinuation": {
+    "realEarlyDelegationObserved": true,
+    "earlierLookupInterrupted": true,
+    "recoveryRequestObserved": true,
+    "completeQuestion": "Compare staffing and automation for the HR service queue. Which experiment would you recommend and why",
+    "nullDelegationCommentaryEvents": 8,
+    "matchedInjectionAcknowledgements": 8,
+    "artificialProviderEventsInjected": false
+  },
+  "turns": [
+    {
+      "question": "Compare staffing and automation for the HR service queue. Which experiment would you recommend and why?",
+      "recognizedQuestion": "Compare staffing and automation for the HR service queue. Which experiment would you recommend and why",
+      "backendQuestion": "Compare staffing and automation for the HR service queue. Which experiment would you recommend and why",
+      "backendMatchesRecognized": true,
+      "secondsFromSpeechStartToAnalysis": 44.829,
+      "secondsFromAnalysisToSpeech": 0.765,
+      "maximumReceivedAudioRms": 0.1781241217126852,
+      "matchedInjectionAcknowledgements": 8,
+      "spokenExcerpt": "Of course, I'll check that for you. Mm-hmm. Good question. Checking the evidence now. The observed dashboard and this are different populations. The queue needs attention, and I'd start with a time-limited staffing experiment. In one hypothetical model, two added agents clear it faster and for less first-year funding than assisted resolution. So a 12-week trial with a comparison queue is a sensible suggestion. Why? Because the monitored queue grew and has breaches."
+    },
+    {
+      "question": "How would you distinguish a capacity problem from a routing problem? What would make you change that recommendation?",
+      "recognizedQuestion": "How would you distinguish a capacity problem from a routing problem? What would make you change that recommendation",
+      "backendQuestion": "How would you distinguish a capacity problem from a routing problem? What would make you change that recommendation",
+      "backendMatchesRecognized": true,
+      "secondsFromSpeechStartToAnalysis": 34.172,
+      "secondsFromAnalysisToSpeech": 0.958,
+      "maximumReceivedAudioRms": 0.18153555421510065,
+      "matchedInjectionAcknowledgements": 8,
+      "spokenExcerpt": "I'll check for findings on that. I'd qualify that - first distinguish too little skilled capacity from avoidable assignment delays. The backlog and unassigned cases justify a look, but don't prove which is it. If a routing-only pilot stabilizes the aged backlog without extra hours, I'd favor that. Otherwise, we'd fall back to testing capacity."
+    }
+  ],
+  "populationBoundary": {
+    "differentPopulationsSpoken": true,
+    "hypotheticalModelSpoken": true,
+    "modelOpeningQueue420Spoken": false,
+    "modelOpeningQueue420Visible": true,
+    "numericNarrationExhaustive": false
+  },
+  "http": [
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/live/session",
+      "status": 201
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    }
+  ],
+  "browserErrors": [],
+  "providerProtocolErrors": [],
+  "final": {
+    "active": false,
+    "state": "Conversation ended (close_requested). Final voice duration received.",
+    "usage": "Voice duration: 133.0 s · final",
+    "browserClosed": true,
+    "directFinalTrackStateSampled": false
+  },
+  "limits": [
+    "Generated audio was injected into a real WebRTC microphone stream; physical microphone and speaker hardware were not tested.",
+    "Append acknowledgements establish context injection, not exact playback completion or word-level visual synchronization.",
+    "Voice stated that the dashboard and hypothetical model use different populations, but omitted the model opening count of 420; the visible evidence retains that number.",
+    "The completed session reported final usage and the client became inactive. Track closure is directly covered by separate browser regressions; final track state was not separately sampled in this live report."
+  ],
+  "screenshot": "live-1920.png"
+}

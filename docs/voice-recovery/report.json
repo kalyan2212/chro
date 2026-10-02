@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-02T17:16:35.266Z",
+  "browser": "154.0.8037.95",
+  "checks": [
+    "Interrupted lookup recovers the complete question without provider redelegation; late duplicate delegation preserves accepted narration",
+    "Speech arriving during the transcript drain cancels the partial lookup and recovers one complete question",
+    "A genuine provider redelegation supersedes the recovery timer without duplicate work",
+    "Typed questions, scope changes and image changes discard queued recovery and delayed old delegations",
+    "Navigation aborts an active recovery request and rejects its late result",
+    "Stop and source refresh cancel recovery timers and release microphone tracks after closure",
+    "Repeated continuation stops after two recovery attempts with a visible retry instruction and working Stop",
+    "A failed recovered analysis stays visible in Studio with the voice panel closed and leaves the active session stoppable",
+    "Recovery retains cookie ownership and rejects non-boolean flags and invalid correlation prefixes before analytical work",
+    "No browser JavaScript errors or real provider requests"
+  ],
+  "errors": [],
+  "externalProviderCalls": 0,
+  "physicalMicrophoneTested": false,
+  "actualAudioPlaybackTested": false,
+  "protocol": "Real local HTTP, session ownership, calculation and UI; provider and WebRTC media simulated"
+}
