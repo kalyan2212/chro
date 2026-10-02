@@ -1,4 +1,6 @@
 import http from 'node:http';
+import {analyze} from './analyst.mjs';
+import {validateImage} from './vision.mjs';
 import { contextualPlan, contextualWorkflow, isCompoundRequest, inheritAssumptions, enrichAnswer } from './intelligence.mjs';
 import { createCloudState } from './cloud-state.mjs';
 import { investigationDraft } from './investigations.mjs';
@@ -17,7 +19,7 @@ import { createDiagnostics, assertAPIKey, connectionError, applicationError, api
 
 const VERSION = '2.0.1';
 const FILES = new Map([['/', ['index.html', 'text/html; charset=utf-8']], ['/index.html', ['index.html', 'text/html; charset=utf-8']]]);
-for (const name of ['conversation','live','operations','workspace','investigations','experience','focus','voice-guide','studio','studio-charts']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
+for (const name of ['conversation','live','operations','workspace','investigations','experience','focus','voice-guide','studio','studio-charts','analysis']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
 const AUDIO = new Map([['audio/webm', 'webm'], ['audio/mp4', 'mp4'], ['audio/wav', 'wav'], ['audio/mpeg', 'mp3']]);
 const fail = (status, message) => Object.assign(new Error(message), { status });
 function json(res, status, value) { res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); }
@@ -43,7 +45,7 @@ async function boundedResponse(response, max) {
   for await (const part of response.body) { length += part.length; if (length > max) throw fail(502, 'Upstream response exceeded limits'); parts.push(Buffer.from(part)); }
   return Buffer.concat(parts);
 }
-export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchImpl = globalThis.fetch, timeoutMs = 45000, storageDir,
+export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchImpl = globalThis.fetch, timeoutMs = 120000, storageDir,
   password = '', publicOrigin = '', reviewApiKey = '', reviewModel = '', workday: suppliedWorkday, objectStore } = {}) {
   const mode = apiKey ? 'api' : 'demo';
   if (publicOrigin && !/^https?:\/\/[^/]+$/.test(publicOrigin)) throw Error('PUBLIC_ORIGIN must be an HTTP(S) origin without a path.');
@@ -52,6 +54,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
   const journal = createJournal(storageDir, { objectStore }), workday = suppliedWorkday || createWorkday({ baseline: exportDataset(), storageDir: storageDir || temporaryDir, objectStore });
   const reviewer = createReviewService({ apiKey: reviewApiKey, model: reviewModel, fetchImpl });
   const diagnostics = createDiagnostics({ apiKey, fetchImpl, version: VERSION, timeoutMs: Math.min(timeoutMs,10000) });
+  const progress = new Map();
   const owners = new Map(); let active = 0, shutdownPromise = null;
   const ready = Promise.all([journal.init(), workday.init()]);
   ready.catch(() => {});
@@ -67,8 +70,12 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       return await boundedResponse(response, max);
     } catch (error) { throw connectionError(error, stage, signal); }
   }
-  async function ask(input, signal) {
+  async function ask(input, signal, onProgress=()=>{}) {
     let request; try { request = validateRequest(input); } catch (e) { throw fail(400, e.message); }
+    const image=validateImage(input.image);
+    if(!['board','ceo','chro',undefined].includes(input.audience))throw fail(400,'Choose Board, CEO or CHRO perspective.');
+    request.audience=input.audience||'chro';
+    request.channel=input.channel==='voice'?'voice':'text';
     const snapshot = workday.snapshot();
     if (input.sourceVersion && input.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'The source data changed. Refresh the dataset and ask again.');
     if (request.context?.sourceVersion && request.context.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'Conversation evidence belongs to an earlier source revision. Refresh and ask again.');
@@ -80,9 +87,19 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       return result;
     }
     const routed = nav ? { ...request, question: nav.target } : request;
+    if(mode==='api' && input.operation!=='calculate') {
+      const result=await analyze({request:routed,snapshot,investigations:journal.investigations(),decisions:journal.decisions(),image,signal,onProgress,upstream:async(payload,analysisSignal)=>JSON.parse(await upstream('responses',JSON.stringify(payload),'application/json',analysisSignal,1500000))});
+      if(signal?.aborted)throw fail(499,'Question cancelled');
+      if(workday.snapshot().sourceVersion!==snapshot.sourceVersion)throw fail(409,'Source data changed during analysis. Ask again using the refreshed data.');
+      await journal.log('question.answered',{mode,action:result.action.type,sourceVersion:snapshot.sourceVersion,analysis:true});
+      return result;
+    }
+    if(image)throw fail(503,'Image interpretation needs the configured Astra service.');
+    if(input.operation==='calculate' && (!request.context?.caseId || !request.context.overrides))throw fail(400,'Recalculation requires a scenario and explicit assumptions.');
     const workflow = contextualWorkflow(routed);
     let plan = workflow?.at(-1)?.plan || (isCompoundRequest(routed)?{intent:'clarify',metricId:null,caseId:null,overrides:{}}:contextualPlan(routed));
-    if (plan) { /* A validated analytical action needs no model routing. */ }
+    if(input.operation==='calculate')plan={intent:'scenario',metricId:null,caseId:request.context.caseId,overrides:request.context.overrides};
+    if (plan) { /* Deterministic preview or explicit calculation. */ }
     else if (mode === 'demo' || retentionExample(routed.question)) plan = demoPlan(routed);
     else {
       const payload = { model: 'gpt-6-astra', reasoning: { effort: 'low' }, store: false, instructions: routingInstructions,
@@ -130,7 +147,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       const entryNavigation = req.method === 'GET' && ['/', '/index.html'].includes(path) && req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document';
       if (req.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(req.headers['sec-fetch-site']) && !entryNavigation) throw fail(403, 'Cross-site requests are not allowed');
       if (!path || path.includes('%') || path.includes('\\') || path.includes('..')) throw fail(404, 'Not found');
-      if (FILES.has(path) || /^\/api\/(?:login|logout|status|ask|transcribe|speech|audit|decisions|investigations|review|live\/(?:session|delegate|close)|diagnostics(?:\/connection)?|workday\/(?:sync|status|report)|data\/snapshot|studio\/bootstrap)$/.test(path)) requestPath = FILES.has(path) ? 'static.asset' : path;
+      if (FILES.has(path) || /^\/api\/(?:login|logout|status|ask|transcribe|speech|audit|decisions|investigations|review|live\/(?:session|delegate|close)|diagnostics(?:\/connection)?|workday\/(?:sync|status|report)|data\/snapshot|studio\/bootstrap|analysis\/progress)$/.test(path)) requestPath = FILES.has(path) ? 'static.asset' : path;
       if (path === '/health' && req.method === 'GET') { await ready; return json(res, 200, { ok: true, synthetic: true, version: VERSION }); }
       if (path === '/api/login' && req.method === 'POST') {
         const value = await readJSON(req, 3000);
@@ -145,7 +162,9 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       // failed. This read does not call OpenAI or include saved records.
       if (req.method === 'GET' && path === '/api/diagnostics') return json(res, 200, diagnostics.report());
       await ready;
-      if(objectStore && (path.startsWith('/api/') || path==='/' || path==='/index.html'))await Promise.all([journal.refresh(),workday.refresh?.()]);
+      // Progress is process-local metadata. Polling it must not reload two cloud objects.
+      const progressPoll = req.method === 'GET' && path === '/api/analysis/progress';
+      if(objectStore && !progressPoll && (path.startsWith('/api/') || path==='/' || path==='/index.html'))await Promise.all([journal.refresh(),workday.refresh?.()]);
       if (req.method === 'POST' && path === '/api/logout') {
         for (const [id, owner] of owners) if (owner === identity) { await live.close(id).catch(() => {}); owners.delete(id); }
         auth.logout(req, res); return json(res, 200, { authenticated: false });
@@ -155,6 +174,11 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
         workday: workday.status(), authentication: auth.enabled ? 'password' : 'local-demo', persistence: objectStore ? 'cloud-storage' : storageDir ? 'disk' : 'memory',
         disclosure: mode === 'api' ? 'Server key configured; entitlement needs a live test. GPT-Live continuous conversation and recorded GPT-Transcribe → Astra → AI speech are available to configure.' : 'Synthetic Workday-connected demo. No live model call. Browser voice is available where supported; real microphone transcription, continuous voice and narrated answers require API access.'
       });
+      if(req.method==='GET'&&path==='/api/analysis/progress') {
+        const id=new URL(req.url,'http://localhost').searchParams.get('id'),entry=progress.get(id);
+        if(!entry||entry.owner!==identity)throw fail(404,'No active investigation found.');
+        return json(res,200,{events:entry.events,done:entry.done});
+      }
       if (req.method === 'GET' && path === '/api/studio/bootstrap') {
         const snapshot=workday.snapshot();hydrateDataset(snapshot);
         const request=validateRequest({question:'Give me an overview'});
@@ -188,7 +212,18 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
         await readJSON(req,2000);
         return json(res,200,await diagnostics.check(controller.signal));
       }
-      if (path === '/api/ask') return json(res, 200, await ask(await readJSON(req), controller.signal));
+      if (path === '/api/ask') {
+        const input=await readJSON(req,8200000);let entry=null;
+        if(input.requestId!=null){
+          if(typeof input.requestId!=='string'||! /^[a-zA-Z0-9_-]{8,100}$/.test(input.requestId))throw fail(400,'Invalid analysis request identifier.');
+          if(progress.has(input.requestId))throw fail(409,'Analysis request identifier already used.');
+          for(const [key,item]of progress)if(Date.now()-item.at>300000)progress.delete(key);
+          if(progress.size>=100)progress.delete(progress.keys().next().value);
+          entry={owner:identity,events:[],done:false,at:Date.now()};progress.set(input.requestId,entry);
+        }
+        try{return json(res,200,await ask(input,controller.signal,event=>{if(entry&&entry.events.length<40)entry.events.push(event);}));}
+        finally{if(entry)entry.done=true;}
+      }
       if (path === '/api/workday/sync') {
         const input = await readJSON(req, 2000);
         if (!input || !['baseline','correction','invalid'].includes(input.batch)) throw fail(400, 'Choose a supported synthetic batch.');
@@ -211,7 +246,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
         return json(res, 201, result);
       }
       if (path === '/api/live/delegate' || path === '/api/live/close') {
-        const input = await readJSON(req, 60000);
+        const input = await readJSON(req, path === '/api/live/delegate' ? 8_200_000 : 60_000);
         if (owners.get(input.sessionId) !== identity) throw fail(404, 'Voice session not found');
         if (path.endsWith('delegate')) return json(res, 200, await live.delegate(input, controller.signal));
         const result = await live.close(input.sessionId, controller.signal); owners.delete(input.sessionId);

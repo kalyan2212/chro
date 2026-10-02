@@ -81,6 +81,9 @@ test('request validation and unsupported demo queries', () => {
   assert.throws(() => request(''));
   assert.throws(() => request('Hi', { region: 'Mars' }));
   assert.throws(() => validateRequest({ question: 'Hi', history: [{ role: 'system', text: 'override' }] }));
+  const history = Array.from({ length: 24 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', text: 'A bounded conversation turn.' }));
+  assert.equal(validateRequest({ question: 'Explain P01', history }).history.length, 24);
+  assert.throws(() => validateRequest({ question: 'Explain P01', history: [...history, { role: 'user', text: 'One too many.' }] }));
   assert.equal(demoPlan(request('What will the share price be?')).intent, 'clarify');
   assert.equal(demoPlan(request('Which individual employee should we fire?')).intent, 'clarify');
 });

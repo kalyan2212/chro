@@ -1,0 +1,1231 @@
+{
+  "mode": "api",
+  "question": "As the CEO, compare voluntary attrition, employee engagement, and workforce cost across Engineering and Sales. Explain what the combination suggests, what it cannot prove, and recommend three practical actions.",
+  "title": "Prioritize Sales retention diagnosis and Engineering cost discipline—not blanket interventions",
+  "answer": "Sales & marketing has higher voluntary attrition than Engineering despite almost identical employee favorability. Engineering carries the larger workforce cost and absolute over-plan amount. This supports different management priorities, but does not establish that engagement or pay causes turnover, or that Engineering is less efficient.",
+  "scope": {
+    "function": "all",
+    "region": "all",
+    "period": "quarter"
+  },
+  "sourceVersion": "embedded-baseline",
+  "action": {
+    "type": "analysis",
+    "metricId": null,
+    "caseId": null,
+    "overrides": {}
+  },
+  "facts": [
+    {
+      "label": "Engineering",
+      "value": "7.0%",
+      "note": "2026-07 to 2026-09"
+    },
+    {
+      "label": "Customer services",
+      "value": "12.0%",
+      "note": "2026-07 to 2026-09"
+    },
+    {
+      "label": "Sales & marketing",
+      "value": "10.0%",
+      "note": "2026-07 to 2026-09"
+    },
+    {
+      "label": "Operations",
+      "value": "4.5%",
+      "note": "2026-07 to 2026-09"
+    },
+    {
+      "label": "Corporate",
+      "value": "3.0%",
+      "note": "2026-07 to 2026-09"
+    },
+    {
+      "label": "Engineering",
+      "value": "72.0%",
+      "note": "2026-09-30"
+    },
+    {
+      "label": "Customer services",
+      "value": "72.0%",
+      "note": "2026-09-30"
+    },
+    {
+      "label": "Sales & marketing",
+      "value": "72.1%",
+      "note": "2026-09-30"
+    },
+    {
+      "label": "Operations",
+      "value": "72.0%",
+      "note": "2026-09-30"
+    },
+    {
+      "label": "Corporate",
+      "value": "71.9%",
+      "note": "2026-09-30"
+    },
+    {
+      "label": "Engineering",
+      "value": "$12m",
+      "note": "2026-09-30"
+    },
+    {
+      "label": "Customer services",
+      "value": "$3m",
+      "note": "2026-09-30"
+    },
+    {
+      "label": "Sales & marketing",
+      "value": "$5m",
+      "note": "2026-09-30"
+    },
+    {
+      "label": "Operations",
+      "value": "$7m",
+      "note": "2026-09-30"
+    },
+    {
+      "label": "Corporate",
+      "value": "$3m",
+      "note": "2026-09-30"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E03",
+      "definition": "Voluntary exits / mean FTE, annualized; short windows are not forecasts.",
+      "period": "2026-07 to 2026-09",
+      "source": "Synthetic governed enterprise aggregates"
+    },
+    {
+      "id": "E07",
+      "definition": "Favorable survey responses / respondents, not all employees.",
+      "period": "2026-09-30",
+      "source": "Synthetic governed enterprise aggregates"
+    },
+    {
+      "id": "E05",
+      "definition": "Annual loaded workforce run rate minus comparable annual plan; not booked savings.",
+      "period": "2026-09-30",
+      "source": "Synthetic governed enterprise aggregates"
+    }
+  ],
+  "followups": [
+    "Compare monthly attrition, favorability and cost trends to assess whether this quarterly contrast persists.",
+    "Obtain a Finance cost-variance bridge and privacy-safe exit-reason evidence for the proposed diagnostic."
+  ],
+  "boundary": "Workforce figures are synthetic. Hypotheses and recommendations are distinct from observed or calculated findings; no external action or approval has been executed.",
+  "analysis": {
+    "summary": "Sales & marketing has higher voluntary attrition than Engineering despite almost identical employee favorability. Engineering carries the larger workforce cost and absolute over-plan amount. This supports different management priorities, but does not establish that engagement or pay causes turnover, or that Engineering is less efficient.",
+    "sections": [
+      {
+        "kind": "finding",
+        "title": "Attrition differs; reported engagement barely does",
+        "text": "For July–September 2026, annualized voluntary attrition is 7.0% in Engineering versus 10.0% in Sales & marketing. At September 30, employee favorable responses are 72.0% and 72.1%, respectively, with survey participation of 60.0% in both. The engagement proxy therefore does not visibly distinguish the functions’ different turnover rates.",
+        "evidenceRefs": [
+          "E1",
+          "E2",
+          "E3"
+        ]
+      },
+      {
+        "kind": "finding",
+        "title": "Engineering has the larger spending exposure—and workforce",
+        "text": "At September 30, Engineering’s annual loaded workforce cost run rate is $420m, versus $180m for Sales & marketing. Engineering is $12m above its comparable annual plan; Sales & marketing is $5m above plan. Employee headcount is 2,400 and 1,200, respectively. These are total spending comparisons, not efficiency measures: cost includes contractors and overtime, while employee headcount excludes contractors.",
+        "evidenceRefs": [
+          "E4",
+          "E5",
+          "E6"
+        ]
+      },
+      {
+        "kind": "hypothesis",
+        "title": "What the combination suggests",
+        "text": "Sales & marketing merits an investigation of retention risks that an overall engagement score may miss—for example, incentive design, career opportunities, workload or external hiring demand. Engineering merits a review of whether its spending supports valuable delivery capacity. Neither interpretation is established: workforce composition could explain cost differences, and broad survey averages could conceal variation within either function.",
+        "evidenceRefs": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6"
+        ]
+      },
+      {
+        "kind": "limitation",
+        "title": "What this cannot prove",
+        "text": "The available Sales segment includes marketing; it is not Sales alone. All figures are synthetic. Attrition is annualized from a quarter, not a forecast; engagement is a September snapshot among respondents, not all employees. Equal participation does not eliminate nonresponse bias. Cost is an annual run rate, not quarterly or year-to-date expenditure. These aggregates establish neither causation nor statistical significance, and do not measure compensation competitiveness, lost revenue, delivery productivity or the financial return from retention spending.",
+        "evidenceRefs": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5"
+        ]
+      },
+      {
+        "kind": "recommendation",
+        "title": "1. Run a focused Sales retention diagnostic",
+        "text": "Ask the CHRO and commercial leader to complete a 30-day review of privacy-safe turnover patterns by tenure, role and region, alongside aggregate exit and stay-interview themes. Test incentive clarity, career progression and workload as competing explanations. Identify whether departures threaten customer coverage before proposing targeted interventions; do not default to an across-the-board pay increase.",
+        "evidenceRefs": [
+          "E1",
+          "E2"
+        ]
+      },
+      {
+        "kind": "recommendation",
+        "title": "2. Reconcile workforce spending to business capacity",
+        "text": "Have Finance and the functional leaders explain each over-plan amount through staffing, role/location mix, contractors, overtime and compensation. Prioritize Engineering’s larger absolute exposure, but review both functions. Require any hiring or cost-reduction proposal to specify the delivery milestones or customer coverage it protects, its cash implications and its capacity risks—rather than treating lower spend as inherently better.",
+        "evidenceRefs": [
+          "E4",
+          "E5",
+          "E6"
+        ]
+      },
+      {
+        "kind": "recommendation",
+        "title": "3. Pilot a targeted response and establish a decision gate",
+        "text": "After diagnosis, test one specific intervention in comparable teams using a phased rollout or comparison group. Set a 90-day operating review for participation, targeted survey items, implementation quality, cost and business-capacity measures; assess retention over a longer observation window. Scale only if the evidence supports improvement without damaging customer coverage or delivery. Treat early results as provisional, not proven savings.",
+        "evidenceRefs": [
+          "E1",
+          "E2",
+          "E3",
+          "E5"
+        ]
+      }
+    ],
+    "unknowns": [
+      "Whether Sales alone follows the combined Sales & marketing pattern.",
+      "Which roles and tenure groups drive turnover, and how business-critical those departures are.",
+      "The drivers of over-plan spending and the business outputs supported by that spending."
+    ],
+    "followups": [
+      "Compare monthly attrition, favorability and cost trends to assess whether this quarterly contrast persists.",
+      "Obtain a Finance cost-variance bridge and privacy-safe exit-reason evidence for the proposed diagnostic."
+    ]
+  },
+  "panels": [
+    {
+      "id": "panel-1",
+      "title": "Voluntary attrition by function",
+      "why": "Shows the retention contrast between Engineering and Sales & marketing.",
+      "response": {
+        "mode": "api",
+        "question": "E03 by function",
+        "answer": "Voluntary attrition, annualized by function: highest Customer services at 12.0%, lowest Corporate at 3.0%. All functions: 7.8%.",
+        "title": "Voluntary attrition, annualized by function",
+        "scope": {
+          "function": "all",
+          "region": "all",
+          "period": "quarter"
+        },
+        "action": {
+          "type": "breakdown",
+          "metricId": "E03",
+          "caseId": null,
+          "overrides": {}
+        },
+        "facts": [
+          {
+            "label": "Engineering",
+            "value": "7.0%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Customer services",
+            "value": "12.0%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Sales & marketing",
+            "value": "10.0%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Operations",
+            "value": "4.5%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Corporate",
+            "value": "3.0%",
+            "note": "2026-07 to 2026-09"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "E03",
+            "definition": "Voluntary exits / mean FTE, annualized; short windows are not forecasts.",
+            "period": "2026-07 to 2026-09",
+            "source": "Synthetic governed enterprise aggregates"
+          }
+        ],
+        "followups": [
+          "Explain E03",
+          "Voluntary attrition, annualized by region",
+          "Voluntary attrition, annualized trend"
+        ],
+        "boundary": "All figures are synthetic. Astra routes intent; the local engine calculates every reported fact. No individual decisions or causal conclusions. Every segment uses the same definition; ratios are computed after aggregating each segment. Differences between segments are descriptive, not causal.",
+        "breakdown": {
+          "metricId": "E03",
+          "label": "Voluntary attrition, annualized",
+          "unit": "ratio",
+          "dimension": "function",
+          "sort": null,
+          "limit": null,
+          "where": "",
+          "periodLabel": "2026-07 to 2026-09",
+          "rows": [
+            {
+              "segment": "Engineering",
+              "label": "Engineering",
+              "value": 0.070199874643081,
+              "formatted": "7.0%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-07 to 2026-09"
+            },
+            {
+              "segment": "Customer services",
+              "label": "Customer services",
+              "value": 0.12034096607053318,
+              "formatted": "12.0%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-07 to 2026-09"
+            },
+            {
+              "segment": "Sales & marketing",
+              "label": "Sales & marketing",
+              "value": 0.10030649205906939,
+              "formatted": "10.0%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-07 to 2026-09"
+            },
+            {
+              "segment": "Operations",
+              "label": "Operations",
+              "value": 0.04513163393230255,
+              "formatted": "4.5%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-07 to 2026-09"
+            },
+            {
+              "segment": "Corporate",
+              "label": "Corporate",
+              "value": 0.030094043887147336,
+              "formatted": "3.0%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-07 to 2026-09"
+            }
+          ],
+          "overall": {
+            "label": "All functions",
+            "value": 0.07822816548265775,
+            "formatted": "7.8%"
+          },
+          "definition": "Voluntary exits / mean FTE, annualized; short windows are not forecasts."
+        },
+        "sourceVersion": "embedded-baseline",
+        "conversation": {
+          "sourceVersion": "embedded-baseline",
+          "metricId": "E03"
+        },
+        "presentation": {
+          "version": 1,
+          "scene": "comparison",
+          "headline": "Voluntary attrition, annualized by function",
+          "takeaway": "Voluntary attrition, annualized by function: highest Customer services at 12.0%, lowest Corporate at 3.0%. All functions: 7.8%.",
+          "beats": [
+            {
+              "id": "fact-0",
+              "label": "Engineering",
+              "detail": "7.0%",
+              "context": "2026-07 to 2026-09",
+              "factIndexes": [
+                0
+              ],
+              "evidenceIds": [
+                "E03"
+              ]
+            },
+            {
+              "id": "fact-1",
+              "label": "Customer services",
+              "detail": "12.0%",
+              "context": "2026-07 to 2026-09",
+              "factIndexes": [
+                1
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-2",
+              "label": "Sales & marketing",
+              "detail": "10.0%",
+              "context": "2026-07 to 2026-09",
+              "factIndexes": [
+                2
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-3",
+              "label": "Operations",
+              "detail": "4.5%",
+              "context": "2026-07 to 2026-09",
+              "factIndexes": [
+                3
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-4",
+              "label": "Corporate",
+              "detail": "3.0%",
+              "context": "2026-07 to 2026-09",
+              "factIndexes": [
+                4
+              ],
+              "evidenceIds": []
+            }
+          ],
+          "nextQuestions": [
+            "Explain E03",
+            "Voluntary attrition, annualized by region",
+            "Voluntary attrition, annualized trend"
+          ],
+          "sourceVersion": "embedded-baseline"
+        }
+      },
+      "evidenceRefs": [
+        "E1"
+      ]
+    },
+    {
+      "id": "panel-2",
+      "title": "Employee favorability by function",
+      "why": "Shows why the overall engagement proxy alone does not explain the turnover contrast.",
+      "response": {
+        "mode": "api",
+        "question": "E07 by function",
+        "answer": "Employee favorable responses by function: highest Sales & marketing at 72.1%, lowest Corporate at 71.9%. All functions: 72.0%.",
+        "title": "Employee favorable responses by function",
+        "scope": {
+          "function": "all",
+          "region": "all",
+          "period": "quarter"
+        },
+        "action": {
+          "type": "breakdown",
+          "metricId": "E07",
+          "caseId": null,
+          "overrides": {}
+        },
+        "facts": [
+          {
+            "label": "Engineering",
+            "value": "72.0%",
+            "note": "2026-09-30"
+          },
+          {
+            "label": "Customer services",
+            "value": "72.0%",
+            "note": "2026-09-30"
+          },
+          {
+            "label": "Sales & marketing",
+            "value": "72.1%",
+            "note": "2026-09-30"
+          },
+          {
+            "label": "Operations",
+            "value": "72.0%",
+            "note": "2026-09-30"
+          },
+          {
+            "label": "Corporate",
+            "value": "71.9%",
+            "note": "2026-09-30"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "E07",
+            "definition": "Favorable survey responses / respondents, not all employees.",
+            "period": "2026-09-30",
+            "source": "Synthetic governed enterprise aggregates"
+          }
+        ],
+        "followups": [
+          "Explain E07",
+          "Employee favorable responses by region",
+          "Employee favorable responses trend"
+        ],
+        "boundary": "All figures are synthetic. Astra routes intent; the local engine calculates every reported fact. No individual decisions or causal conclusions. Every segment uses the same definition; ratios are computed after aggregating each segment. Differences between segments are descriptive, not causal.",
+        "breakdown": {
+          "metricId": "E07",
+          "label": "Employee favorable responses",
+          "unit": "ratio",
+          "dimension": "function",
+          "sort": null,
+          "limit": null,
+          "where": "",
+          "periodLabel": "2026-09-30",
+          "rows": [
+            {
+              "segment": "Engineering",
+              "label": "Engineering",
+              "value": 0.7201388888888889,
+              "formatted": "72.0%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            },
+            {
+              "segment": "Customer services",
+              "label": "Customer services",
+              "value": 0.72,
+              "formatted": "72.0%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            },
+            {
+              "segment": "Sales & marketing",
+              "label": "Sales & marketing",
+              "value": 0.7208333333333333,
+              "formatted": "72.1%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            },
+            {
+              "segment": "Operations",
+              "label": "Operations",
+              "value": 0.7197916666666667,
+              "formatted": "72.0%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            },
+            {
+              "segment": "Corporate",
+              "label": "Corporate",
+              "value": 0.71875,
+              "formatted": "71.9%",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            }
+          ],
+          "overall": {
+            "label": "All functions",
+            "value": 0.72,
+            "formatted": "72.0%"
+          },
+          "definition": "Favorable survey responses / respondents, not all employees."
+        },
+        "sourceVersion": "embedded-baseline",
+        "conversation": {
+          "sourceVersion": "embedded-baseline",
+          "metricId": "E07"
+        },
+        "presentation": {
+          "version": 1,
+          "scene": "comparison",
+          "headline": "Employee favorable responses by function",
+          "takeaway": "Employee favorable responses by function: highest Sales & marketing at 72.1%, lowest Corporate at 71.9%. All functions: 72.0%.",
+          "beats": [
+            {
+              "id": "fact-0",
+              "label": "Engineering",
+              "detail": "72.0%",
+              "context": "2026-09-30",
+              "factIndexes": [
+                0
+              ],
+              "evidenceIds": [
+                "E07"
+              ]
+            },
+            {
+              "id": "fact-1",
+              "label": "Customer services",
+              "detail": "72.0%",
+              "context": "2026-09-30",
+              "factIndexes": [
+                1
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-2",
+              "label": "Sales & marketing",
+              "detail": "72.1%",
+              "context": "2026-09-30",
+              "factIndexes": [
+                2
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-3",
+              "label": "Operations",
+              "detail": "72.0%",
+              "context": "2026-09-30",
+              "factIndexes": [
+                3
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-4",
+              "label": "Corporate",
+              "detail": "71.9%",
+              "context": "2026-09-30",
+              "factIndexes": [
+                4
+              ],
+              "evidenceIds": []
+            }
+          ],
+          "nextQuestions": [
+            "Explain E07",
+            "Employee favorable responses by region",
+            "Employee favorable responses trend"
+          ],
+          "sourceVersion": "embedded-baseline"
+        }
+      },
+      "evidenceRefs": [
+        "E2"
+      ]
+    },
+    {
+      "id": "panel-3",
+      "title": "Annual workforce cost versus plan",
+      "why": "Identifies the absolute spending variances that Finance and functional leaders should explain.",
+      "response": {
+        "mode": "api",
+        "question": "E05 by function",
+        "answer": "Annual cost vs plan by function: highest Engineering at $12m, lowest Customer services at $3m. All functions: $30m.",
+        "title": "Annual cost vs plan by function",
+        "scope": {
+          "function": "all",
+          "region": "all",
+          "period": "quarter"
+        },
+        "action": {
+          "type": "breakdown",
+          "metricId": "E05",
+          "caseId": null,
+          "overrides": {}
+        },
+        "facts": [
+          {
+            "label": "Engineering",
+            "value": "$12m",
+            "note": "2026-09-30"
+          },
+          {
+            "label": "Customer services",
+            "value": "$3m",
+            "note": "2026-09-30"
+          },
+          {
+            "label": "Sales & marketing",
+            "value": "$5m",
+            "note": "2026-09-30"
+          },
+          {
+            "label": "Operations",
+            "value": "$7m",
+            "note": "2026-09-30"
+          },
+          {
+            "label": "Corporate",
+            "value": "$3m",
+            "note": "2026-09-30"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "E05",
+            "definition": "Annual loaded workforce run rate minus comparable annual plan; not booked savings.",
+            "period": "2026-09-30",
+            "source": "Synthetic governed enterprise aggregates"
+          }
+        ],
+        "followups": [
+          "Compare workforce cost in Engineering and Sales",
+          "Show workforce cost trend over the last six months",
+          "Explain E05"
+        ],
+        "boundary": "All figures are synthetic. Astra routes intent; the local engine calculates every reported fact. No individual decisions or causal conclusions. Every segment uses the same definition; ratios are computed after aggregating each segment. Differences between segments are descriptive, not causal.",
+        "breakdown": {
+          "metricId": "E05",
+          "label": "Annual cost vs plan",
+          "unit": "usd",
+          "dimension": "function",
+          "sort": null,
+          "limit": null,
+          "where": "",
+          "periodLabel": "2026-09-30",
+          "rows": [
+            {
+              "segment": "Engineering",
+              "label": "Engineering",
+              "value": 12000000,
+              "formatted": "$12m",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            },
+            {
+              "segment": "Customer services",
+              "label": "Customer services",
+              "value": 3000000,
+              "formatted": "$3m",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            },
+            {
+              "segment": "Sales & marketing",
+              "label": "Sales & marketing",
+              "value": 5000000,
+              "formatted": "$5m",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            },
+            {
+              "segment": "Operations",
+              "label": "Operations",
+              "value": 7000000,
+              "formatted": "$7m",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            },
+            {
+              "segment": "Corporate",
+              "label": "Corporate",
+              "value": 3000000,
+              "formatted": "$3m",
+              "numerator": null,
+              "denominator": null,
+              "period": "2026-09-30"
+            }
+          ],
+          "overall": {
+            "label": "All functions",
+            "value": 30000000,
+            "formatted": "$30m"
+          },
+          "definition": "Annual loaded workforce run rate minus comparable annual plan; not booked savings."
+        },
+        "sourceVersion": "embedded-baseline",
+        "conversation": {
+          "sourceVersion": "embedded-baseline",
+          "metricId": "E05"
+        },
+        "presentation": {
+          "version": 1,
+          "scene": "comparison",
+          "headline": "Annual cost vs plan by function",
+          "takeaway": "Annual cost vs plan by function: highest Engineering at $12m, lowest Customer services at $3m. All functions: $30m.",
+          "beats": [
+            {
+              "id": "fact-0",
+              "label": "Engineering",
+              "detail": "$12m",
+              "context": "2026-09-30",
+              "factIndexes": [
+                0
+              ],
+              "evidenceIds": [
+                "E05"
+              ]
+            },
+            {
+              "id": "fact-1",
+              "label": "Customer services",
+              "detail": "$3m",
+              "context": "2026-09-30",
+              "factIndexes": [
+                1
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-2",
+              "label": "Sales & marketing",
+              "detail": "$5m",
+              "context": "2026-09-30",
+              "factIndexes": [
+                2
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-3",
+              "label": "Operations",
+              "detail": "$7m",
+              "context": "2026-09-30",
+              "factIndexes": [
+                3
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-4",
+              "label": "Corporate",
+              "detail": "$3m",
+              "context": "2026-09-30",
+              "factIndexes": [
+                4
+              ],
+              "evidenceIds": []
+            }
+          ],
+          "nextQuestions": [
+            "Compare workforce cost in Engineering and Sales",
+            "Show workforce cost trend over the last six months",
+            "Explain E05"
+          ],
+          "sourceVersion": "embedded-baseline"
+        }
+      },
+      "evidenceRefs": [
+        "E5"
+      ]
+    }
+  ],
+  "evidenceReferences": [
+    {
+      "refId": "E1",
+      "kind": "breakdown",
+      "title": "Voluntary attrition, annualized by function",
+      "sourceVersion": "embedded-baseline",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "7.0%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Customer services",
+          "value": "12.0%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "10.0%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Operations",
+          "value": "4.5%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Corporate",
+          "value": "3.0%",
+          "note": "2026-07 to 2026-09"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "E03",
+          "definition": "Voluntary exits / mean FTE, annualized; short windows are not forecasts.",
+          "period": "2026-07 to 2026-09",
+          "source": "Synthetic governed enterprise aggregates"
+        }
+      ]
+    },
+    {
+      "refId": "E2",
+      "kind": "breakdown",
+      "title": "Employee favorable responses by function",
+      "sourceVersion": "embedded-baseline",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "72.0%",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Customer services",
+          "value": "72.0%",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "72.1%",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Operations",
+          "value": "72.0%",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Corporate",
+          "value": "71.9%",
+          "note": "2026-09-30"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "E07",
+          "definition": "Favorable survey responses / respondents, not all employees.",
+          "period": "2026-09-30",
+          "source": "Synthetic governed enterprise aggregates"
+        }
+      ]
+    },
+    {
+      "refId": "E3",
+      "kind": "breakdown",
+      "title": "Survey participation by function",
+      "sourceVersion": "embedded-baseline",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "60.0%",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Customer services",
+          "value": "60.0%",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "60.0%",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Operations",
+          "value": "60.0%",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Corporate",
+          "value": "60.0%",
+          "note": "2026-09-30"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "E08",
+          "definition": "Respondents / invited employees.",
+          "period": "2026-09-30",
+          "source": "Synthetic governed enterprise aggregates"
+        }
+      ]
+    },
+    {
+      "refId": "E4",
+      "kind": "breakdown",
+      "title": "Annual workforce cost by function",
+      "sourceVersion": "embedded-baseline",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "$420m",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Customer services",
+          "value": "$150m",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "$180m",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Operations",
+          "value": "$176m",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Corporate",
+          "value": "$104m",
+          "note": "2026-09-30"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "E02",
+          "definition": "Annual loaded workforce run rate, including overtime and contractors; not YTD actual.",
+          "period": "2026-09-30",
+          "source": "Synthetic governed enterprise aggregates"
+        }
+      ]
+    },
+    {
+      "refId": "E5",
+      "kind": "breakdown",
+      "title": "Annual cost vs plan by function",
+      "sourceVersion": "embedded-baseline",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "$12m",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Customer services",
+          "value": "$3m",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "$5m",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Operations",
+          "value": "$7m",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Corporate",
+          "value": "$3m",
+          "note": "2026-09-30"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "E05",
+          "definition": "Annual loaded workforce run rate minus comparable annual plan; not booked savings.",
+          "period": "2026-09-30",
+          "source": "Synthetic governed enterprise aggregates"
+        }
+      ]
+    },
+    {
+      "refId": "E6",
+      "kind": "breakdown",
+      "title": "Employee headcount by function",
+      "sourceVersion": "embedded-baseline",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "2,400",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Customer services",
+          "value": "2,000",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "1,200",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Operations",
+          "value": "1,600",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Corporate",
+          "value": "800",
+          "note": "2026-09-30"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "E01",
+          "definition": "Month-end employee stock; excludes contractors.",
+          "period": "2026-09-30",
+          "source": "Synthetic governed enterprise aggregates"
+        }
+      ]
+    }
+  ],
+  "conversation": {
+    "sourceVersion": "embedded-baseline"
+  },
+  "presentation": {
+    "version": 1,
+    "scene": "analysis",
+    "headline": "Prioritize Sales retention diagnosis and Engineering cost discipline—not blanket interventions",
+    "takeaway": "Sales & marketing has higher voluntary attrition than Engineering despite almost identical employee favorability. Engineering carries the larger workforce cost and absolute over-plan amount. This supports different management priorities, but does not establish that engagement or pay causes turnover, or that Engineering is less efficient.",
+    "beats": [
+      {
+        "id": "analysis-1",
+        "label": "Attrition differs; reported engagement barely does",
+        "detail": "For July–September 2026, annualized voluntary attrition is 7.0% in Engineering versus 10.0% in Sales & marketing. At September 30, employee favorable responses are 72.0% and 72.1%, respectively, with survey participation of 60.0% in both. The engagement proxy therefore does not visibly distinguish the functions’ different turnover rates.",
+        "context": "finding",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E1",
+          "E2",
+          "E3"
+        ],
+        "evidenceIds": [
+          "E03",
+          "E07",
+          "E08"
+        ]
+      },
+      {
+        "id": "analysis-2",
+        "label": "Engineering has the larger spending exposure—and workforce",
+        "detail": "At September 30, Engineering’s annual loaded workforce cost run rate is $420m, versus $180m for Sales & marketing. Engineering is $12m above its comparable annual plan; Sales & marketing is $5m above plan. Employee headcount is 2,400 and 1,200, respectively. These are total spending comparisons, not efficiency measures: cost includes contractors and overtime, while employee headcount excludes contractors.",
+        "context": "finding",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E4",
+          "E5",
+          "E6"
+        ],
+        "evidenceIds": [
+          "E02",
+          "E05",
+          "E01"
+        ]
+      },
+      {
+        "id": "analysis-3",
+        "label": "What the combination suggests",
+        "detail": "Sales & marketing merits an investigation of retention risks that an overall engagement score may miss—for example, incentive design, career opportunities, workload or external hiring demand. Engineering merits a review of whether its spending supports valuable delivery capacity. Neither interpretation is established: workforce composition could explain cost differences, and broad survey averages could conceal variation within either function.",
+        "context": "hypothesis",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E1",
+          "E2",
+          "E4",
+          "E5",
+          "E6"
+        ],
+        "evidenceIds": [
+          "E03",
+          "E07",
+          "E02",
+          "E05",
+          "E01"
+        ]
+      },
+      {
+        "id": "analysis-4",
+        "label": "What this cannot prove",
+        "detail": "The available Sales segment includes marketing; it is not Sales alone. All figures are synthetic. Attrition is annualized from a quarter, not a forecast; engagement is a September snapshot among respondents, not all employees. Equal participation does not eliminate nonresponse bias. Cost is an annual run rate, not quarterly or year-to-date expenditure. These aggregates establish neither causation nor statistical significance, and do not measure compensation competitiveness, lost revenue, delivery productivity or the financial return from retention spending.",
+        "context": "limitation",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5"
+        ],
+        "evidenceIds": [
+          "E03",
+          "E07",
+          "E08",
+          "E02",
+          "E05"
+        ]
+      },
+      {
+        "id": "analysis-5",
+        "label": "1. Run a focused Sales retention diagnostic",
+        "detail": "Ask the CHRO and commercial leader to complete a 30-day review of privacy-safe turnover patterns by tenure, role and region, alongside aggregate exit and stay-interview themes. Test incentive clarity, career progression and workload as competing explanations. Identify whether departures threaten customer coverage before proposing targeted interventions; do not default to an across-the-board pay increase.",
+        "context": "recommendation",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E1",
+          "E2"
+        ],
+        "evidenceIds": [
+          "E03",
+          "E07"
+        ]
+      },
+      {
+        "id": "analysis-6",
+        "label": "2. Reconcile workforce spending to business capacity",
+        "detail": "Have Finance and the functional leaders explain each over-plan amount through staffing, role/location mix, contractors, overtime and compensation. Prioritize Engineering’s larger absolute exposure, but review both functions. Require any hiring or cost-reduction proposal to specify the delivery milestones or customer coverage it protects, its cash implications and its capacity risks—rather than treating lower spend as inherently better.",
+        "context": "recommendation",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E4",
+          "E5",
+          "E6"
+        ],
+        "evidenceIds": [
+          "E02",
+          "E05",
+          "E01"
+        ]
+      },
+      {
+        "id": "analysis-7",
+        "label": "3. Pilot a targeted response and establish a decision gate",
+        "detail": "After diagnosis, test one specific intervention in comparable teams using a phased rollout or comparison group. Set a 90-day operating review for participation, targeted survey items, implementation quality, cost and business-capacity measures; assess retention over a longer observation window. Scale only if the evidence supports improvement without damaging customer coverage or delivery. Treat early results as provisional, not proven savings.",
+        "context": "recommendation",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E1",
+          "E2",
+          "E3",
+          "E5"
+        ],
+        "evidenceIds": [
+          "E03",
+          "E07",
+          "E08",
+          "E05"
+        ]
+      }
+    ],
+    "nextQuestions": [
+      "Compare monthly attrition, favorability and cost trends to assess whether this quarterly contrast persists.",
+      "Obtain a Finance cost-variance bridge and privacy-safe exit-reason evidence for the proposed diagnostic."
+    ],
+    "sourceVersion": "embedded-baseline"
+  }
+}

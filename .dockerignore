@@ -12,6 +12,9 @@ VALIDATION.md
 .review-state
 .cloud-local
 node_modules
-docs
+docs/*
+!docs/COVERAGE.md
+!docs/WORKDAY.md
+!docs/INVESTIGATIONS.md
 scripts
 gha-creds-*.json

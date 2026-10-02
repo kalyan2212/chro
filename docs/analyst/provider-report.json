@@ -1,0 +1,285 @@
+{
+  "schema": "chro-analyst-provider-validation.v1",
+  "verifiedAt": "2026-10-02T15:00:38.672Z",
+  "provider": "OpenAI Responses API",
+  "requestedModel": "gpt-6-astra",
+  "reasoningEffort": "medium",
+  "store": false,
+  "method": "Actual paid provider calls over an isolated synthetic snapshot. The browser-to-application check is recorded separately. No fake provider responses were used for these four evaluations.",
+  "results": [
+    {
+      "id": "multi-metric-executive",
+      "question": "As the CEO, compare voluntary attrition, employee engagement, and workforce cost across Engineering and Sales. Explain what the combination suggests, what it cannot prove, and recommend three practical actions.",
+      "verdict": "passed",
+      "milliseconds": 34682,
+      "apiRounds": 2,
+      "rounds": [
+        {
+          "milliseconds": 4328,
+          "httpStatus": 200,
+          "returnedModel": "gpt-6-astra",
+          "reasoningEffort": "medium",
+          "tools": [
+            "compare_metrics"
+          ],
+          "usage": {
+            "inputTokens": 12833,
+            "outputTokens": 54,
+            "cachedInputTokens": 0,
+            "reasoningTokens": 0
+          }
+        },
+        {
+          "milliseconds": 29922,
+          "httpStatus": 200,
+          "returnedModel": "gpt-6-astra",
+          "reasoningEffort": "medium",
+          "tools": [],
+          "usage": {
+            "inputTokens": 19310,
+            "outputTokens": 1280,
+            "cachedInputTokens": 12830,
+            "reasoningTokens": 38
+          }
+        }
+      ],
+      "usage": {
+        "inputTokens": 32143,
+        "outputTokens": 1334,
+        "totalTokens": 33477
+      },
+      "response": {
+        "headline": "Prioritize Sales retention diagnosis and Engineering cost discipline—not blanket interventions",
+        "summary": "Sales & marketing has higher voluntary attrition than Engineering despite almost identical employee favorability. Engineering carries the larger workforce cost and absolute over-plan amount. This supports different management priorities, but does not establish that engagement or pay causes turnover, or that Engineering is less efficient.",
+        "sectionKinds": [
+          "finding",
+          "finding",
+          "hypothesis",
+          "limitation",
+          "recommendation",
+          "recommendation",
+          "recommendation"
+        ],
+        "panelCount": 3,
+        "evidenceReferenceCount": 6
+      },
+      "audience": "ceo",
+      "verifiedObservation": "The model retrieved attrition, engagement, participation, workforce cost, cost variance and headcount evidence, distinguished descriptive associations from causes, and recommended three different practical actions."
+    },
+    {
+      "id": "strategic-follow-up",
+      "question": "What additional evidence would change your recommendation, and how should we design a pilot to learn whether it worked?",
+      "verdict": "passed",
+      "milliseconds": 43329,
+      "apiRounds": 2,
+      "rounds": [
+        {
+          "milliseconds": 4255,
+          "httpStatus": 200,
+          "returnedModel": "gpt-6-astra",
+          "reasoningEffort": "medium",
+          "tools": [
+            "compare_metrics",
+            "search_workspace"
+          ],
+          "usage": {
+            "inputTokens": 12928,
+            "outputTokens": 95,
+            "cachedInputTokens": 12751,
+            "reasoningTokens": 0
+          }
+        },
+        {
+          "milliseconds": 38655,
+          "httpStatus": 200,
+          "returnedModel": "gpt-6-astra",
+          "reasoningEffort": "medium",
+          "tools": [],
+          "usage": {
+            "inputTokens": 20767,
+            "outputTokens": 1584,
+            "cachedInputTokens": 12925,
+            "reasoningTokens": 63
+          }
+        }
+      ],
+      "usage": {
+        "inputTokens": 33695,
+        "outputTokens": 1679,
+        "totalTokens": 35374
+      },
+      "response": {
+        "headline": "Test targeted retention and cost actions—not a company-wide intervention",
+        "summary": "I would retain the direction of the earlier recommendation: investigate Sales & marketing retention and Engineering cost drivers separately, rather than assume engagement or pay explains either. The board should consider a capped, staged pilot, with a credible comparison group and agreed scale, stop, and learning criteria.",
+        "sectionKinds": [
+          "finding",
+          "recommendation",
+          "recommendation",
+          "recommendation",
+          "recommendation",
+          "recommendation",
+          "limitation"
+        ],
+        "panelCount": 3,
+        "evidenceReferenceCount": 16
+      },
+      "audience": "board",
+      "verifiedObservation": "The question supplied the prior user request and generated summary as history. The model retained the Sales retention / Engineering cost distinction, described evidence that could change its recommendation, and proposed pilot measurement and board decision gates."
+    },
+    {
+      "id": "vision-verification",
+      "question": "Read this supplied chart. Compare these functions against the governed attrition and engagement figures, identify any mismatch without inventing a cause, and suggest what to investigate. The supplied image is unverified.",
+      "verdict": "passed",
+      "milliseconds": 28981,
+      "apiRounds": 2,
+      "rounds": [
+        {
+          "milliseconds": 3779,
+          "httpStatus": 200,
+          "returnedModel": "gpt-6-astra",
+          "reasoningEffort": "medium",
+          "tools": [
+            "compare_metrics"
+          ],
+          "usage": {
+            "inputTokens": 13468,
+            "outputTokens": 48,
+            "cachedInputTokens": 0,
+            "reasoningTokens": 0
+          }
+        },
+        {
+          "milliseconds": 24807,
+          "httpStatus": 200,
+          "returnedModel": "gpt-6-astra",
+          "reasoningEffort": "medium",
+          "tools": [],
+          "usage": {
+            "inputTokens": 18051,
+            "outputTokens": 1049,
+            "cachedInputTokens": 13465,
+            "reasoningTokens": 0
+          }
+        }
+      ],
+      "usage": {
+        "inputTokens": 31519,
+        "outputTokens": 1097,
+        "totalTokens": 32616
+      },
+      "response": {
+        "headline": "Engineering’s chart value differs from governed attrition; Sales & marketing matches",
+        "summary": "Governed annualized voluntary attrition is 7.0% for Engineering and 10.0% for Sales & marketing. Their favorable survey responses are nearly identical, so these aggregates do not establish an engagement explanation for the attrition difference. Reconcile the chart’s definition and reporting period before using it in a CHRO briefing.",
+        "sectionKinds": [
+          "limitation",
+          "finding",
+          "finding",
+          "finding",
+          "recommendation",
+          "recommendation"
+        ],
+        "panelCount": 3,
+        "evidenceReferenceCount": 4
+      },
+      "audience": "chro",
+      "verifiedObservation": "The response retained image labels Engineering 8.0% and Sales & marketing 10.0% in an explicitly unverified image section. Separately cited governed annualized voluntary attrition was 7.0% and 10.0%; the explanation identified the mismatch without inventing its cause."
+    },
+    {
+      "id": "service-investment-comparison",
+      "question": "Now compare staffing and automation for the HR service queue. Which experiment would you recommend and why?",
+      "audience": "chro",
+      "verdict": "passed",
+      "milliseconds": 59185,
+      "apiRounds": 3,
+      "rounds": [
+        {
+          "milliseconds": 9204,
+          "httpStatus": 200,
+          "status": "completed",
+          "tools": [
+            "inspect_metrics",
+            "search_workspace",
+            "calculate_scenario",
+            "calculate_scenario"
+          ]
+        },
+        {
+          "milliseconds": 12495,
+          "httpStatus": 200,
+          "status": "completed",
+          "tools": [
+            "calculate_scenario"
+          ]
+        },
+        {
+          "milliseconds": 37004,
+          "httpStatus": 200,
+          "status": "completed",
+          "tools": []
+        }
+      ],
+      "usage": null,
+      "usageNote": "Token usage was not retained by this instrumented replay.",
+      "response": {
+        "headline": "Test staffing first for queue recovery; require automation to prove its productivity and quality",
+        "summary": "I recommend a time-limited staffing experiment before a full automation commitment. Under the shared scenario assumptions, two additional agents clear the hypothetical backlog sooner and require less first-year funding than automation. Automation remains worth a bounded test, but its assumed productivity gain is decisive. The monitored queue supports action, not a conclusion that understaffing is the cause.",
+        "sectionKinds": [
+          "finding",
+          "finding",
+          "finding",
+          "hypothesis",
+          "recommendation",
+          "recommendation",
+          "limitation"
+        ],
+        "panelCount": 4,
+        "evidenceReferenceCount": 19
+      },
+      "verifiedObservation": "The model calculated staffing, automation and current-baseline service scenarios, distinguished observed backlog from the independent hypothetical queue, and recommended a bounded experiment. The corrected replay passed without a repair round."
+    }
+  ],
+  "browserToApplication": {
+    "artifact": "local-http-report.json",
+    "verdict": "passed",
+    "milliseconds": 37577,
+    "mode": "Actual browser upload → authenticated application API → Astra image and tool calls → evidence canvas",
+    "browserErrors": [],
+    "verifiedObservation": "An actual browser image upload passed through authenticated local application HTTP endpoints to Astra and displayed an analytical response and calculated evidence panels."
+  },
+  "failureHistory": [
+    {
+      "test": "initial image evaluation",
+      "verdict": "failed",
+      "milliseconds": 29776,
+      "reason": "A finding combined a number read from the supplied image with governed observations; the numerical evidence verifier rejected the unsupported figure.",
+      "correction": "Image observations now remain in a labeled unverified hypothesis or limitation section; governed findings have separate evidence citations.",
+      "finalVerification": "vision-verification"
+    },
+    {
+      "test": "intermediate image repair",
+      "verdict": "passed with presentation limitation",
+      "milliseconds": 54666,
+      "apiRounds": 3,
+      "reason": "A bounded repair separated the governed observations but omitted the original Engineering image value from its text.",
+      "correction": "The prompt now explicitly preserves useful supplied image values as unverified observations.",
+      "finalVerification": "vision-verification"
+    },
+    {
+      "test": "initial service comparison and instrumented replay",
+      "verdict": "failed",
+      "milliseconds": 65898,
+      "apiRounds": 4,
+      "reason": "The numerical verifier omitted already calculated chart trajectory labels and effective monetary assumptions. It rejected clearance months 3 and 5 and the valid $48,000 setup / $16,000 monthly costs.",
+      "correction": "Verification includes trusted chart trajectories and typed effective cost assumptions. A final verification-only repair is available after the normal analysis rounds, without additional tool execution.",
+      "finalVerification": "service-investment-comparison"
+    }
+  ],
+  "boundaries": [
+    "These evaluations establish four successful analytical paths, not exhaustive question coverage or guaranteed reasoning quality.",
+    "Reported latency is a measured sample for these requests, not a service-level guarantee.",
+    "Only synthetic workforce evidence and a synthetic supplied image were used. No local saved workspace was modified by the isolated evaluation scripts.",
+    "Provider usage counts are recorded where available; no dollar cost is inferred.",
+    "This report does not establish physical microphone/speaker compatibility or exact word-to-visual synchronization. Final continuous-voice validation is recorded separately."
+  ],
+  "redaction": "No credentials, authorization headers, cookies, raw function arguments, model reasoning contents, or original image bytes are included."
+}

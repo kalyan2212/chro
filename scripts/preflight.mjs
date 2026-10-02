@@ -29,7 +29,7 @@ if (args.includes('--help')) {
   let origin, stage='Initialize isolated workspace';
   const check = async (name, fn) => { stage=name; const detail=await fn(); report.checks.push({name,status:'passed',...(detail?{detail}: {})}); };
   const request = async (path, data, type='application/json') => {
-    const res = await fetch(origin+path,{...(data===undefined?{}:{method:'POST',headers:{'content-type':type},body:type==='application/json'?JSON.stringify(data):data}),signal:AbortSignal.timeout(50000)});
+    const res = await fetch(origin+path,{...(data===undefined?{}:{method:'POST',headers:{'content-type':type},body:type==='application/json'?JSON.stringify(data):data}),signal:AbortSignal.timeout(path==='/api/ask'?130000:50000)});
     if (!res.ok) { const message=await res.json().catch(()=>({})); throw Error(message.error||`HTTP ${res.status}`); }
     return type==='application/json' && path!=='/api/speech' ? res.json() : res;
   };
@@ -85,9 +85,14 @@ if (args.includes('--help')) {
         return 'Generated synthetic speech was transcribed successfully.';
       });
       let result;
-      await check('Astra route and grounded response',async()=>{
-        result=await request('/api/ask',{question:transcript,sourceVersion:snapshot.sourceVersion});assert.equal(result.mode,'api');assert.equal(result.action.type,'metric');assert.ok(result.facts.length);
-        assert.equal(result.sourceVersion,snapshot.sourceVersion);return 'Transcribed question produced a supported route and source-versioned facts.';
+      await check('Astra investigation and grounded response',async()=>{
+        result=await request('/api/ask',{question:transcript,sourceVersion:snapshot.sourceVersion});assert.equal(result.mode,'api');
+        assert.ok(result.analysis?.sections?.length,'Astra must compose a structured explanation');
+        const headcount=result.evidenceReferences?.find(item=>item.definitions?.some(definition=>definition.id==='P01'));
+        assert.ok(headcount?.facts?.length,'The analyst must retrieve calculated P01 headcount evidence');
+        assert.ok(result.analysis.sections.some(section=>section.kind==='finding'&&section.evidenceRefs.includes(headcount.refId)),'A finding must cite the retrieved headcount evidence');
+        assert.equal(headcount.sourceVersion,snapshot.sourceVersion);assert.equal(result.sourceVersion,snapshot.sourceVersion);
+        return 'Transcribed question produced a structured analysis citing calculated headcount evidence from the active source revision.';
       });
       await check('Narration of the governed answer',async()=>{
         const audio=await request('/api/speech',{text:result.answer});assert.ok((await audio.arrayBuffer()).byteLength>100);

@@ -106,6 +106,55 @@ test('multi-beat narration never slices multibyte or numeric statements to meet 
  assert.ok(result.events.every(event=>Buffer.byteLength(event.content)<=450));
  assert.ok(result.events.some(event=>event.content.includes(full)));assert.equal(result.events.some(event=>event.content.includes('999.9')),false);
 });
+test('analyst narration leads with interpreted findings, distinguishes recommendations, and names linked panels',async t=>{
+ const analysis={summary:'HR service pressure merits investigation before adding permanent capacity.',sections:[
+  {kind:'finding',title:'Queue pressure',text:'Arrivals exceed the current monthly resolution capacity.',evidenceRefs:['service-evidence']},
+  {kind:'hypothesis',title:'Demand mix',text:'Request mix may explain some of the pressure; the aggregate data cannot establish a cause.',evidenceRefs:['service-evidence']},
+  {kind:'recommendation',title:'A reversible first step',text:'Trial queue triage and compare service outcomes before committing to new staffing.',evidenceRefs:['service-evidence']},
+  {kind:'limitation',title:'Costs are conditional',text:'The capacity scenario is a modeled assumption, not an observed saving.',evidenceRefs:['capacity-evidence']}
+ ]};
+ const panels=[{id:'queue',title:'HR service pressure',evidenceRefs:['service-evidence'],response:{facts:[{label:'Closing backlog',value:'240'}]}},{id:'capacity',title:'Capacity scenario',evidenceRefs:['capacity-evidence'],response:{facts:[{label:'Monthly net value',value:'$12k'}]}}];
+ const {live}=service({ask:async body=>({...await governed(body),analysis,panels})});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ const result=await live.delegate({sessionId:'live_1',delegationId:'analyst_voice',...request});const spoken=result.events.map(event=>event.content).join(' ');
+ assert.match(result.event.content,/Analyst interpretation: HR service pressure/);
+ assert.match(spoken,/HR service pressure\. Evidence finding: Arrivals/);
+ assert.match(spoken,/Possible explanation, not established cause: Request mix/);
+ assert.match(spoken,/Suggested next step: Trial queue triage/);assert.match(spoken,/Evidence limit: The capacity scenario/);
+ assert.ok(result.events.every(event=>Buffer.byteLength(event.content)<=450));assert.ok(result.events.length<=8);
+ const recommendation=result.narration.beats.find(beat=>beat.kind==='recommendation');assert.equal(recommendation.panelId,'queue');assert.equal(recommendation.title,'HR service pressure');
+ assert.equal(result.events.some(event=>'panelId' in event),false,'UI metadata must not become an unsupported Live protocol field');
+});
+test('oversized analyst sentences are not truncated and remaining recommendations keep their qualification',async t=>{
+ const tooLong='A recommendation with an indivisible statement '+ '検'.repeat(200)+' at 999.9%.';
+ const {live}=service({ask:async body=>({...await governed(body),analysis:{summary:tooLong,sections:[{kind:'recommendation',title:'Next step',text:tooLong+' Review the available evidence with the service owner.',evidenceRefs:[]}]},panels:[]})});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ const result=await live.delegate({sessionId:'live_1',delegationId:'analyst_long',...request});const spoken=result.events.map(event=>event.content).join(' ');
+ assert.match(spoken,/Detailed wording and qualifications are on screen/);assert.match(spoken,/Suggested next step: Review the available evidence/);assert.equal(spoken.includes('999.9'),false);assert.ok(result.events.every(event=>Buffer.byteLength(event.content)<=450));
+});
+
+test('broad analysis preserves a late recommendation and evidence limit within the narration budget',async t=>{
+ const sections=Array.from({length:7},(_,index)=>({kind:'finding',title:'Finding '+index,text:`Evidence paragraph ${index} describes a complete observation. Its additional detail can remain on screen.`,evidenceRefs:[]}));
+ sections.push({kind:'recommendation',title:'Proposed experiment',text:'Test a reversible service intervention before permanent hiring.',evidenceRefs:[]});
+ sections.push({kind:'limitation',title:'Important uncertainty',text:'The scenario does not establish actual implementation readiness.',evidenceRefs:[]});
+ const {live}=service({ask:async body=>({...await governed(body),analysis:{summary:'Several signals warrant an investigation. The explanation should retain its suggested action and limits.',sections},panels:[]})});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ const result=await live.delegate({sessionId:'live_1',delegationId:'analyst_budget',...request});const spoken=result.events.map(event=>event.content).join(' ');
+ assert.ok(result.events.length<=8);assert.ok(result.events.every(event=>Buffer.byteLength(event.content)<=450));
+ assert.match(spoken,/Suggested next step: Test a reversible service intervention/);
+ assert.match(spoken,/Evidence limit: The scenario does not establish actual implementation readiness/);
+});
+test('attached images and source revision reach only the governed delegation backend as immutable input',async t=>{
+ const image={dataUrl:'data:image/png;base64,dGVzdA==',mimeType:'image/png',name:'user-chart.png'};let seen;
+ const {live,calls}=service({ask:async body=>{seen=body;return governed(body);}});t.after(()=>live.shutdown());await live.create({sdp:SDP,image});
+ await live.delegate({sessionId:'live_1',delegationId:'analyst_image',...request,image,sourceVersion:'source_revision_fixture',audience:'board'});
+ assert.deepEqual(seen.image,image);assert.ok(Object.isFrozen(seen.image));image.name='changed';assert.equal(seen.image.name,'user-chart.png');assert.equal(seen.sourceVersion,'source_revision_fixture');
+ assert.equal(seen.audience,'board');
+ assert.equal(calls[0].init.body.includes('data:image'),false);assert.equal(calls[0].init.body.includes('user-chart'),false);
+});
+test('reasoning uses its separate delegation deadline and still rejects a late cancelled result',async t=>{
+ const {live}=service({timeoutMs:10,delegationTimeoutMs:200,ask:async body=>{await new Promise(resolve=>setTimeout(resolve,30));return governed(body);}});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ const result=await live.delegate({sessionId:'live_1',delegationId:'analyst_slow',...request});assert.equal(result.delegationId,'analyst_slow');
+ const expired=service({delegationTimeoutMs:5,ask:async body=>{await new Promise(resolve=>setTimeout(resolve,20));return governed(body);}});t.after(()=>expired.live.shutdown());await expired.live.create({sdp:SDP});
+ await assert.rejects(expired.live.delegate({sessionId:'live_1',delegationId:'analyst_timeout',...request}),{status:409});
+});
 test('new delegation cancels earlier work and late results cannot escape',async t => {
  const old=deferred(); let call=0,oldSignal;
  const {live}=service({ask:async (body,signal) => { if(++call===1){oldSignal=signal;return old.promise;} return governed(body); }}); t.after(() => live.shutdown());
@@ -139,7 +188,7 @@ test('startup cancelled after response closes the orphan session',async () => {
 });
 
 const source=readFileSync(new URL('../public/live.js',import.meta.url),'utf8');
-function browser({permissionPending=false,playBlocked=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null,multiBeat=false,statusCode=200}={}) {
+function browser({permissionPending=false,playBlocked=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null,multiBeat=false,statusCode=200,attachedImage=null,selectedAudience='chro'}={}) {
  class Element {
   constructor(){this.listeners=new Map();this.attrs={};this.textContent='';this.disabled=false;this.classList={toggle(){}};this.srcObject=null;this.paused=true;}
   addEventListener(type,fn){this.listeners.set(type,fn);} fire(type,value={}){return this.listeners.get(type)?.(value);} setAttribute(k,v){this.attrs[k]=v;} focus(){this.focused=true;}
@@ -158,7 +207,7 @@ function browser({permissionPending=false,playBlocked=false,delegatePending=fals
   close(){this.connectionState='closed';} addEventListener(){} removeEventListener(){}
  }
  const scope={function:'all',region:'all',period:'quarter'};
- const window={RTCPeerConnection:Peer,addEventListener:(type,fn)=>listeners.set(type,fn),dispatchEvent:e=>{emitted.push(e);return listeners.get(e.type)?.(e);},WI_CONVERSATION:{cancel(){},getScope:()=>scope,getContext:()=>({}),getHistory:()=>[],async showResponse(data,options){if(renderPending)await render.promise;if(options?.isCurrent&&!options.isCurrent())return false;shown.push(data);return true;}}};
+ const window={RTCPeerConnection:Peer,addEventListener:(type,fn)=>listeners.set(type,fn),dispatchEvent:e=>{emitted.push(e);return listeners.get(e.type)?.(e);},WI_STUDIO:{getImage:()=>attachedImage,getAudience:()=>selectedAudience},WI_CONVERSATION:{cancel(){},getScope:()=>scope,getContext:()=>({}),getHistory:()=>[],async showResponse(data,options){if(renderPending)await render.promise;if(options?.isCurrent&&!options.isCurrent())return false;shown.push(data);return true;}}};
  const fetch=async(url,init)=>{
   requests.push({url,init}); if(url==='/api/status')return {ok:statusCode===200,status:statusCode,json:async()=>({version:'2.0.1',live:{available:true}})};
   if(url==='/api/diagnostics'||url==='/api/diagnostics/connection')return {ok:true,json:async()=>structuredClone(connectionReport)};
@@ -168,7 +217,7 @@ function browser({permissionPending=false,playBlocked=false,delegatePending=fals
   if(url==='/api/live/delegate'){
    const body=JSON.parse(init.body); const data=await governed(validateRequest(body));
    const value={sessionId:body.sessionId,delegationId:body.delegationId,response:data,event:{type:'session.commentary.append',event_id:'result_mock',delegation_id:body.delegationId,content:data.answer}};
-   if(multiBeat){value.event.content='Synthetic data. The validated result is ready.';value.events=[value.event,{...value.event,event_id:'result_mock_2',content:'First-year exits use a mature cohort denominator.'},{...value.event,event_id:'result_mock_3',content:'This is an association, not a causal conclusion.'}];}
+   if(multiBeat){value.event.content='Synthetic data. The validated result is ready.';value.events=[value.event,{...value.event,event_id:'result_mock_2',content:'First-year exits use a mature cohort denominator.'},{...value.event,event_id:'result_mock_3',content:'This is an association, not a causal conclusion.'}];value.narration={beats:value.events.map((_,index)=>({index,panelId:'cohort',title:'Cohort evidence',kind:'finding'}))};}
    if(delegatePending)await delegation.promise; return {ok:true,json:async()=>value};
   }
   throw Error('Unexpected URL '+url);
@@ -176,7 +225,7 @@ function browser({permissionPending=false,playBlocked=false,delegatePending=fals
  vm.runInNewContext(source,{window,document:{getElementById:id=>id==='wi-live'?host:id==='wi-app'&&toolbar?root:null,createElement:()=>new Element(),body:new Element()},navigator:{mediaDevices:{getUserMedia:()=>permissionPending?permission.promise:Promise.resolve(stream())},sendBeacon:(url,body)=>{requests.push({url,body,beacon:true});return true;}},RTCPeerConnection:Peer,MediaStream:class{},Event:class{constructor(type){this.type=type;}},CustomEvent:class{constructor(type,{detail}){this.type=type;this.detail=detail;}},TextEncoder,fetch,Blob,URL:{createObjectURL:blob=>{blobs.push(blob);return 'blob:report-'+blobs.length;},revokeObjectURL(){}},AbortController,AbortSignal,structuredClone,crypto:webcrypto,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)});
  const event=value=>peers.at(-1).channel.onmessage?.({data:JSON.stringify(value)});
  const fireTimers=async ms=>{for(const [id,t]of [...timers])if(t.ms===ms){timers.delete(id);await t.fn();}await tick();};
- return {window,scope,requests,peers,shown,timers,streams,host,downloads,blobs,emitted,toolbar:anchor.inserted,node:s=>host.querySelector(s),event,fireTimers,setStatus:value=>{statusCode=value;},setSessionFailure:value=>{sessionFailure=value;},resolvePermission:()=>permission.resolve(stream()),resolveDelegate:()=>delegation.resolve(),resolveRender:()=>render.resolve(),async start(){await tick();window.WI_LIVE.open();await host.querySelector('#wl-start').fire('click');event({type:'session.started',session:{id:'live_browser'}});await tick();}};
+ return {window,scope,requests,peers,shown,timers,streams,host,downloads,blobs,emitted,toolbar:anchor.inserted,node:s=>host.querySelector(s),event,fireTimers,setStatus:value=>{statusCode=value;},setImage:value=>{attachedImage=value;},setAudience:value=>{selectedAudience=value;},setSessionFailure:value=>{sessionFailure=value;},resolvePermission:()=>permission.resolve(stream()),resolveDelegate:()=>delegation.resolve(),resolveRender:()=>render.resolve(),async start(){await tick();window.WI_LIVE.open();await host.querySelector('#wl-start').fire('click');event({type:'session.started',session:{id:'live_browser'}});await tick();}};
 }
 test('voice startup failure releases media, exposes connection help, exports safe context and permits a retry',async()=>{
  const failure={error:'The server could not verify the API certificate.',code:'TLS_TRUST',diagnosticId:'22222222-2222-4222-8222-222222222222'};
@@ -232,6 +281,7 @@ test('richer voice beats wait for their own injection acknowledgements and emit 
  const spoken=()=>h.peers[0].channel.sent.filter(event=>event.type==='session.commentary.append');
  assert.equal(spoken().length,1);
  const answerEvent=h.emitted.find(event=>event.type==='wi-voice-answer');assert.equal(answerEvent.detail.turnId,'item_beats');assert.equal(answerEvent.detail.beatCount,3);assert.ok(Object.isFrozen(answerEvent.detail.response));
+ assert.equal(answerEvent.detail.narration.beats[0].panelId,'cohort');assert.equal(h.emitted.find(event=>event.type==='wi-voice-beat').detail.cue.title,'Cohort evidence');
  h.event({type:'session.commentary.appended',client_event_id:'foreign_result'});assert.equal(spoken().length,1);
  h.event({type:'session.commentary.appended',client_event_id:'result_mock'});assert.equal(spoken().length,2);
  h.event({type:'session.commentary.appended',client_event_id:'result_mock'});assert.equal(spoken().length,2);
@@ -297,6 +347,22 @@ test('interruption during asynchronous visual refresh prevents stale view mutati
 test('scope changes while work is pending discard response',async()=>{
  const h=browser({delegatePending:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_scope',target:'client'}});
  const work=h.fireTimers(300);await tick();h.scope.period='rolling12';h.resolveDelegate();await work;assert.equal(h.shown.length,0);h.event({type:'session.closed',usage:{seconds:4}});
+});
+test('voice forwards a user attachment only with delegation and discards an answer after the attachment changes',async()=>{
+ const attachment={dataUrl:'data:image/png;base64,dGVzdA==',mimeType:'image/png',name:'chart.png'};
+ const h=browser({attachedImage:attachment,delegatePending:true});await h.start();
+ const startup=JSON.parse(h.requests.find(request=>request.url==='/api/live/session').init.body);assert.equal(startup.image,undefined);
+ h.event({type:'session.input_transcript.delta',delta:'Explain the chart',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_image',target:'client'}});
+ const work=h.fireTimers(300);await tick();const request=JSON.parse(h.requests.find(request=>request.url==='/api/live/delegate').init.body);assert.deepEqual(request.image,attachment);
+ assert.match(h.node('#wl-result').textContent,/Investigating/);assert.equal(h.emitted.filter(event=>event.type==='wi-voice-state').at(-1).detail.phase,'thinking');
+ h.setImage({...attachment,dataUrl:'data:image/png;base64,bmV3'});h.resolveDelegate();await work;assert.equal(h.shown.length,0);assert.equal(h.peers[0].channel.sent.some(event=>event.type==='session.commentary.append'),false);
+ h.event({type:'session.closed',usage:{seconds:4}});
+});
+test('voice preserves the selected audience and discards an answer when that perspective changes',async()=>{
+ const h=browser({selectedAudience:'board',delegatePending:true});await h.start();
+ h.event({type:'session.input_transcript.delta',delta:'Summarize the evidence',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_audience',target:'client'}});
+ const work=h.fireTimers(300);await tick();assert.equal(JSON.parse(h.requests.find(request=>request.url==='/api/live/delegate').init.body).audience,'board');
+ h.setAudience('ceo');h.resolveDelegate();await work;assert.equal(h.shown.length,0);h.event({type:'session.closed',usage:{seconds:4}});
 });
 test('graceful close retains transport until final event, timeout releases without claiming final',async()=>{
  const h=browser();await h.start();h.event({type:'session.usage.updated',usage:{seconds:12}});h.node('#wl-stop').fire('click');

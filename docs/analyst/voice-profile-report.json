@@ -1,0 +1,146 @@
+{
+  "schema": "chro-analyst-voice-profile-validation.v1",
+  "at": "2026-10-02T15:06:28.300Z",
+  "environment": "Isolated local analytical pipeline using the real configured provider; no browser or Realtime transport",
+  "model": "gpt-6-astra",
+  "reasoningEffort": "medium",
+  "channel": "voice",
+  "question": "Now compare staffing and automation for the HR service queue. Which experiment would you recommend and why?",
+  "verdict": "pass",
+  "milliseconds": 29326,
+  "apiRounds": 2,
+  "rounds": [
+    {
+      "number": 1,
+      "http": 200,
+      "status": "completed",
+      "milliseconds": 9366,
+      "tools": [
+        "inspect_metrics",
+        "calculate_scenario",
+        "calculate_scenario"
+      ],
+      "maxOutputTokens": 2500,
+      "usage": {
+        "input_tokens": 13288,
+        "input_tokens_details": {
+          "cache_write_tokens": 13285,
+          "cached_tokens": 0
+        },
+        "output_tokens": 370,
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "total_tokens": 13658
+      }
+    },
+    {
+      "number": 2,
+      "http": 200,
+      "status": "completed",
+      "milliseconds": 19532,
+      "tools": [],
+      "maxOutputTokens": 2500,
+      "usage": {
+        "input_tokens": 20040,
+        "input_tokens_details": {
+          "cache_write_tokens": 6752,
+          "cached_tokens": 13285
+        },
+        "output_tokens": 785,
+        "output_tokens_details": {
+          "reasoning_tokens": 69
+        },
+        "total_tokens": 20825
+      }
+    }
+  ],
+  "response": {
+    "headline": "Test staffing first: the modeled queue clears faster at lower first-year cost",
+    "analysis": {
+      "summary": "I recommend a time-limited staffing experiment before an automation rollout. Under the same hypothetical queue assumptions, staffing clears the backlog sooner and requires less first-year funding. Validate productivity and service quality before making either investment permanent.",
+      "sections": [
+        {
+          "kind": "finding",
+          "title": "There is a queue problem worth testing",
+          "text": "Across all functions and regions, the synthetic HR backlog grew 23.1% during July–September 2026, reaching 320 open cases. At September 30, 43 open cases breached SLA. The quarter’s 92.0% resolved-within-SLA rate excludes open cases, so it does not capture the whole service problem.",
+          "evidenceRefs": [
+            "E1",
+            "E2",
+            "E3",
+            "E5"
+          ]
+        },
+        {
+          "kind": "finding",
+          "title": "Staffing wins the baseline comparison",
+          "text": "Adding two agents models 1,140 cases of monthly capacity, backlog clearance in month 3, and $163.2k first-year incremental funding. Automation at an assumed 15% productivity gain models 1,092.5 monthly capacity, clearance in month 5, and $240k funding including setup. Both end month 12 with zero backlog.",
+          "evidenceRefs": [
+            "E7",
+            "E8"
+          ]
+        },
+        {
+          "kind": "limitation",
+          "title": "These are conditional scenarios, not forecasts",
+          "text": "Both options use an independent hypothetical opening queue of 420, 1,000 monthly arrivals, and 10 baseline agents resolving 95 cases each monthly—not the dashboard’s queue. Steady productivity and arrivals are assumptions. Actual staffing ramp-up, automation effectiveness, and service-quality effects remain unverified.",
+          "evidenceRefs": [
+            "E7",
+            "E8"
+          ]
+        },
+        {
+          "kind": "recommendation",
+          "title": "Run a reversible staffing pilot",
+          "text": "Propose a 12-week pilot adding two qualified temporary agents, with a comparable unchanged queue and matched case mix. Track backlog age, SLA breaches, quality-checked resolutions, reopenings, satisfaction, and incremental cost per resolution. Continue only if backlog improves without quality deterioration. Defer automation rollout until a bounded, human-reviewed trial demonstrates stronger economics.",
+          "evidenceRefs": [
+            "E7",
+            "E8",
+            "E3"
+          ]
+        }
+      ],
+      "unknowns": [
+        "Actual arrivals, case mix, productive agent capacity, and time to deploy qualified staff.",
+        "Automation’s achievable productivity gain after human review, rework, and implementation costs."
+      ],
+      "followups": [
+        "Confirm operational inputs and pilot costs before setting success thresholds.",
+        "Stress-test both options against higher arrivals and lower realized productivity."
+      ]
+    },
+    "panels": [
+      {
+        "title": "Two-agent staffing scenario",
+        "why": "Shows modeled backlog clearance and first-year incremental funding.",
+        "evidenceRefs": [
+          "E7"
+        ]
+      },
+      {
+        "title": "Assisted-resolution scenario",
+        "why": "Provides the like-for-like queue comparison at an assumed 15% productivity gain.",
+        "evidenceRefs": [
+          "E8"
+        ]
+      }
+    ],
+    "evidenceReferenceCount": 8
+  },
+  "comparison": {
+    "earlierFullLengthDirectAnalysisMs": 59185,
+    "earlierFullLengthRounds": 3,
+    "interpretation": "This single concise-profile sample completed faster; stochastic evidence choices and provider conditions differ. It is not a controlled benchmark or end-to-end voice latency guarantee."
+  },
+  "preserved": [
+    "All evidence tools and scenario calculators",
+    "Medium reasoning and the same strict response schema",
+    "Numeric evidence verification and model-versus-observation distinction",
+    "The same caller cancellation signal and investigation round limits"
+  ],
+  "boundaries": [
+    "No physical microphone or speaker was tested in this direct replay.",
+    "No Realtime transport or spoken response latency was measured here.",
+    "Presentation brevity does not restrict question vocabulary or evidence access."
+  ]
+}

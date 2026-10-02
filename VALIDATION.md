@@ -1,5 +1,7 @@
 # Release validation — version 2.0.1
 
+The dated entries below preserve release history. See **Astra analytical workspace — October 2, 2026** for the current tool-driven analyst, image and browser validation boundary.
+
 Built and checked on 25 September 2026 with Node.js 24.19.0. **83 automated tests passed**, plus the six-step offline preflight. The previous 2.0.0 release also passed a separate CLI startup/shutdown smoke check. No live OpenAI or Anthropic request, company-system request, physical microphone recording, or browser-rendered visual review was performed in this environment. For this patch, the user's supplied diagnostic JSON reported a passed local capture test; the supplied WebM contained VP8 video and Opus audio and decoded without errors. That establishes local diagnostic capture, not an AI voice session.
 
 This is the complete runnable **synthetic demonstration package**. Its frontend, local backend, simulated source adapter, persistent decision workspace, and optional provider integration paths are implemented. A functioning implementation and mocked protocol checks do not establish real model entitlement or target-device media behavior.
@@ -64,3 +66,44 @@ The expanded suite passes 88 tests, including Cloud Storage generation checks, c
 The release passed **127 automated tests**, **18 Studio browser checks**, **6 simulated voice browser checks**, and the existing13-journey workspace browser regression plus narration/shared-link checks. Screenshots were inspected at1920×1080 and390px, with responsive checks also at1366 and768px. Verified flows include context and assumption retention, all six calculated charts, percent-unit clarification, compound-step integrity, Back, persistent investigation/decision saves, original lineage, source refresh, reduced motion and access to the original workspace. See [Studio report](docs/studio/report.json) and [voice protocol report](docs/studio-voice/report.json).
 
 A separate **real-provider** trial used generated speech input through WebRTC. It transcribed the retention question, opened the matching scene, spoke six avoided exits and minus $90,000 net, received measurable audio, and closed with final24.0-second provider usage. [Sanitized evidence](docs/studio-voice/provider-report.json). This does not establish physical microphone/speaker compatibility, exhaustive question coverage or production HR governance. Saved records remain drafts, all data remains synthetic, and transcript emphasis is approximate.
+
+## Astra analytical workspace — October 2, 2026
+
+The current integrated application passed **155 automated tests** and **six offline preflight checks** on Node 24.14.0. The only legacy test fixture requiring adjustment was the live-session ownership test: its old router response was replaced with a real tool-call/structured-answer fixture. All cookie ownership, rejected cross-session access, duplicate delegation and logout cleanup assertions remain. The new test also requires retrieval of governed headcount evidence. No external provider requests were made by these tests or offline preflight.
+
+The suite now checks multi-step analyst execution, all 50 metric definitions and calculated values, 38 coverage descriptions, scenario assumptions, small-cell suppression, snapshot isolation, numerical grounding and repair, unknown references, bounded tool calls, image validation and size limits, progress ownership, and cancellation. HTTP tests confirm that large voice-delegation bodies still require the owning session, the close endpoint retains its smaller limit, and progress polling does not trigger Cloud Storage reads. These tests establish deterministic application behavior with simulated provider responses; they do not establish comprehensive reasoning quality.
+
+The five existing Chromium scripts passed again: **13 original workspace journeys**, shared-link sign-in, the narration guide, **18 Studio checks**, and **six simulated voice checks**. They cover persistent investigations and decisions, evidence lineage, stale-source recovery, the six labs, assumptions and follow-up context, Back navigation, narrow layouts, reduced motion, expired authentication, microphone denial and stale narration cancellation. Their generated historical screenshots were not used to make a new visual-quality claim.
+
+The new [analyst browser report](docs/analyst/browser-report.json) records **16 checks** using a recorded actual Astra response and locally calculated scoped observations as fixtures, with no external API calls during browser execution:
+
+1. Board perspective is sent with the question and the recorded analysis renders findings and calculated panels.
+2. Selecting an evidence panel changes the visible chart and follow-up context.
+3. A claim citation navigates to its associated calculated panel.
+4. Downloaded briefs map evidence reference IDs to their scope, revision and metric definitions.
+5. Narration cues highlight a finding and its panel, then clear on stop.
+6. A saved panel investigation survives reload with server-calculated lineage.
+7. Saved breakdowns retain displayed Engineering and Sales segment observations, rather than only the aggregate.
+8. An attached image is decoded, normalized, previewed and sent only while attached.
+9. Changing perspective aborts an active typed request and rejects its late response.
+10. Adding or removing an attachment aborts stale typed analysis.
+11. Leaving Studio keeps a hidden Studio attachment out of Workspace voice.
+12. Manually selecting evidence aborts pending analysis while retaining the selected panel.
+13. A multi-panel save retains each observation's separate scope, server-calculated value and source revision.
+14. Follow-ups use the selected panel's scope as well as its metric context.
+15. Layouts fit at presentation, tablet and phone widths, and reduced motion is honored.
+16. No browser JavaScript errors occur.
+
+The new briefing screenshots were inspected at 1920 × 1080 and 390 pixels wide; the chart was kept visible within the desktop evidence panel after an inspection-driven layout correction. See [desktop briefing](docs/analyst/01-executive-1920.png), [narration emphasis](docs/analyst/02-narration-focus-1920.png), and [phone briefing](docs/analyst/briefing-390.png). These images show one recorded analysis, not exhaustive evidence of every generated answer or device.
+
+GitHub Actions now runs `scripts/check-analysis.mjs` after the existing browser suite using the same installed Chromium. Its response fixture is checked into the repository and it makes no live provider calls. The live preflight has been updated to accept a structured analysis with cited headcount evidence and a longer analytical request deadline; its changed **live** branch has not been rerun as part of the offline checks above. Live analysis may require multiple paid Responses requests, so the earlier fixed four-request preflight description is historical.
+
+Actual provider validation now includes **four successful Astra analytical paths**, recorded in the [sanitized provider report](docs/analyst/provider-report.json): a multi-metric executive question (34.7 seconds, two Responses rounds), a strategic follow-up carrying prior conversation (43.3 seconds, two rounds), image reconciliation against governed workforce metrics (29.0 seconds, two rounds), and staffing-versus-automation experiment design (59.2 seconds, three rounds). The model retrieved calculated evidence and composed distinct findings, hypotheses, recommendations and limitations. These are measured samples, not latency guarantees or exhaustive reasoning-quality certification.
+
+The successful image response retained the supplied **8.0%** Engineering label as an unverified visual observation, separately cited the governed **7.0%** result, and described the discrepancy without inventing its cause. Earlier failed trials are preserved in the report: the first image answer mixed image and governed numbers in a finding; the initial service comparison exposed a verifier omission of valid chart timings and effective monetary assumptions. Those failures were corrected and the final image and service replays passed without a repair round. Separately, an [actual browser-to-application image check](docs/analyst/local-http-report.json) completed in **37.6 seconds** through authenticated local HTTP endpoints, rendered the analysis and evidence canvas, and recorded no browser JavaScript errors.
+
+An [actual continuous-voice replay](docs/analyst-voice/retest/provider-report.json) completed both the staffing-versus-automation question and a follow-up asking how to distinguish capacity from routing. The model revised its recommendation when the follow-up changed the decision framing; calculated evidence and received spoken answers were present for both turns. These generated-input WebRTC trials took **81.6 and 67.1 seconds** from spoken-question start to analysis, with substantive speech following about one second later. This delay is a material interaction limitation.
+
+A subsequent concise voice profile preserves the complete tool catalogue, medium reasoning and numerical verification while requesting a shorter summary and fewer displayed sections. One [actual direct analytical replay](docs/analyst/voice-profile-report.json) of the service question completed in **29.3 seconds**, two provider rounds, with four short sections, two scenario panels and eight evidence references; the earlier full-length direct replay took 59.2 seconds in three rounds. This is a sampled backend improvement, not a controlled comparison or an established end-to-end WebRTC latency guarantee. Physical microphone/speaker compatibility, exact word-to-visual synchronization, complete question coverage and production HR governance remain unverified. Architecture and operational limits are documented in [ASTRA-ANALYST.md](docs/ASTRA-ANALYST.md).
+
+Final implementation regression run: **160/160 automated tests passed**. The 16 analyst browser checks cover presentation, source references, persisted scopes, exports, attachment and perspective cancellation, and responsive layouts. Actual provider and continuous-voice reports above remain distinct from simulated browser checks.

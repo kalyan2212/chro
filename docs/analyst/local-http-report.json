@@ -1,0 +1,1164 @@
+{
+  "at": "2026-10-02T14:56:42.766Z",
+  "base": "http://127.0.0.1:8787",
+  "milliseconds": 37577,
+  "mode": "Actual browser upload → authenticated application API → Astra image and tool calls → evidence canvas",
+  "progress": [
+    "Astra is planning the investigation…",
+    "Astra is investigating your question…",
+    "Astra is connecting the evidence and testing its recommendation…"
+  ],
+  "browserErrors": [],
+  "response": {
+    "mode": "api",
+    "question": "Inspect this chart and compare its attrition figures with our governed workforce evidence. Explain the discrepancy and recommend what the board should ask next.",
+    "title": "Engineering’s chart figure does not match governed attrition; reconcile definitions before board use",
+    "answer": "Governed annualized voluntary attrition for July–September 2026 is 7.0% in Engineering and 10.0% in Sales & marketing. Engineering does not match the supplied chart; Sales & marketing matches at displayed precision, but comparability remains unverified. The discrepancy’s cause is not established. The board should require a source-and-definition reconciliation and consider the wider functional picture before directing retention investment.",
+    "scope": {
+      "function": "all",
+      "region": "all",
+      "period": "quarter"
+    },
+    "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+    "action": {
+      "type": "analysis",
+      "metricId": null,
+      "caseId": null,
+      "overrides": {}
+    },
+    "facts": [
+      {
+        "label": "Engineering",
+        "value": "7.0%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Customer services",
+        "value": "12.0%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Sales & marketing",
+        "value": "10.0%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Operations",
+        "value": "4.5%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Corporate",
+        "value": "3.0%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Engineering",
+        "value": "2.0%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Customer services",
+        "value": "4.2%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Sales & marketing",
+        "value": "4.0%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Operations",
+        "value": "0.8%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Corporate",
+        "value": "0.0%",
+        "note": "2026-07 to 2026-09"
+      },
+      {
+        "label": "Engineering",
+        "value": "10.0%",
+        "note": "Matured cohort, observed through Sep 2026"
+      },
+      {
+        "label": "Customer services",
+        "value": "17.5%",
+        "note": "Matured cohort, observed through Sep 2026"
+      },
+      {
+        "label": "Sales & marketing",
+        "value": "13.0%",
+        "note": "Matured cohort, observed through Sep 2026"
+      },
+      {
+        "label": "Operations",
+        "value": "16.0%",
+        "note": "Matured cohort, observed through Sep 2026"
+      },
+      {
+        "label": "Corporate",
+        "value": "10.0%",
+        "note": "Matured cohort, observed through Sep 2026"
+      }
+    ],
+    "evidence": [
+      {
+        "id": "E03",
+        "definition": "Voluntary exits / mean FTE, annualized; short windows are not forecasts.",
+        "period": "2026-07 to 2026-09",
+        "source": "Synthetic governed enterprise aggregates"
+      },
+      {
+        "id": "P13",
+        "definition": "Annualized classified regrettable exits / selected-period mean FTE; classification is illustrative.",
+        "period": "2026-07 to 2026-09",
+        "source": "Fictional manual aggregate score sheet"
+      },
+      {
+        "id": "C01",
+        "definition": "Any exit within 12 months / fully observed Oct 2024–Sep 2025 hires; independent of selected flow period.",
+        "period": "Matured cohort, observed through Sep 2026",
+        "source": "Synthetic governed enterprise aggregates"
+      }
+    ],
+    "followups": [
+      "Obtain the chart’s underlying extract and calculation specification for reconciliation.",
+      "Review governed voluntary attrition trends by function alongside aggregate regrettable exits and capability exposure."
+    ],
+    "boundary": "Workforce figures are synthetic. Hypotheses and recommendations are distinct from observed or calculated findings; no external action or approval has been executed.",
+    "analysis": {
+      "summary": "Governed annualized voluntary attrition for July–September 2026 is 7.0% in Engineering and 10.0% in Sales & marketing. Engineering does not match the supplied chart; Sales & marketing matches at displayed precision, but comparability remains unverified. The discrepancy’s cause is not established. The board should require a source-and-definition reconciliation and consider the wider functional picture before directing retention investment.",
+      "sections": [
+        {
+          "kind": "limitation",
+          "title": "User image — unverified",
+          "text": "The image shows Engineering at 8.0% and Sales & marketing at 10.0%, labeled “Synthetic sample chart · values not yet verified.” It does not specify a reporting period, exit definition, denominator, regional coverage or annualization method. These are visual observations, not verified workforce results.",
+          "evidenceRefs": []
+        },
+        {
+          "kind": "finding",
+          "title": "The governed comparison",
+          "text": "For all regions, July–September 2026, annualized voluntary attrition is Engineering 7.0% and Sales & marketing 10.0%. Thus, the image’s Engineering figure does not match the governed measure; its Sales & marketing figure matches only at displayed precision. The governed definition is voluntary exits divided by mean FTE, annualized—not the percentage of employees who left during the quarter and not a forecast.",
+          "evidenceRefs": [
+            "E1",
+            "E4"
+          ]
+        },
+        {
+          "kind": "finding",
+          "title": "Other exit measures do not validate the chart",
+          "text": "For the same quarter, annualized regrettable attrition is 2.0% in Engineering and 4.0% in Sales & marketing; the classification is illustrative. First-year exit rates are instead 10.0% and 13.0%, respectively, for fully observed October 2024–September 2025 hires, observed through September 2026. That cohort measure includes any exit within 12 months and is independent of the selected quarter. Neither alternative reproduces the chart’s pair of figures.",
+          "evidenceRefs": [
+            "E2",
+            "E3"
+          ]
+        },
+        {
+          "kind": "hypothesis",
+          "title": "What could explain the discrepancy",
+          "text": "Possible explanations include a different period or source revision, a narrower population, total rather than voluntary exits, a headcount rather than mean-FTE denominator, or a transcription error. None is established. Obtain the chart’s underlying extract, numerator, denominator, filters and calculation specification; reproducing each figure against those inputs would distinguish a legitimate metric difference from an error.",
+          "evidenceRefs": [
+            "E1",
+            "E4"
+          ]
+        },
+        {
+          "kind": "finding",
+          "title": "The two-function chart leaves out a material comparison",
+          "text": "Customer services has the highest governed annualized voluntary attrition at 12.0%, compared with 7.8% across all functions for July–September 2026. The supplied chart therefore does not show the highest-rate function. These differences are descriptive and do not establish causes or the business impact of departures.",
+          "evidenceRefs": [
+            "E1"
+          ]
+        },
+        {
+          "kind": "recommendation",
+          "title": "What the board should ask next",
+          "text": "1. Can the CHRO and data owner reconcile each chart value to a named metric, period, population, numerator, denominator and source revision before the next board pack?\n2. Is attrition persistent across comparable periods, or is the annualized quarter magnifying a short-term pattern?\n3. Why were only these functions selected, and what warrants prioritizing Engineering or Sales & marketing over Customer services?\n4. Which departures create critical capability, customer-service or delivery exposure? Request aggregate evidence rather than inferring impact from rates alone.\n5. What evidence supports the proposed intervention, and what outcome, cost limit and review gate would justify scaling it?\nUntil reconciliation is complete, replace or clearly flag the supplied chart and use the governed comparison with its full definition. Do not allocate retention funding solely from the chart.",
+          "evidenceRefs": [
+            "E1",
+            "E2",
+            "E3"
+          ]
+        },
+        {
+          "kind": "limitation",
+          "title": "Evidence boundary",
+          "text": "All workforce evidence in this workspace is synthetic. The chart’s provenance and calculation inputs are unavailable, so the mismatch is verified but its cause is not.",
+          "evidenceRefs": []
+        }
+      ],
+      "unknowns": [
+        "The chart’s period, population, exit definition, denominator and source revision.",
+        "Whether the functional differences persist over time or translate into material business exposure."
+      ],
+      "followups": [
+        "Obtain the chart’s underlying extract and calculation specification for reconciliation.",
+        "Review governed voluntary attrition trends by function alongside aggregate regrettable exits and capability exposure."
+      ]
+    },
+    "panels": [
+      {
+        "id": "panel-1",
+        "title": "Governed voluntary attrition by function",
+        "why": "Provides the direct comparison and reveals the highest-rate function omitted from the image.",
+        "response": {
+          "mode": "api",
+          "question": "E03 by function",
+          "answer": "Voluntary attrition, annualized by function: highest Customer services at 12.0%, lowest Corporate at 3.0%. All functions: 7.8%.",
+          "title": "Voluntary attrition, annualized by function",
+          "scope": {
+            "function": "all",
+            "region": "all",
+            "period": "quarter"
+          },
+          "action": {
+            "type": "breakdown",
+            "metricId": "E03",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Engineering",
+              "value": "7.0%",
+              "note": "2026-07 to 2026-09"
+            },
+            {
+              "label": "Customer services",
+              "value": "12.0%",
+              "note": "2026-07 to 2026-09"
+            },
+            {
+              "label": "Sales & marketing",
+              "value": "10.0%",
+              "note": "2026-07 to 2026-09"
+            },
+            {
+              "label": "Operations",
+              "value": "4.5%",
+              "note": "2026-07 to 2026-09"
+            },
+            {
+              "label": "Corporate",
+              "value": "3.0%",
+              "note": "2026-07 to 2026-09"
+            }
+          ],
+          "evidence": [
+            {
+              "id": "E03",
+              "definition": "Voluntary exits / mean FTE, annualized; short windows are not forecasts.",
+              "period": "2026-07 to 2026-09",
+              "source": "Synthetic governed enterprise aggregates"
+            }
+          ],
+          "followups": [
+            "Explain E03",
+            "Voluntary attrition, annualized by region",
+            "Voluntary attrition, annualized trend"
+          ],
+          "boundary": "All figures are synthetic. Astra routes intent; the local engine calculates every reported fact. No individual decisions or causal conclusions. Every segment uses the same definition; ratios are computed after aggregating each segment. Differences between segments are descriptive, not causal.",
+          "breakdown": {
+            "metricId": "E03",
+            "label": "Voluntary attrition, annualized",
+            "unit": "ratio",
+            "dimension": "function",
+            "sort": null,
+            "limit": null,
+            "where": "",
+            "periodLabel": "2026-07 to 2026-09",
+            "rows": [
+              {
+                "segment": "Engineering",
+                "label": "Engineering",
+                "value": 0.070199874643081,
+                "formatted": "7.0%",
+                "numerator": null,
+                "denominator": null,
+                "period": "2026-07 to 2026-09"
+              },
+              {
+                "segment": "Customer services",
+                "label": "Customer services",
+                "value": 0.12034096607053318,
+                "formatted": "12.0%",
+                "numerator": null,
+                "denominator": null,
+                "period": "2026-07 to 2026-09"
+              },
+              {
+                "segment": "Sales & marketing",
+                "label": "Sales & marketing",
+                "value": 0.10030649205906939,
+                "formatted": "10.0%",
+                "numerator": null,
+                "denominator": null,
+                "period": "2026-07 to 2026-09"
+              },
+              {
+                "segment": "Operations",
+                "label": "Operations",
+                "value": 0.04513163393230255,
+                "formatted": "4.5%",
+                "numerator": null,
+                "denominator": null,
+                "period": "2026-07 to 2026-09"
+              },
+              {
+                "segment": "Corporate",
+                "label": "Corporate",
+                "value": 0.030094043887147336,
+                "formatted": "3.0%",
+                "numerator": null,
+                "denominator": null,
+                "period": "2026-07 to 2026-09"
+              }
+            ],
+            "overall": {
+              "label": "All functions",
+              "value": 0.07822816548265775,
+              "formatted": "7.8%"
+            },
+            "definition": "Voluntary exits / mean FTE, annualized; short windows are not forecasts."
+          },
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "conversation": {
+            "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+            "metricId": "E03"
+          },
+          "presentation": {
+            "version": 1,
+            "scene": "comparison",
+            "headline": "Voluntary attrition, annualized by function",
+            "takeaway": "Voluntary attrition, annualized by function: highest Customer services at 12.0%, lowest Corporate at 3.0%. All functions: 7.8%.",
+            "beats": [
+              {
+                "id": "fact-0",
+                "label": "Engineering",
+                "detail": "7.0%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  0
+                ],
+                "evidenceIds": [
+                  "E03"
+                ]
+              },
+              {
+                "id": "fact-1",
+                "label": "Customer services",
+                "detail": "12.0%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  1
+                ],
+                "evidenceIds": []
+              },
+              {
+                "id": "fact-2",
+                "label": "Sales & marketing",
+                "detail": "10.0%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  2
+                ],
+                "evidenceIds": []
+              },
+              {
+                "id": "fact-3",
+                "label": "Operations",
+                "detail": "4.5%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  3
+                ],
+                "evidenceIds": []
+              },
+              {
+                "id": "fact-4",
+                "label": "Corporate",
+                "detail": "3.0%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  4
+                ],
+                "evidenceIds": []
+              }
+            ],
+            "nextQuestions": [
+              "Explain E03",
+              "Voluntary attrition, annualized by region",
+              "Voluntary attrition, annualized trend"
+            ],
+            "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0"
+          }
+        },
+        "evidenceRefs": [
+          "E1"
+        ]
+      },
+      {
+        "id": "panel-2",
+        "title": "Regrettable attrition is a distinct measure",
+        "why": "Separates classified regrettable departures from overall voluntary attrition.",
+        "response": {
+          "mode": "api",
+          "question": "P13 by function",
+          "answer": "Regrettable attrition by function: highest Customer services at 4.2%, lowest Corporate at 0.0%. All functions: 2.4%.",
+          "title": "Regrettable attrition by function",
+          "scope": {
+            "function": "all",
+            "region": "all",
+            "period": "quarter"
+          },
+          "action": {
+            "type": "breakdown",
+            "metricId": "P13",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Engineering",
+              "value": "2.0%",
+              "note": "2026-07 to 2026-09"
+            },
+            {
+              "label": "Customer services",
+              "value": "4.2%",
+              "note": "2026-07 to 2026-09"
+            },
+            {
+              "label": "Sales & marketing",
+              "value": "4.0%",
+              "note": "2026-07 to 2026-09"
+            },
+            {
+              "label": "Operations",
+              "value": "0.8%",
+              "note": "2026-07 to 2026-09"
+            },
+            {
+              "label": "Corporate",
+              "value": "0.0%",
+              "note": "2026-07 to 2026-09"
+            }
+          ],
+          "evidence": [
+            {
+              "id": "P13",
+              "definition": "Annualized classified regrettable exits / selected-period mean FTE; classification is illustrative.",
+              "period": "2026-07 to 2026-09",
+              "source": "Fictional manual aggregate score sheet"
+            }
+          ],
+          "followups": [
+            "Explain P13",
+            "Regrettable attrition by region",
+            "Regrettable attrition trend"
+          ],
+          "boundary": "All figures are synthetic. Astra routes intent; the local engine calculates every reported fact. No individual decisions or causal conclusions. Every segment uses the same definition; ratios are computed after aggregating each segment. Differences between segments are descriptive, not causal.",
+          "breakdown": {
+            "metricId": "P13",
+            "label": "Regrettable attrition",
+            "unit": "ratio",
+            "dimension": "function",
+            "sort": null,
+            "limit": null,
+            "where": "",
+            "periodLabel": "2026-07 to 2026-09",
+            "rows": [
+              {
+                "segment": "Engineering",
+                "label": "Engineering",
+                "value": 0.020057107040880283,
+                "formatted": "2.0%",
+                "numerator": 144,
+                "denominator": 7179.5,
+                "period": "2026-07 to 2026-09"
+              },
+              {
+                "segment": "Customer services",
+                "label": "Customer services",
+                "value": 0.042119338124686614,
+                "formatted": "4.2%",
+                "numerator": 252,
+                "denominator": 5983,
+                "period": "2026-07 to 2026-09"
+              },
+              {
+                "segment": "Sales & marketing",
+                "label": "Sales & marketing",
+                "value": 0.04012259682362775,
+                "formatted": "4.0%",
+                "numerator": 144,
+                "denominator": 3589,
+                "period": "2026-07 to 2026-09"
+              },
+              {
+                "segment": "Operations",
+                "label": "Operations",
+                "value": 0.007521938988717091,
+                "formatted": "0.8%",
+                "numerator": 36,
+                "denominator": 4786,
+                "period": "2026-07 to 2026-09"
+              },
+              {
+                "segment": "Corporate",
+                "label": "Corporate",
+                "value": 0,
+                "formatted": "0.0%",
+                "numerator": 0,
+                "denominator": 2392.5,
+                "period": "2026-07 to 2026-09"
+              }
+            ],
+            "overall": {
+              "label": "All functions",
+              "value": 0.024070204763894692,
+              "formatted": "2.4%"
+            },
+            "definition": "Annualized classified regrettable exits / selected-period mean FTE; classification is illustrative."
+          },
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "conversation": {
+            "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+            "metricId": "P13"
+          },
+          "presentation": {
+            "version": 1,
+            "scene": "comparison",
+            "headline": "Regrettable attrition by function",
+            "takeaway": "Regrettable attrition by function: highest Customer services at 4.2%, lowest Corporate at 0.0%. All functions: 2.4%.",
+            "beats": [
+              {
+                "id": "fact-0",
+                "label": "Engineering",
+                "detail": "2.0%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  0
+                ],
+                "evidenceIds": [
+                  "P13"
+                ]
+              },
+              {
+                "id": "fact-1",
+                "label": "Customer services",
+                "detail": "4.2%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  1
+                ],
+                "evidenceIds": []
+              },
+              {
+                "id": "fact-2",
+                "label": "Sales & marketing",
+                "detail": "4.0%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  2
+                ],
+                "evidenceIds": []
+              },
+              {
+                "id": "fact-3",
+                "label": "Operations",
+                "detail": "0.8%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  3
+                ],
+                "evidenceIds": []
+              },
+              {
+                "id": "fact-4",
+                "label": "Corporate",
+                "detail": "0.0%",
+                "context": "2026-07 to 2026-09",
+                "factIndexes": [
+                  4
+                ],
+                "evidenceIds": []
+              }
+            ],
+            "nextQuestions": [
+              "Explain P13",
+              "Regrettable attrition by region",
+              "Regrettable attrition trend"
+            ],
+            "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0"
+          }
+        },
+        "evidenceRefs": [
+          "E2"
+        ]
+      },
+      {
+        "id": "panel-3",
+        "title": "First-year exits use a different population",
+        "why": "Prevents a matured hiring-cohort rate from being confused with annualized quarterly attrition.",
+        "response": {
+          "mode": "api",
+          "question": "C01 by function",
+          "answer": "First-year exit rate by function: highest Customer services at 17.5%, lowest Engineering at 10.0%. All functions: 14.0%.",
+          "title": "First-year exit rate by function",
+          "scope": {
+            "function": "all",
+            "region": "all",
+            "period": "quarter"
+          },
+          "action": {
+            "type": "breakdown",
+            "metricId": "C01",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Engineering",
+              "value": "10.0%",
+              "note": "Matured cohort, observed through Sep 2026"
+            },
+            {
+              "label": "Customer services",
+              "value": "17.5%",
+              "note": "Matured cohort, observed through Sep 2026"
+            },
+            {
+              "label": "Sales & marketing",
+              "value": "13.0%",
+              "note": "Matured cohort, observed through Sep 2026"
+            },
+            {
+              "label": "Operations",
+              "value": "16.0%",
+              "note": "Matured cohort, observed through Sep 2026"
+            },
+            {
+              "label": "Corporate",
+              "value": "10.0%",
+              "note": "Matured cohort, observed through Sep 2026"
+            }
+          ],
+          "evidence": [
+            {
+              "id": "C01",
+              "definition": "Any exit within 12 months / fully observed Oct 2024–Sep 2025 hires; independent of selected flow period.",
+              "period": "Matured cohort, observed through Sep 2026",
+              "source": "Synthetic governed enterprise aggregates"
+            }
+          ],
+          "followups": [
+            "What could explain that?",
+            "Compare Engineering and Sales",
+            "Model retention with a half-point reduction"
+          ],
+          "boundary": "All figures are synthetic. Astra routes intent; the local engine calculates every reported fact. No individual decisions or causal conclusions. Every segment uses the same definition; ratios are computed after aggregating each segment. Differences between segments are descriptive, not causal.",
+          "breakdown": {
+            "metricId": "C01",
+            "label": "First-year exit rate",
+            "unit": "ratio",
+            "dimension": "function",
+            "sort": null,
+            "limit": null,
+            "where": "",
+            "periodLabel": "Matured cohort, observed through Sep 2026",
+            "rows": [
+              {
+                "segment": "Engineering",
+                "label": "Engineering",
+                "value": 0.1,
+                "formatted": "10.0%",
+                "numerator": 30,
+                "denominator": 300,
+                "period": "Matured cohort, observed through Sep 2026"
+              },
+              {
+                "segment": "Customer services",
+                "label": "Customer services",
+                "value": 0.175,
+                "formatted": "17.5%",
+                "numerator": 70,
+                "denominator": 400,
+                "period": "Matured cohort, observed through Sep 2026"
+              },
+              {
+                "segment": "Sales & marketing",
+                "label": "Sales & marketing",
+                "value": 0.13,
+                "formatted": "13.0%",
+                "numerator": 26,
+                "denominator": 200,
+                "period": "Matured cohort, observed through Sep 2026"
+              },
+              {
+                "segment": "Operations",
+                "label": "Operations",
+                "value": 0.16,
+                "formatted": "16.0%",
+                "numerator": 32,
+                "denominator": 200,
+                "period": "Matured cohort, observed through Sep 2026"
+              },
+              {
+                "segment": "Corporate",
+                "label": "Corporate",
+                "value": 0.1,
+                "formatted": "10.0%",
+                "numerator": 10,
+                "denominator": 100,
+                "period": "Matured cohort, observed through Sep 2026"
+              }
+            ],
+            "overall": {
+              "label": "All functions",
+              "value": 0.14,
+              "formatted": "14.0%"
+            },
+            "definition": "Any exit within 12 months / fully observed Oct 2024–Sep 2025 hires; independent of selected flow period."
+          },
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "conversation": {
+            "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+            "metricId": "C01"
+          },
+          "presentation": {
+            "version": 1,
+            "scene": "comparison",
+            "headline": "First-year exit rate by function",
+            "takeaway": "First-year exit rate by function: highest Customer services at 17.5%, lowest Engineering at 10.0%. All functions: 14.0%.",
+            "beats": [
+              {
+                "id": "fact-0",
+                "label": "Engineering",
+                "detail": "10.0%",
+                "context": "Matured cohort, observed through Sep 2026",
+                "factIndexes": [
+                  0
+                ],
+                "evidenceIds": [
+                  "C01"
+                ]
+              },
+              {
+                "id": "fact-1",
+                "label": "Customer services",
+                "detail": "17.5%",
+                "context": "Matured cohort, observed through Sep 2026",
+                "factIndexes": [
+                  1
+                ],
+                "evidenceIds": []
+              },
+              {
+                "id": "fact-2",
+                "label": "Sales & marketing",
+                "detail": "13.0%",
+                "context": "Matured cohort, observed through Sep 2026",
+                "factIndexes": [
+                  2
+                ],
+                "evidenceIds": []
+              },
+              {
+                "id": "fact-3",
+                "label": "Operations",
+                "detail": "16.0%",
+                "context": "Matured cohort, observed through Sep 2026",
+                "factIndexes": [
+                  3
+                ],
+                "evidenceIds": []
+              },
+              {
+                "id": "fact-4",
+                "label": "Corporate",
+                "detail": "10.0%",
+                "context": "Matured cohort, observed through Sep 2026",
+                "factIndexes": [
+                  4
+                ],
+                "evidenceIds": []
+              }
+            ],
+            "nextQuestions": [
+              "What could explain that?",
+              "Compare Engineering and Sales",
+              "Model retention with a half-point reduction"
+            ],
+            "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0"
+          }
+        },
+        "evidenceRefs": [
+          "E3"
+        ]
+      }
+    ],
+    "evidenceReferences": [
+      {
+        "refId": "E1",
+        "kind": "breakdown",
+        "title": "Voluntary attrition, annualized by function",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": {
+          "function": "all",
+          "region": "all",
+          "period": "quarter"
+        },
+        "source": "Trusted local metric and scenario engine",
+        "facts": [
+          {
+            "label": "Engineering",
+            "value": "7.0%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Customer services",
+            "value": "12.0%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Sales & marketing",
+            "value": "10.0%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Operations",
+            "value": "4.5%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Corporate",
+            "value": "3.0%",
+            "note": "2026-07 to 2026-09"
+          }
+        ],
+        "definitions": [
+          {
+            "id": "E03",
+            "definition": "Voluntary exits / mean FTE, annualized; short windows are not forecasts.",
+            "period": "2026-07 to 2026-09",
+            "source": "Synthetic governed enterprise aggregates"
+          }
+        ]
+      },
+      {
+        "refId": "E2",
+        "kind": "breakdown",
+        "title": "Regrettable attrition by function",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": {
+          "function": "all",
+          "region": "all",
+          "period": "quarter"
+        },
+        "source": "Trusted local metric and scenario engine",
+        "facts": [
+          {
+            "label": "Engineering",
+            "value": "2.0%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Customer services",
+            "value": "4.2%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Sales & marketing",
+            "value": "4.0%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Operations",
+            "value": "0.8%",
+            "note": "2026-07 to 2026-09"
+          },
+          {
+            "label": "Corporate",
+            "value": "0.0%",
+            "note": "2026-07 to 2026-09"
+          }
+        ],
+        "definitions": [
+          {
+            "id": "P13",
+            "definition": "Annualized classified regrettable exits / selected-period mean FTE; classification is illustrative.",
+            "period": "2026-07 to 2026-09",
+            "source": "Fictional manual aggregate score sheet"
+          }
+        ]
+      },
+      {
+        "refId": "E3",
+        "kind": "breakdown",
+        "title": "First-year exit rate by function",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": {
+          "function": "all",
+          "region": "all",
+          "period": "quarter"
+        },
+        "source": "Trusted local metric and scenario engine",
+        "facts": [
+          {
+            "label": "Engineering",
+            "value": "10.0%",
+            "note": "Matured cohort, observed through Sep 2026"
+          },
+          {
+            "label": "Customer services",
+            "value": "17.5%",
+            "note": "Matured cohort, observed through Sep 2026"
+          },
+          {
+            "label": "Sales & marketing",
+            "value": "13.0%",
+            "note": "Matured cohort, observed through Sep 2026"
+          },
+          {
+            "label": "Operations",
+            "value": "16.0%",
+            "note": "Matured cohort, observed through Sep 2026"
+          },
+          {
+            "label": "Corporate",
+            "value": "10.0%",
+            "note": "Matured cohort, observed through Sep 2026"
+          }
+        ],
+        "definitions": [
+          {
+            "id": "C01",
+            "definition": "Any exit within 12 months / fully observed Oct 2024–Sep 2025 hires; independent of selected flow period.",
+            "period": "Matured cohort, observed through Sep 2026",
+            "source": "Synthetic governed enterprise aggregates"
+          }
+        ]
+      },
+      {
+        "refId": "E4",
+        "kind": "document",
+        "title": "E03 · Voluntary attrition, annualized",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "Governed metric definition",
+        "facts": [],
+        "excerpt": "Voluntary exits / mean FTE, annualized; short windows are not forecasts.\nUnit: ratio\nPeriod: 2026-07 to 2026-09\nScope and privacy display rules apply",
+        "trust": "Governed definition"
+      },
+      {
+        "refId": "E5",
+        "kind": "document",
+        "title": "P13 · Regrettable attrition display coverage",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "public/index.html#wi-source-coverage-js",
+        "facts": [],
+        "excerpt": "people / empower\nChart: single-score\nDisplayed segmentation: overall\nAnnualized classified regrettable exits / selected-period mean FTE; classification is illustrative.\nCatalog indicator: Regrettable attrition\nManual score; regrettable classification, population and denominator are not documented.",
+        "trust": "Shipped coverage definition"
+      },
+      {
+        "refId": "E6",
+        "kind": "document",
+        "title": "P13 · Regrettable attrition",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "Governed metric definition",
+        "facts": [],
+        "excerpt": "Annualized classified regrettable exits / selected-period mean FTE; classification is illustrative.\nUnit: ratio\nPeriod: 2026-07 to 2026-09\nScope and privacy display rules apply\nManual score; regrettable classification, population and denominator are not documented.",
+        "trust": "Governed definition"
+      },
+      {
+        "refId": "E7",
+        "kind": "document",
+        "title": "Next 1,200 hires have a 14% baseline first-year exit rate. The observed 13.3 pp difference between delaye",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "public/index.html (displayed explanation)",
+        "facts": [],
+        "excerpt": "Next 1,200 hires have a 14% baseline first-year exit rate. The observed 13.3 pp difference between delayed and on-time onboarding groups is descriptive, not an effect estimate.",
+        "trust": "Shipped dashboard explanation, not executable instructions"
+      },
+      {
+        "refId": "E8",
+        "kind": "document",
+        "title": "C01 · First-year exit rate",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "Governed metric definition",
+        "facts": [],
+        "excerpt": "Any exit within 12 months / fully observed Oct 2024–Sep 2025 hires; independent of selected flow period.\nUnit: ratio\nPeriod: Matured cohort, observed through Sep 2026\nScope and privacy display rules apply",
+        "trust": "Governed definition"
+      },
+      {
+        "refId": "E9",
+        "kind": "document",
+        "title": "retention scenario definition and assumptions",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "Governed scenario catalog",
+        "facts": [],
+        "excerpt": "Next 1,200 hires over 12 months. Avoided exits = population × assumed percentage-point reduction / 100. Gross modeled value = avoided exits × replacement value; net = gross − program cost. Baseline exit rate is 14%; results are conditional, not a forecast.\neffect: Assumed first-year exit-rate reduction, in percentage points; not a causal estimate. Default 3; bounds 0 to 6.\nprogramCost: Retention intervention funding in USD. Default 240000; bounds 120000 to 600000.\nreplacementCost: Assumed avoidable replacement value per exit, in USD. Default 25000; bounds 10000 to 50000.",
+        "trust": "Governed scenario definition"
+      },
+      {
+        "refId": "E10",
+        "kind": "document",
+        "title": "Eligible U.S. self-identification only. Percent denominator: eligible U.S. employees within the displayed",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "public/index.html (displayed explanation)",
+        "facts": [],
+        "excerpt": "Eligible U.S. self-identification only. Percent denominator: eligible U.S. employees within the displayed job level. This subset belongs to Americas; it is not a global race comparison.",
+        "trust": "Shipped dashboard explanation, not executable instructions"
+      },
+      {
+        "refId": "E11",
+        "kind": "document",
+        "title": "Filters, population, definition and snapshot are retained when an observation moves into the lab.",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "public/index.html (displayed explanation)",
+        "facts": [],
+        "excerpt": "Filters, population, definition and snapshot are retained when an observation moves into the lab.",
+        "trust": "Shipped dashboard explanation, not executable instructions"
+      },
+      {
+        "refId": "E12",
+        "kind": "document",
+        "title": "skills scenario definition and assumptions",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "Governed scenario catalog",
+        "facts": [],
+        "excerpt": "Funded Engineering initiative requiring 36 FTE, with 20 initially ready. Assessment, arrival dates, release and skill-specific gaps constrain readiness. Surplus in one skill cannot fill another. Training, temporary backfill, recruiting and fully ramped annual payroll belong to the funding envelope.\nskillsPlan: Capability investment path: hire, reskill or hybrid. Default reskill; choices hire, reskill, hybrid.\nyieldPct: Assessed learner qualification yield, in percent. Default 80; bounds 50 to 100.\nskillsDay: Day at which capability readiness is assessed. Default 120; bounds 60 to 150.",
+        "trust": "Governed scenario definition"
+      },
+      {
+        "refId": "E13",
+        "kind": "document",
+        "title": "delivery scenario definition and assumptions",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "scope": null,
+        "source": "Governed scenario catalog",
+        "facts": [],
+        "excerpt": "One business workflow. Accepted units are limited by demand and build, review and validation capacity. Added accepted weekly units × 4.33 × unit value minus incremental monthly spend gives monthly net modeled capacity value, not booked cash.\ndeliveryPlan: Workflow option: current, coding-only improvement or full redesign. Default redesign; choices current, coding, redesign.\ndemand: Accepted demand per week. Default 110; bounds 80 to 150.\nunitValue: Assumed value per additional accepted unit, in USD. Default 300; bounds 100 to 600.",
+        "trust": "Governed scenario definition"
+      }
+    ],
+    "conversation": {
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0"
+    },
+    "presentation": {
+      "version": 1,
+      "scene": "analysis",
+      "headline": "Engineering’s chart figure does not match governed attrition; reconcile definitions before board use",
+      "takeaway": "Governed annualized voluntary attrition for July–September 2026 is 7.0% in Engineering and 10.0% in Sales & marketing. Engineering does not match the supplied chart; Sales & marketing matches at displayed precision, but comparability remains unverified. The discrepancy’s cause is not established. The board should require a source-and-definition reconciliation and consider the wider functional picture before directing retention investment.",
+      "beats": [
+        {
+          "id": "analysis-1",
+          "label": "User image — unverified",
+          "detail": "The image shows Engineering at 8.0% and Sales & marketing at 10.0%, labeled “Synthetic sample chart · values not yet verified.” It does not specify a reporting period, exit definition, denominator, regional coverage or annualization method. These are visual observations, not verified workforce results.",
+          "context": "limitation",
+          "factIndexes": [],
+          "evidenceRefs": [],
+          "evidenceIds": []
+        },
+        {
+          "id": "analysis-2",
+          "label": "The governed comparison",
+          "detail": "For all regions, July–September 2026, annualized voluntary attrition is Engineering 7.0% and Sales & marketing 10.0%. Thus, the image’s Engineering figure does not match the governed measure; its Sales & marketing figure matches only at displayed precision. The governed definition is voluntary exits divided by mean FTE, annualized—not the percentage of employees who left during the quarter and not a forecast.",
+          "context": "finding",
+          "factIndexes": [],
+          "evidenceRefs": [
+            "E1",
+            "E4"
+          ],
+          "evidenceIds": [
+            "E03"
+          ]
+        },
+        {
+          "id": "analysis-3",
+          "label": "Other exit measures do not validate the chart",
+          "detail": "For the same quarter, annualized regrettable attrition is 2.0% in Engineering and 4.0% in Sales & marketing; the classification is illustrative. First-year exit rates are instead 10.0% and 13.0%, respectively, for fully observed October 2024–September 2025 hires, observed through September 2026. That cohort measure includes any exit within 12 months and is independent of the selected quarter. Neither alternative reproduces the chart’s pair of figures.",
+          "context": "finding",
+          "factIndexes": [],
+          "evidenceRefs": [
+            "E2",
+            "E3"
+          ],
+          "evidenceIds": [
+            "P13",
+            "C01"
+          ]
+        },
+        {
+          "id": "analysis-4",
+          "label": "What could explain the discrepancy",
+          "detail": "Possible explanations include a different period or source revision, a narrower population, total rather than voluntary exits, a headcount rather than mean-FTE denominator, or a transcription error. None is established. Obtain the chart’s underlying extract, numerator, denominator, filters and calculation specification; reproducing each figure against those inputs would distinguish a legitimate metric difference from an error.",
+          "context": "hypothesis",
+          "factIndexes": [],
+          "evidenceRefs": [
+            "E1",
+            "E4"
+          ],
+          "evidenceIds": [
+            "E03"
+          ]
+        },
+        {
+          "id": "analysis-5",
+          "label": "The two-function chart leaves out a material comparison",
+          "detail": "Customer services has the highest governed annualized voluntary attrition at 12.0%, compared with 7.8% across all functions for July–September 2026. The supplied chart therefore does not show the highest-rate function. These differences are descriptive and do not establish causes or the business impact of departures.",
+          "context": "finding",
+          "factIndexes": [],
+          "evidenceRefs": [
+            "E1"
+          ],
+          "evidenceIds": [
+            "E03"
+          ]
+        },
+        {
+          "id": "analysis-6",
+          "label": "What the board should ask next",
+          "detail": "1. Can the CHRO and data owner reconcile each chart value to a named metric, period, population, numerator, denominator and source revision before the next board pack?\n2. Is attrition persistent across comparable periods, or is the annualized quarter magnifying a short-term pattern?\n3. Why were only these functions selected, and what warrants prioritizing Engineering or Sales & marketing over Customer services?\n4. Which departures create critical capability, customer-service or delivery exposure? Request aggregate evidence rather than inferring impact from rates alone.\n5. What evidence supports the proposed intervention, and what outcome, cost limit and review gate would justify scaling it?\nUntil reconciliation is complete, replace or clearly flag the supplied chart and use the governed comparison with its full definition. Do not allocate retention funding solely from the chart.",
+          "context": "recommendation",
+          "factIndexes": [],
+          "evidenceRefs": [
+            "E1",
+            "E2",
+            "E3"
+          ],
+          "evidenceIds": [
+            "E03",
+            "P13",
+            "C01"
+          ]
+        },
+        {
+          "id": "analysis-7",
+          "label": "Evidence boundary",
+          "detail": "All workforce evidence in this workspace is synthetic. The chart’s provenance and calculation inputs are unavailable, so the mismatch is verified but its cause is not.",
+          "context": "limitation",
+          "factIndexes": [],
+          "evidenceRefs": [],
+          "evidenceIds": []
+        }
+      ],
+      "nextQuestions": [
+        "Obtain the chart’s underlying extract and calculation specification for reconciliation.",
+        "Review governed voluntary attrition trends by function alongside aggregate regrettable exits and capability exposure."
+      ],
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0"
+    }
+  }
+}

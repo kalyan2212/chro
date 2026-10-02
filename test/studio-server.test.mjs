@@ -4,7 +4,7 @@ import { createServer } from '../server.mjs';
 
 async function setup(t,options={}){
   const calls=[];
-  const server=createServer({apiKey:'sk-test-studio-never-sent',fetchImpl:async(...args)=>{calls.push(args);throw Error('Known Studio requests must not contact a model');},...options});
+  const server=createServer({apiKey:'',fetchImpl:async(...args)=>{calls.push(args);throw Error('Offline Studio requests must not contact a model');},...options});
   await server.ready;
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   t.after(async()=>{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await server.whenClosed();});
@@ -23,7 +23,7 @@ test('Studio bootstrap provides governed overview and complete catalogue without
   assert.equal(calls.length,0);assert.ok(!JSON.stringify(data).includes('sk-test'));
 });
 
-test('actual HTTP scenario chain retains bounded assumptions, exposes signed chart and avoids the provider',async t=>{
+test('offline HTTP scenario chain retains bounded assumptions and exposes a signed chart',async t=>{
   const {post,calls}=await setup(t);
   const initial=await post('/api/ask',{question:'Model retention with half a percentage point and program budget $300k',scope:{function:'Engineering',region:'EMEA',period:'quarter'}});
   assert.equal(initial.status,200);const first=await initial.json();
@@ -45,7 +45,7 @@ test('stale conversational lineage fails even when the outer request names the c
   assert.equal(stale.status,409);assert.match((await stale.json()).error,/source|refresh|context/i);assert.equal(calls.length,0);
 });
 
-test('explicit compound requests return every governed workflow step and final scenario result',async t=>{
+test('offline compound requests return every governed workflow step and final scenario result',async t=>{
   const {post,calls}=await setup(t);
   const res=await post('/api/ask',{question:'Compare attrition in Engineering and Sales and then model retention with half a percentage point'});
   assert.equal(res.status,200);const result=await res.json();
@@ -54,7 +54,7 @@ test('explicit compound requests return every governed workflow step and final s
   assert.equal(result.workflow[0].breakdown.rows.length,2);assert.equal(calls.length,0);
 });
 
-test('an unsupported compound clause prevents partial execution and model fallback',async t=>{
+test('an unsupported offline compound clause prevents partial execution',async t=>{
   const {post,calls}=await setup(t);
   for(const question of ['Show headcount and then send an email to the CEO','Show headcount; send an email to the CEO','Show headcount and send an email to the CEO','Explain C01 and then predict our share price','Compare Engineering and Sales and then model retention']){
     const response=await post('/api/ask',{question});assert.equal(response.status,200);const result=await response.json();

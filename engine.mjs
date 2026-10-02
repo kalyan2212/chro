@@ -112,7 +112,7 @@ export function validateRequest(body) {
     }
   }
   const history = body.history ?? [];
-  if (!Array.isArray(history) || history.length > 6 || history.some(x => !x || !['user', 'assistant'].includes(x.role) || typeof x.text !== 'string' || x.text.length > 2000)) throw new Error('Invalid history');
+  if (!Array.isArray(history) || history.length > 24 || history.some(x => !x || !['user', 'assistant'].includes(x.role) || typeof x.text !== 'string' || x.text.length > 2000)) throw new Error('Invalid history');
   return { question: body.question.trim(), scope, context, history: history.map(({ role, text }) => ({ role, text })), ...(Object.keys(mentions).length ? { mentions } : {}), ...(window ? { window } : {}) };
 }
 export function validatePlan(p) {

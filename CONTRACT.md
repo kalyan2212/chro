@@ -25,20 +25,26 @@ The connector emits seven paginated synthetic report names: `CoreHCM`, `Talent`,
 
 ## Questions, voice and media
 
-`POST /api/ask` accepts `{question,scope:{function,region,period},context?,history?,sourceVersion?}` and returns:
+`POST /api/ask` accepts `{question,scope:{function,region,period},context?,history?,sourceVersion?,audience?,image?,requestId?,operation?}`. `audience` is `chro`, `ceo` or `board` and changes presentation only. History is bounded to 24 messages of at most 2,000 characters each. The common response retains:
 
 ```js
 {
   mode: 'demo' | 'api', question, answer, title,
   scope: { function, region, period }, sourceVersion,
-  action: { type: 'metric' | 'scenario' | 'overview', metricId, caseId, overrides },
+  action: { type: 'metric' | 'scenario' | 'overview' | 'breakdown' | 'insight' | 'analysis' | 'clarify', metricId, caseId, overrides },
   facts: [{ label, value, note }],
   evidence: [{ id, definition, period, source }],
   followups: ['...'], boundary: '...'
 }
 ```
 
-Demo routing is deterministic and bounded to supported metrics/scenarios. In API mode, server-held `OPENAI_API_KEY` calls `gpt-6-astra` for a constrained structured routing plan, then deterministic code computes facts and six scenario outcomes. The model cannot replace the calculated figures. Scope, population, denominator, assumptions, definitions and source revision accompany the result. A scenario uses its fixed hypothetical population and complete effective inputs, rather than silently inheriting dashboard filter populations. Unsupported dates, private individual requests and causal claims must remain bounded.
+Demo routing is deterministic and bounded to supported metrics/scenarios. In API mode, server-held `OPENAI_API_KEY` enables a `gpt-6-astra` investigation that can call fixed, read-only tools for all 50 metrics, function/region/month comparisons, six scenario calculators, and bounded search over definitions and saved evidence. The model composes explanations and proposed actions; deterministic code computes workforce facts. Scope, population, denominator, assumptions, definitions and source revision accompany calculated results. A scenario uses its fixed hypothetical population and complete effective inputs, rather than silently inheriting dashboard filter populations. Unsupported dates, private individual requests and causal claims remain bounded. Explicit `operation:'calculate'` requires a scenario context with assumptions and runs the local calculator without a model request.
+
+API explanations add `analysis:{summary,sections,unknowns,followups}`, `panels:[{id,title,why,response,evidenceRefs}]`, and `evidenceReferences`. Sections have a `kind` of `finding`, `hypothesis`, `recommendation`, `question` or `limitation`, plus a title, text and retrieved reference IDs. Findings must cite retrieved evidence; numeric tokens are checked against that evidence. A bounded repair attempt may correct invalid output; unresolved failure returns an error. These are consistency checks, not a guarantee of semantic or causal correctness. The tool loop allows four investigation/synthesis rounds and an optional fifth verification-only repair with no further tools, sixteen tool calls, and at most six panels. A single-panel response retains its original calculated action; a multi-panel explanation uses `action.type:'analysis'`.
+
+An optional `image:{name,dataUrl}` accepts canonical PNG/JPEG data URLs with matching signature bytes, at most 4,000,000 decoded bytes and 6,000,000 encoded characters. Ask and live-delegation JSON bodies are limited to 8,200,000 bytes. Remote image URLs are rejected. Attachments are unverified user context, not governed findings, and their bytes are not written to the workspace journal. No-key image requests return a configuration error. The UI decodes and scales selected files before sending; there is no camera or video-analysis path.
+
+With a unique 8–100 character alphanumeric/underscore/hyphen `requestId`, the caller can read `GET /api/analysis/progress?id=…`. The response contains bounded phase events and `done`, scoped to the caller's authenticated identity. It is temporary process-local metadata, not a durable job API. Polling does not refresh Cloud Storage. Images, conversation content and analytical records are excluded from progress events. See [docs/ASTRA-ANALYST.md](docs/ASTRA-ANALYST.md) for retrieval, image and operational limits.
 
 `POST /api/transcribe` accepts supported recorded audio (`audio/webm`, `audio/mp4`, `audio/mpeg`, `audio/wav`) and uses `gpt-transcribe` in API mode. `POST /api/speech` accepts `{text}` (1–3000 characters) and returns generated MP3 using `gpt-4o-mini-tts` in API mode. The turn-based client captures audio only after a click, stops tracks on completion/error, and does not save microphone bytes in the journal. Browser speech synthesis in demo mode is a preview and cannot be treated as capturable narration.
 
@@ -71,7 +77,7 @@ Authenticated `GET /api/investigations` lists saved investigations; `POST /api/i
 
 Authenticated GET /api/studio/bootstrap returns {response,catalog}: a deterministic executive overview plus all 50 metric IDs, labels and definitions. It never calls a model. The Studio adds six scenario entries to this catalogue.
 
-/api/ask accepts bounded conversation context: metricId, caseId, validated overrides, insightId, sourceVersion and pendingAssumption for a retention-unit clarification. A stale context revision returns409, even if the outer sourceVersion is current. Supported deterministic follow-ups reuse explicit scenario assumptions; only the requested fields change. Unknown language may use the existing strict model router. Unsupported compound steps produce a clarification instead of silently executing a subset.
+/api/ask accepts bounded conversation context: metricId, caseId, validated overrides, insightId, sourceVersion and pendingAssumption for a retention-unit clarification. A stale context revision returns409, even if the outer sourceVersion is current. Supported deterministic follow-ups reuse explicit scenario assumptions; only the requested fields change. API questions use the analytical tool loop and preserve current scenario assumptions when revising the same case unless the user asks to reset. In demo mode, unsupported compound steps produce a clarification instead of silently executing a subset.
 
 Answers add conversation plus presentation:{version,scene,headline,takeaway,beats,nextQuestions,sourceVersion,chart?}. Beats reference answer fact indexes and evidence IDs. Scenario chart rows come from the same server calculator. Explicit supported compound requests add workflow, an ordered array of complete answers. No presentation field authorizes saving, approving or executing decisions.
 

@@ -57,7 +57,9 @@
  const api = () => window.WI_CONVERSATION;
  const scope = () => api()?.getScope?.() || { function: window.WI_APP?.state?.function || 'all', region: window.WI_APP?.state?.region || 'all', period: window.WI_APP?.state?.period || 'quarter' };
  const context = () => api()?.getContext?.() || {};
- const history = () => (api()?.getHistory?.() || []).slice(-6).map(x => ({ role: x.role, text: String(x.text || '').slice(0,2000) }));
+ const attachedImage = () => window.WI_STUDIO?.getImage?.() || null;
+ const audience = () => window.WI_STUDIO?.getAudience?.() || 'chro';
+ const history = () => (api()?.getHistory?.() || []).slice(-24).map(x => ({ role: x.role, text: String(x.text || '').slice(0,2000) }));
  const current = run => active === run && run.serial === serial;
  function notify(type, detail) { window.dispatchEvent(new CustomEvent(type, { detail: snapshot(detail) })); }
  function phase(run, value, detail = {}) {
@@ -72,7 +74,7 @@
   const event = queue.events[queue.index];
   if (!event) { clearBeats(run); return; }
   if (!send(run, event)) { clearBeats(run); return; }
-  notify('wi-voice-beat', { turnId: run.turnId, index: queue.index, total: queue.events.length, status: 'submitted' });
+  notify('wi-voice-beat', { turnId: run.turnId, index: queue.index, total: queue.events.length, status: 'submitted', cue:queue.cues?.[queue.index] || null });
   run.beatTimer = setTimeout(() => {
    if (run.beats !== queue || !current(run)) return;
    clearBeats(run);
@@ -84,7 +86,7 @@
   if (!queue || event.client_event_id !== queue.events[queue.index]?.event_id) return;
   clearTimeout(run.beatTimer);
   // An append acknowledgement confirms context injection, not spoken playback.
-  notify('wi-voice-beat', { turnId: run.turnId, index: queue.index, total: queue.events.length, status: 'accepted' });
+  notify('wi-voice-beat', { turnId: run.turnId, index: queue.index, total: queue.events.length, status: 'accepted', cue:queue.cues?.[queue.index] || null });
   queue.index++;
   sendBeat(run);
  }
@@ -187,7 +189,7 @@
  }
  function syncContext(event) {
   const run = active; if (!run?.ready || closing) return;
-  const selected = context(), values = { scope: scope(), metric: selected.metricId || null, scenario: selected.caseId || null };
+  const selected = context(), values = { scope: scope(), metric: selected.metricId || null, scenario: selected.caseId || null, audience:audience() };
   const key = JSON.stringify(values);
   // An explicit application navigation/question event invalidates pending work
   // even when it keeps the same filters (for example Home or a typed follow-up).
@@ -219,25 +221,27 @@
     $('#wl-result').textContent = 'Transcript was incomplete or too long. Please repeat a short question.'; return;
    }
    const revision = run.inputRevision, ctrl = new AbortController(); run.pending = ctrl;
-   const scopeAtStart = JSON.stringify(scope()), contextAtStart = JSON.stringify(context());
-   $('#wl-result').textContent = 'Checking the governed synthetic evidence…';
+   const scopeAtStart = JSON.stringify(scope()), contextAtStart = JSON.stringify(context()), imageAtStart=attachedImage(), audienceAtStart=audience();
+   $('#wl-result').textContent = 'Investigating your question across the available evidence…';
+   phase(run,'thinking',{message:'Investigating your question across the available evidence. You can interrupt to change direction.'});
+   command(run,'session.thinking.append',{delegation_id:delegationId,content:'The backend analyst is investigating the question. No result is verified yet. Briefly acknowledge the lookup if useful, then wait for the verified explanation; do not invent progress or findings.'});
    try {
-    const res = await fetch('/api/live/delegate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(45000)]), body: JSON.stringify({ sessionId: run.sessionId, delegationId, question, scope: scope(), context: context(), history: history() }) });
+    const res = await fetch('/api/live/delegate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(110000)]), body: JSON.stringify({ sessionId: run.sessionId, delegationId, question, scope: scope(), context: context(), history: history(), audience:audienceAtStart, sourceVersion:window.WI_DATA?.sourceVersion, ...(imageAtStart?{image:imageAtStart}:{}) }) });
     if (!res.ok) { let error; try { error = (await res.json()).error; } catch {} if (res.status === 401) { run.failureCode = 'HTTP_401'; failed(run, 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.'); return; } throw Error(error || `Evidence lookup failed (${res.status}).`); }
     const value = await res.json();
-    if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder || scopeAtStart !== JSON.stringify(scope()) || contextAtStart !== JSON.stringify(context())) return;
+    if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder || scopeAtStart !== JSON.stringify(scope()) || contextAtStart !== JSON.stringify(context()) || imageAtStart?.dataUrl !== attachedImage()?.dataUrl || audienceAtStart!==audience()) return;
     if (!matches(value, run.sessionId, delegationId)) throw Error('The evidence response did not match this conversation.');
     const result = snapshot(value);
     if (!api()?.showResponse) throw Error('The visual briefing is unavailable.');
-    const shown = await api().showResponse(result.response, { origin: 'voice', isCurrent: () => current(run) && !closing && !ctrl.signal.aborted && revision === run.inputRevision && order === run.delegationOrder && scopeAtStart === JSON.stringify(scope()) });
+    const shown = await api().showResponse(result.response, { origin: 'voice', isCurrent: () => current(run) && !closing && !ctrl.signal.aborted && revision === run.inputRevision && order === run.delegationOrder && scopeAtStart === JSON.stringify(scope()) && imageAtStart?.dataUrl === attachedImage()?.dataUrl && audienceAtStart===audience() });
     if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder) return;
     if (shown === false) throw Error('The data changed during this lookup. Ask again to use the latest evidence.');
     run.answeredOffset = event.offset_ms;
     $('#wl-result').textContent = 'Validated visual briefing: ' + result.response.title + '. Exact figures and scenario assumptions appear in the evidence card.';
     window.WI_VOICE_GUIDE?.prepare(result.response);
-    run.contextKey = JSON.stringify({ scope: scope(), metric: context().metricId || null, scenario: context().caseId || null });
-    notify('wi-voice-answer', { response: result.response, turnId: delegationId, beatCount: result.events?.length || 1 });
-    run.beats = { events: result.events || [result.event], index: 0, revision, scope: JSON.stringify(scope()) };
+    run.contextKey = JSON.stringify({ scope: scope(), metric: context().metricId || null, scenario: context().caseId || null, audience:audience() });
+    notify('wi-voice-answer', { response: result.response, turnId: delegationId, beatCount: result.events?.length || 1, narration:result.narration || null });
+    run.beats = { events: result.events || [result.event], cues:result.narration?.beats, index: 0, revision, scope: JSON.stringify(scope()) };
     sendBeat(run);
    } catch (error) {
     if (!current(run) || closing || ctrl.signal.aborted || order !== run.delegationOrder) return;

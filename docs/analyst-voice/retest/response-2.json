@@ -1,0 +1,1246 @@
+{
+  "mode": "api",
+  "question": "How distinguish a capacity problem from a routing problem? What would make you change change that recommendation",
+  "title": "Test where cases wait before deciding that more agents are the answer",
+  "answer": "A capacity problem means insufficient qualified service hours; a routing problem means available capacity is not reaching the right work. The current evidence shows queue pressure, but cannot distinguish those causes. I would refine my earlier recommendation: test routing at unchanged staffing first, with temporary staffing available for urgent protection. Continue the staffing experiment only if a workload shortfall remains after routing improves.",
+  "scope": {
+    "function": "all",
+    "region": "all",
+    "period": "quarter"
+  },
+  "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+  "action": {
+    "type": "analysis",
+    "metricId": null,
+    "caseId": null,
+    "overrides": {}
+  },
+  "facts": [
+    {
+      "label": "Backlog growth",
+      "value": "23.1%",
+      "note": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic."
+    },
+    {
+      "label": "Beginning / ending queue",
+      "value": "260 / 320",
+      "note": "Inflow + beginning backlog − resolved = ending backlog"
+    },
+    {
+      "label": "Unassigned open cases",
+      "value": "29",
+      "note": "Open cases unassigned at selected month end; may overlap SLA breaches."
+    },
+    {
+      "label": "Monthly capacity",
+      "value": "1,140",
+      "note": "Independent hypothetical queue; forward 12 months"
+    },
+    {
+      "label": "Monthly arrivals",
+      "value": "1,000",
+      "note": "Assumed independent queue"
+    },
+    {
+      "label": "Closing backlog",
+      "value": "0",
+      "note": "After 12 monthly periods"
+    },
+    {
+      "label": "First-year funding",
+      "value": "$163.2k",
+      "note": "Incremental staffing / automation and setup"
+    },
+    {
+      "label": "Assumptions",
+      "value": "Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%",
+      "note": "Shipped baseline plus requested changes; all synthetic"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "O04",
+      "definition": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic.",
+      "period": "2026-07 to 2026-09",
+      "source": "Fictional aggregate HR service case ledger"
+    },
+    {
+      "id": "O09",
+      "definition": "Open cases unassigned at selected month end; may overlap SLA breaches.",
+      "period": "2026-09-30",
+      "source": "Fictional aggregate HR service case ledger"
+    },
+    {
+      "id": "scenario:service",
+      "definition": "Independent hypothetical queue; forward 12 months. Assumptions: Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%.",
+      "period": "Forward scenario, separate from dashboard filters",
+      "source": "Trusted WI_DECIDE.calculate; synthetic assumptions"
+    }
+  ],
+  "followups": [
+    "Can the service lead provide aggregate assignment-delay, transfer, blocked-time and staffed-hour measures by service queue?",
+    "Which comparable queues could support a routing pilot without compromising urgent-case coverage?",
+    "What open-case aging, quality and cost thresholds should govern continuation or reversal?"
+  ],
+  "boundary": "Workforce figures are synthetic. Hypotheses and recommendations are distinct from observed or calculated findings; no external action or approval has been executed.",
+  "analysis": {
+    "summary": "A capacity problem means insufficient qualified service hours; a routing problem means available capacity is not reaching the right work. The current evidence shows queue pressure, but cannot distinguish those causes. I would refine my earlier recommendation: test routing at unchanged staffing first, with temporary staffing available for urgent protection. Continue the staffing experiment only if a workload shortfall remains after routing improves.",
+    "sections": [
+      {
+        "kind": "finding",
+        "title": "The queue needs attention—but backlog is not a diagnosis",
+        "text": "Across all functions and regions, the July–September 2026 backlog grew 23.1%, from 260 to 320 cases. At September 30, 29 open cases were unassigned and 43 breached SLA; these groups may overlap. Backlog grew in every function. These observations establish service pressure, not whether staffing or routing caused it. The quarter’s 92.0% resolved-within-SLA result excludes open cases, so it cannot rule out serious waiting in the unresolved queue.",
+        "evidenceRefs": [
+          "E1",
+          "E4",
+          "E5",
+          "E9",
+          "E11"
+        ]
+      },
+      {
+        "kind": "hypothesis",
+        "title": "Distinguish insufficient capacity from capacity in the wrong place",
+        "text": "Capacity hypothesis: correctly assigned cases wait because qualified agents lack available hours, and incoming workload persistently exceeds sustainable throughput. Look for rising assigned-case age, sustained overtime and limited spare capacity within the required skill and shift.\n\nRouting hypothesis: cases wait for ownership, bounce between teams or queue behind the wrong specialist while another suitably qualified team has spare capacity. Look for long assignment delays, repeated transfers and uneven workload within comparable skill groups.\n\nBoth can coexist. An assigned case can still be misrouted; an unassigned case can reflect understaffed triage. Waiting for approvals, access or employee information is a third explanation that neither additional generalists nor reassignment necessarily fixes.",
+        "evidenceRefs": [
+          "E4",
+          "E5"
+        ]
+      },
+      {
+        "kind": "finding",
+        "title": "The staffing model supports a conditional option, not the diagnosis",
+        "text": "Retaining your assumptions, the independent hypothetical queue starts at 420 cases, receives 1,000 monthly arrivals and adds two agents to 10 baseline agents at 95 cases per agent per month. Modeled monthly capacity is 1,140, the queue reaches zero in Month 3, and first-year incremental funding is $163.2k. This is separate from the observed queue. The calculation assumes productive capacity is usable; it does not test assignment delays, skill mismatch or blocked approvals.",
+        "evidenceRefs": [
+          "E17"
+        ]
+      },
+      {
+        "kind": "recommendation",
+        "title": "Run a routing-first diagnostic with a staffing comparison",
+        "text": "Ask the HR service lead to run a proposed two-week baseline followed by a four-week routing pilot in comparable service queues. Keep staffing hours unchanged; introduce a named triage owner, skill-based assignment, daily aging review and explicit escalation ownership. Use matched queues or a staggered rollout, accounting for case complexity, priority, arrivals and agent availability.\n\nMeasure time to qualified ownership, transfers, active handling time, blocked time, arrivals, quality-checked resolutions and open-case age. Track reopen rates, employee satisfaction, overtime and SLA performance as guardrails. If a shortfall remains, test temporary additional qualified hours while keeping routing rules stable. Protect urgent cases throughout; do not withhold necessary cover for experimental purity.",
+        "evidenceRefs": [
+          "E1",
+          "E4",
+          "E5",
+          "E17"
+        ]
+      },
+      {
+        "kind": "recommendation",
+        "title": "What would change my recommendation",
+        "text": "Favor routing over added headcount if routing-only changes produce sustained backlog reduction and better open-case age versus the comparison queue, without extra hours, easier case mix or poorer quality.\n\nRetain targeted staffing if ownership becomes prompt but correctly assigned work still accumulates, qualified hours remain insufficient, and added hours improve quality-adjusted throughput beyond routing alone.\n\nFavor specialist coverage or process redesign if delays concentrate in a particular skill, approval or access dependency rather than general workload.\n\nReconsider automation if a controlled pilot demonstrates usable end-to-end capacity gains after review and rework, with acceptable quality and total costs—not merely faster drafting. I would stop expansion if any option only shifts work downstream or increases errors. Agree practical improvement thresholds before the pilot rather than selecting them after seeing results.",
+        "evidenceRefs": [
+          "E4",
+          "E5",
+          "E17"
+        ]
+      },
+      {
+        "kind": "limitation",
+        "title": "What is still missing",
+        "text": "The retrieved aggregates do not provide assignment histories, qualified available hours, active-versus-waiting time, blocked reasons or case-mix-adjusted productivity. Function breakdowns are not a substitute for servicing-team capacity. Consequently, neither a staffing shortage nor a routing failure is established. All workspace figures are synthetic.",
+        "evidenceRefs": []
+      }
+    ],
+    "unknowns": [
+      "Where elapsed case time is spent: awaiting ownership, qualified handling, approvals or external information.",
+      "Whether spare capacity exists in the right skill and shift—not merely elsewhere in HR.",
+      "Whether routing changes or additional hours improve durable resolutions without increasing rework."
+    ],
+    "followups": [
+      "Can the service lead provide aggregate assignment-delay, transfer, blocked-time and staffed-hour measures by service queue?",
+      "Which comparable queues could support a routing pilot without compromising urgent-case coverage?",
+      "What open-case aging, quality and cost thresholds should govern continuation or reversal?"
+    ]
+  },
+  "panels": [
+    {
+      "id": "panel-1",
+      "title": "Observed backlog pressure",
+      "why": "Establishes the queue problem without presuming its cause.",
+      "response": {
+        "mode": "api",
+        "question": "Explain O04",
+        "answer": "In this synthetic scope, backlog growth is 23.1%. (Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic.",
+        "title": "Backlog growth",
+        "scope": {
+          "function": "all",
+          "region": "all",
+          "period": "quarter"
+        },
+        "action": {
+          "type": "metric",
+          "metricId": "O04",
+          "caseId": null,
+          "overrides": {}
+        },
+        "facts": [
+          {
+            "label": "Backlog growth",
+            "value": "23.1%",
+            "note": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic."
+          },
+          {
+            "label": "Beginning / ending queue",
+            "value": "260 / 320",
+            "note": "Inflow + beginning backlog − resolved = ending backlog"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "O04",
+            "definition": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic.",
+            "period": "2026-07 to 2026-09",
+            "source": "Fictional aggregate HR service case ledger"
+          }
+        ],
+        "followups": [
+          "Show the overview",
+          "Explain P01"
+        ],
+        "boundary": "All figures are synthetic. Astra routes intent; the local engine calculates every reported fact. No individual decisions or causal conclusions.",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "conversation": {
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "metricId": "O04"
+        },
+        "presentation": {
+          "version": 1,
+          "scene": "metric",
+          "headline": "Backlog growth",
+          "takeaway": "In this synthetic scope, backlog growth is 23.1%. (Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic.",
+          "beats": [
+            {
+              "id": "fact-0",
+              "label": "Backlog growth",
+              "detail": "23.1%",
+              "context": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic.",
+              "factIndexes": [
+                0
+              ],
+              "evidenceIds": [
+                "O04"
+              ]
+            },
+            {
+              "id": "fact-1",
+              "label": "Beginning / ending queue",
+              "detail": "260 / 320",
+              "context": "Inflow + beginning backlog − resolved = ending backlog",
+              "factIndexes": [
+                1
+              ],
+              "evidenceIds": []
+            }
+          ],
+          "nextQuestions": [
+            "Show the overview",
+            "Explain P01"
+          ],
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0"
+        }
+      },
+      "evidenceRefs": [
+        "E1"
+      ]
+    },
+    {
+      "id": "panel-2",
+      "title": "Unassigned cases",
+      "why": "Provides a routing diagnostic signal, not proof of routing failure.",
+      "response": {
+        "mode": "api",
+        "question": "Explain O09",
+        "answer": "In this synthetic scope, unassigned open cases is 29. Open cases unassigned at selected month end; may overlap SLA breaches.",
+        "title": "Unassigned open cases",
+        "scope": {
+          "function": "all",
+          "region": "all",
+          "period": "quarter"
+        },
+        "action": {
+          "type": "metric",
+          "metricId": "O09",
+          "caseId": null,
+          "overrides": {}
+        },
+        "facts": [
+          {
+            "label": "Unassigned open cases",
+            "value": "29",
+            "note": "Open cases unassigned at selected month end; may overlap SLA breaches."
+          }
+        ],
+        "evidence": [
+          {
+            "id": "O09",
+            "definition": "Open cases unassigned at selected month end; may overlap SLA breaches.",
+            "period": "2026-09-30",
+            "source": "Fictional aggregate HR service case ledger"
+          }
+        ],
+        "followups": [
+          "Show the overview",
+          "Explain P01"
+        ],
+        "boundary": "All figures are synthetic. Astra routes intent; the local engine calculates every reported fact. No individual decisions or causal conclusions.",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "conversation": {
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "metricId": "O09"
+        },
+        "presentation": {
+          "version": 1,
+          "scene": "metric",
+          "headline": "Unassigned open cases",
+          "takeaway": "In this synthetic scope, unassigned open cases is 29. Open cases unassigned at selected month end; may overlap SLA breaches.",
+          "beats": [
+            {
+              "id": "fact-0",
+              "label": "Unassigned open cases",
+              "detail": "29",
+              "context": "Open cases unassigned at selected month end; may overlap SLA breaches.",
+              "factIndexes": [
+                0
+              ],
+              "evidenceIds": [
+                "O09"
+              ]
+            }
+          ],
+          "nextQuestions": [
+            "Show the overview",
+            "Explain P01"
+          ],
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0"
+        }
+      },
+      "evidenceRefs": [
+        "E5"
+      ]
+    },
+    {
+      "id": "panel-3",
+      "title": "Conditional staffing case",
+      "why": "Shows the staffing option under your retained assumptions, separately from observed operations.",
+      "response": {
+        "mode": "api",
+        "question": "Calculate the service scenario",
+        "answer": "For independent hypothetical queue; forward 12 months: monthly capacity is 1,140; monthly arrivals is 1,000; closing backlog is 0; first-year funding is $163.2k. Assumptions: Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%. These are conditional modeled results, not a forecast or proven causal effect.",
+        "title": "Service scenario",
+        "scope": {
+          "function": "all",
+          "region": "all",
+          "period": "quarter"
+        },
+        "action": {
+          "type": "scenario",
+          "metricId": null,
+          "caseId": "service",
+          "overrides": {
+            "servicePlan": "staff",
+            "openingQueue": 420,
+            "arrivals": 1000,
+            "agents": 10,
+            "agentProductivity": 95,
+            "automationGain": 15,
+            "agentMonthlyCost": 6800,
+            "automationMonthlyCost": 16000,
+            "serviceSetup": 48000
+          }
+        },
+        "facts": [
+          {
+            "label": "Monthly capacity",
+            "value": "1,140",
+            "note": "Independent hypothetical queue; forward 12 months"
+          },
+          {
+            "label": "Monthly arrivals",
+            "value": "1,000",
+            "note": "Assumed independent queue"
+          },
+          {
+            "label": "Closing backlog",
+            "value": "0",
+            "note": "After 12 monthly periods"
+          },
+          {
+            "label": "First-year funding",
+            "value": "$163.2k",
+            "note": "Incremental staffing / automation and setup"
+          },
+          {
+            "label": "Assumptions",
+            "value": "Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%",
+            "note": "Shipped baseline plus requested changes; all synthetic"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "scenario:service",
+            "definition": "Independent hypothetical queue; forward 12 months. Assumptions: Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%.",
+            "period": "Forward scenario, separate from dashboard filters",
+            "source": "Trusted WI_DECIDE.calculate; synthetic assumptions"
+          }
+        ],
+        "followups": [
+          "Show the overview",
+          "Show first-year retention"
+        ],
+        "boundary": "All figures are synthetic. Astra routes intent; the local engine calculates every reported fact. No individual decisions or causal conclusions. Each answer starts from the shipped scenario baseline, then applies stated overrides. All effective inputs are included in the action. Scenario populations are fixed and do not inherit the filtered dashboard population. Dashboard scope is preserved.",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "conversation": {
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "caseId": "service",
+          "overrides": {
+            "servicePlan": "staff",
+            "openingQueue": 420,
+            "arrivals": 1000,
+            "agents": 10,
+            "agentProductivity": 95,
+            "automationGain": 15,
+            "agentMonthlyCost": 6800,
+            "automationMonthlyCost": 16000,
+            "serviceSetup": 48000
+          }
+        },
+        "presentation": {
+          "version": 1,
+          "scene": "scenario",
+          "headline": "Service scenario",
+          "takeaway": "For independent hypothetical queue; forward 12 months: monthly capacity is 1,140; monthly arrivals is 1,000; closing backlog is 0; first-year funding is $163.2k. Assumptions: Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%. These are conditional modeled results, not a forecast or proven causal effect.",
+          "beats": [
+            {
+              "id": "fact-0",
+              "label": "Monthly capacity",
+              "detail": "1,140",
+              "context": "Independent hypothetical queue; forward 12 months",
+              "factIndexes": [
+                0
+              ],
+              "evidenceIds": [
+                "scenario:service"
+              ]
+            },
+            {
+              "id": "fact-1",
+              "label": "Monthly arrivals",
+              "detail": "1,000",
+              "context": "Assumed independent queue",
+              "factIndexes": [
+                1
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-2",
+              "label": "Closing backlog",
+              "detail": "0",
+              "context": "After 12 monthly periods",
+              "factIndexes": [
+                2
+              ],
+              "evidenceIds": []
+            },
+            {
+              "id": "fact-3",
+              "label": "First-year funding",
+              "detail": "$163.2k",
+              "context": "Incremental staffing / automation and setup",
+              "factIndexes": [
+                3
+              ],
+              "evidenceIds": []
+            }
+          ],
+          "nextQuestions": [
+            "Show the overview",
+            "Show first-year retention"
+          ],
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "chart": {
+            "type": "line",
+            "title": "Queue through the next 12 months",
+            "unit": "count",
+            "rows": [
+              {
+                "label": "Opening",
+                "value": 420
+              },
+              {
+                "label": "Month 1",
+                "value": 280
+              },
+              {
+                "label": "Month 2",
+                "value": 140
+              },
+              {
+                "label": "Month 3",
+                "value": 0
+              },
+              {
+                "label": "Month 4",
+                "value": 0
+              },
+              {
+                "label": "Month 5",
+                "value": 0
+              },
+              {
+                "label": "Month 6",
+                "value": 0
+              },
+              {
+                "label": "Month 7",
+                "value": 0
+              },
+              {
+                "label": "Month 8",
+                "value": 0
+              },
+              {
+                "label": "Month 9",
+                "value": 0
+              },
+              {
+                "label": "Month 10",
+                "value": 0
+              },
+              {
+                "label": "Month 11",
+                "value": 0
+              },
+              {
+                "label": "Month 12",
+                "value": 0
+              }
+            ],
+            "basis": "Independent queue; each closing balance = opening + arrivals − resolved"
+          }
+        }
+      },
+      "evidenceRefs": [
+        "E17"
+      ]
+    }
+  ],
+  "evidenceReferences": [
+    {
+      "refId": "E1",
+      "kind": "metric",
+      "title": "Backlog growth",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Backlog growth",
+          "value": "23.1%",
+          "note": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic."
+        },
+        {
+          "label": "Beginning / ending queue",
+          "value": "260 / 320",
+          "note": "Inflow + beginning backlog − resolved = ending backlog"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O04",
+          "definition": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic.",
+          "period": "2026-07 to 2026-09",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E2",
+      "kind": "metric",
+      "title": "Open HR cases",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Open HR cases",
+          "value": "320",
+          "note": "Open HR cases at selected month end."
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O05",
+          "definition": "Open HR cases at selected month end.",
+          "period": "2026-09-30",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E3",
+      "kind": "metric",
+      "title": "Open cases by age",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Open cases by age",
+          "value": "320",
+          "note": "Open HR cases split by age bands at selected month end."
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O07",
+          "definition": "Open HR cases split by age bands at selected month end.",
+          "period": "2026-09-30",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E4",
+      "kind": "metric",
+      "title": "Open cases breaching SLA",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Open cases breaching SLA",
+          "value": "43",
+          "note": "Open cases with an SLA breach at selected month end; may overlap unassigned."
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O08",
+          "definition": "Open cases with an SLA breach at selected month end; may overlap unassigned.",
+          "period": "2026-09-30",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E5",
+      "kind": "metric",
+      "title": "Unassigned open cases",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Unassigned open cases",
+          "value": "29",
+          "note": "Open cases unassigned at selected month end; may overlap SLA breaches."
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O09",
+          "definition": "Open cases unassigned at selected month end; may overlap SLA breaches.",
+          "period": "2026-09-30",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E6",
+      "kind": "metric",
+      "title": "SLA breaches by priority",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "SLA breaches by priority",
+          "value": "43",
+          "note": "Open cases with breached SLAs at month end, split by priority and tracked monthly."
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O10",
+          "definition": "Open cases with breached SLAs at month end, split by priority and tracked monthly.",
+          "period": "2026-09-30",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E7",
+      "kind": "metric",
+      "title": "Unassigned cases by priority",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Unassigned cases by priority",
+          "value": "29",
+          "note": "Unassigned open cases at month end, split by priority and tracked monthly."
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O11",
+          "definition": "Unassigned open cases at month end, split by priority and tracked monthly.",
+          "period": "2026-09-30",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E8",
+      "kind": "metric",
+      "title": "Resolution time by priority",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Resolution time by priority",
+          "value": "2.3 d",
+          "note": "Resolved HR case hours / matching closed cases / 24; chart tracks each priority monthly."
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O06",
+          "definition": "Resolved HR case hours / matching closed cases / 24; chart tracks each priority monthly.",
+          "period": "2026-07 to 2026-09",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E9",
+      "kind": "metric",
+      "title": "Resolved HR cases within SLA",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Resolved HR cases within SLA",
+          "value": "92.0%",
+          "note": "Resolved cases meeting SLA / resolved cases; excludes open cases."
+        }
+      ],
+      "definitions": [
+        {
+          "id": "E10",
+          "definition": "Resolved cases meeting SLA / resolved cases; excludes open cases.",
+          "period": "2026-07 to 2026-09",
+          "source": "Synthetic governed enterprise aggregates"
+        }
+      ]
+    },
+    {
+      "refId": "E10",
+      "kind": "metric",
+      "title": "Case survey score",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Case survey score",
+          "value": "4.15",
+          "note": "Sum of 1–5 response scores / survey responses on closed HR cases in selected flow window."
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O12",
+          "definition": "Sum of 1–5 response scores / survey responses on closed HR cases in selected flow window.",
+          "period": "2026-07 to 2026-09",
+          "source": "Fictional aggregate case survey responses"
+        }
+      ]
+    },
+    {
+      "refId": "E11",
+      "kind": "breakdown",
+      "title": "Backlog growth by function",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "23.1%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Customer services",
+          "value": "25.0%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "22.5%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Operations",
+          "value": "23.1%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Corporate",
+          "value": "19.2%",
+          "note": "2026-07 to 2026-09"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O04",
+          "definition": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic.",
+          "period": "2026-07 to 2026-09",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E12",
+      "kind": "breakdown",
+      "title": "Open HR cases by function",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "96",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Customer services",
+          "value": "80",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "49",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Operations",
+          "value": "64",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Corporate",
+          "value": "31",
+          "note": "2026-09-30"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O05",
+          "definition": "Open HR cases at selected month end.",
+          "period": "2026-09-30",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E13",
+      "kind": "breakdown",
+      "title": "Unassigned open cases by function",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "9",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Customer services",
+          "value": "7",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "4",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Operations",
+          "value": "6",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Corporate",
+          "value": "3",
+          "note": "2026-09-30"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O09",
+          "definition": "Open cases unassigned at selected month end; may overlap SLA breaches.",
+          "period": "2026-09-30",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E14",
+      "kind": "breakdown",
+      "title": "Open cases breaching SLA by function",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "12",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Customer services",
+          "value": "11",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "7",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Operations",
+          "value": "9",
+          "note": "2026-09-30"
+        },
+        {
+          "label": "Corporate",
+          "value": "4",
+          "note": "2026-09-30"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O08",
+          "definition": "Open cases with an SLA breach at selected month end; may overlap unassigned.",
+          "period": "2026-09-30",
+          "source": "Fictional aggregate HR service case ledger"
+        }
+      ]
+    },
+    {
+      "refId": "E15",
+      "kind": "breakdown",
+      "title": "Resolved HR cases within SLA by function",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "92.0%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Customer services",
+          "value": "92.1%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "92.0%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Operations",
+          "value": "91.9%",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Corporate",
+          "value": "92.2%",
+          "note": "2026-07 to 2026-09"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "E10",
+          "definition": "Resolved cases meeting SLA / resolved cases; excludes open cases.",
+          "period": "2026-07 to 2026-09",
+          "source": "Synthetic governed enterprise aggregates"
+        }
+      ]
+    },
+    {
+      "refId": "E16",
+      "kind": "breakdown",
+      "title": "Case survey score by function",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Engineering",
+          "value": "4.16",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Customer services",
+          "value": "4.13",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Sales & marketing",
+          "value": "4.19",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Operations",
+          "value": "4.12",
+          "note": "2026-07 to 2026-09"
+        },
+        {
+          "label": "Corporate",
+          "value": "4.19",
+          "note": "2026-07 to 2026-09"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "O12",
+          "definition": "Sum of 1–5 response scores / survey responses on closed HR cases in selected flow window.",
+          "period": "2026-07 to 2026-09",
+          "source": "Fictional aggregate case survey responses"
+        }
+      ]
+    },
+    {
+      "refId": "E17",
+      "kind": "scenario",
+      "title": "Service scenario",
+      "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+      "scope": {
+        "function": "all",
+        "region": "all",
+        "period": "quarter"
+      },
+      "source": "Trusted local metric and scenario engine",
+      "facts": [
+        {
+          "label": "Monthly capacity",
+          "value": "1,140",
+          "note": "Independent hypothetical queue; forward 12 months"
+        },
+        {
+          "label": "Monthly arrivals",
+          "value": "1,000",
+          "note": "Assumed independent queue"
+        },
+        {
+          "label": "Closing backlog",
+          "value": "0",
+          "note": "After 12 monthly periods"
+        },
+        {
+          "label": "First-year funding",
+          "value": "$163.2k",
+          "note": "Incremental staffing / automation and setup"
+        },
+        {
+          "label": "Assumptions",
+          "value": "Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%",
+          "note": "Shipped baseline plus requested changes; all synthetic"
+        }
+      ],
+      "definitions": [
+        {
+          "id": "scenario:service",
+          "definition": "Independent hypothetical queue; forward 12 months. Assumptions: Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%.",
+          "period": "Forward scenario, separate from dashboard filters",
+          "source": "Trusted WI_DECIDE.calculate; synthetic assumptions"
+        }
+      ]
+    }
+  ],
+  "conversation": {
+    "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0"
+  },
+  "presentation": {
+    "version": 1,
+    "scene": "analysis",
+    "headline": "Test where cases wait before deciding that more agents are the answer",
+    "takeaway": "A capacity problem means insufficient qualified service hours; a routing problem means available capacity is not reaching the right work. The current evidence shows queue pressure, but cannot distinguish those causes. I would refine my earlier recommendation: test routing at unchanged staffing first, with temporary staffing available for urgent protection. Continue the staffing experiment only if a workload shortfall remains after routing improves.",
+    "beats": [
+      {
+        "id": "analysis-1",
+        "label": "The queue needs attention—but backlog is not a diagnosis",
+        "detail": "Across all functions and regions, the July–September 2026 backlog grew 23.1%, from 260 to 320 cases. At September 30, 29 open cases were unassigned and 43 breached SLA; these groups may overlap. Backlog grew in every function. These observations establish service pressure, not whether staffing or routing caused it. The quarter’s 92.0% resolved-within-SLA result excludes open cases, so it cannot rule out serious waiting in the unresolved queue.",
+        "context": "finding",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E1",
+          "E4",
+          "E5",
+          "E9",
+          "E11"
+        ],
+        "evidenceIds": [
+          "O04",
+          "O08",
+          "O09",
+          "E10"
+        ]
+      },
+      {
+        "id": "analysis-2",
+        "label": "Distinguish insufficient capacity from capacity in the wrong place",
+        "detail": "Capacity hypothesis: correctly assigned cases wait because qualified agents lack available hours, and incoming workload persistently exceeds sustainable throughput. Look for rising assigned-case age, sustained overtime and limited spare capacity within the required skill and shift.\n\nRouting hypothesis: cases wait for ownership, bounce between teams or queue behind the wrong specialist while another suitably qualified team has spare capacity. Look for long assignment delays, repeated transfers and uneven workload within comparable skill groups.\n\nBoth can coexist. An assigned case can still be misrouted; an unassigned case can reflect understaffed triage. Waiting for approvals, access or employee information is a third explanation that neither additional generalists nor reassignment necessarily fixes.",
+        "context": "hypothesis",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E4",
+          "E5"
+        ],
+        "evidenceIds": [
+          "O08",
+          "O09"
+        ]
+      },
+      {
+        "id": "analysis-3",
+        "label": "The staffing model supports a conditional option, not the diagnosis",
+        "detail": "Retaining your assumptions, the independent hypothetical queue starts at 420 cases, receives 1,000 monthly arrivals and adds two agents to 10 baseline agents at 95 cases per agent per month. Modeled monthly capacity is 1,140, the queue reaches zero in Month 3, and first-year incremental funding is $163.2k. This is separate from the observed queue. The calculation assumes productive capacity is usable; it does not test assignment delays, skill mismatch or blocked approvals.",
+        "context": "finding",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E17"
+        ],
+        "evidenceIds": [
+          "scenario:service"
+        ]
+      },
+      {
+        "id": "analysis-4",
+        "label": "Run a routing-first diagnostic with a staffing comparison",
+        "detail": "Ask the HR service lead to run a proposed two-week baseline followed by a four-week routing pilot in comparable service queues. Keep staffing hours unchanged; introduce a named triage owner, skill-based assignment, daily aging review and explicit escalation ownership. Use matched queues or a staggered rollout, accounting for case complexity, priority, arrivals and agent availability.\n\nMeasure time to qualified ownership, transfers, active handling time, blocked time, arrivals, quality-checked resolutions and open-case age. Track reopen rates, employee satisfaction, overtime and SLA performance as guardrails. If a shortfall remains, test temporary additional qualified hours while keeping routing rules stable. Protect urgent cases throughout; do not withhold necessary cover for experimental purity.",
+        "context": "recommendation",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E1",
+          "E4",
+          "E5",
+          "E17"
+        ],
+        "evidenceIds": [
+          "O04",
+          "O08",
+          "O09",
+          "scenario:service"
+        ]
+      },
+      {
+        "id": "analysis-5",
+        "label": "What would change my recommendation",
+        "detail": "Favor routing over added headcount if routing-only changes produce sustained backlog reduction and better open-case age versus the comparison queue, without extra hours, easier case mix or poorer quality.\n\nRetain targeted staffing if ownership becomes prompt but correctly assigned work still accumulates, qualified hours remain insufficient, and added hours improve quality-adjusted throughput beyond routing alone.\n\nFavor specialist coverage or process redesign if delays concentrate in a particular skill, approval or access dependency rather than general workload.\n\nReconsider automation if a controlled pilot demonstrates usable end-to-end capacity gains after review and rework, with acceptable quality and total costs—not merely faster drafting. I would stop expansion if any option only shifts work downstream or increases errors. Agree practical improvement thresholds before the pilot rather than selecting them after seeing results.",
+        "context": "recommendation",
+        "factIndexes": [],
+        "evidenceRefs": [
+          "E4",
+          "E5",
+          "E17"
+        ],
+        "evidenceIds": [
+          "O08",
+          "O09",
+          "scenario:service"
+        ]
+      },
+      {
+        "id": "analysis-6",
+        "label": "What is still missing",
+        "detail": "The retrieved aggregates do not provide assignment histories, qualified available hours, active-versus-waiting time, blocked reasons or case-mix-adjusted productivity. Function breakdowns are not a substitute for servicing-team capacity. Consequently, neither a staffing shortage nor a routing failure is established. All workspace figures are synthetic.",
+        "context": "limitation",
+        "factIndexes": [],
+        "evidenceRefs": [],
+        "evidenceIds": []
+      }
+    ],
+    "nextQuestions": [
+      "Can the service lead provide aggregate assignment-delay, transfer, blocked-time and staffed-hour measures by service queue?",
+      "Which comparable queues could support a routing pilot without compromising urgent-case coverage?",
+      "What open-case aging, quality and cost thresholds should govern continuation or reversal?"
+    ],
+    "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0"
+  }
+}

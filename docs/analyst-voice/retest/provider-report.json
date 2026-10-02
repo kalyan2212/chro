@@ -1,0 +1,568 @@
+{
+  "schema": "chro-analyst-voice-eval.v1",
+  "at": "2026-10-02T14:57:00.980Z",
+  "environment": "Isolated local app using the real configured provider",
+  "generatedInput": true,
+  "physicalMicrophoneTested": false,
+  "physicalSpeakerTested": false,
+  "questions": [
+    "Compare staffing and automation for the HR service queue. Which experiment would you recommend and why?",
+    "How would you distinguish a capacity problem from a routing problem? What would make you change that recommendation?"
+  ],
+  "turns": [
+    {
+      "index": 0,
+      "question": "Compare staffing and automation for the HR service queue. Which experiment would you recommend and why?",
+      "inputDuration": 6.36,
+      "observedQuietAfterSentence": true,
+      "millisecondsToAnalysis": 81594,
+      "millisecondsToPostAnalysisSpeech": 82552,
+      "millisecondsObserved": 112170,
+      "recognizedQuestion": "Compare staffing and automation for the HR service queue Which experiment would you recommend and why",
+      "spokenExcerpt": "I'm on it. Checking that now. Sure—looking into that. Here's the analyst's recommendation. Based on the current synthetic evidence, they suggest a time-boxed staffing experiment. Try bringing in two temporary agents for a 12-week pilot, tracking weekly backlog and resolution quality. The caveat is, all of this is synthetic, and it's based on a hypothetical queue that may not match your world. But under those assumptions, two extra agents clear the queue faster and at a lower cost.",
+      "answerTitle": "Test temporary staffing first; require automation to prove its productivity and cost case",
+      "analysis": {
+        "summary": "I recommend a time-boxed staffing experiment before committing to automation. Under the shared scenario assumptions, two additional agents clear the hypothetical queue sooner and require less first-year funding than assisted resolution. Automation remains worth testing selectively, but its assumed productivity gain is unproven. The observed queue warrants action; it is separate from the modeled queue, so the scenario results are not a forecast.",
+        "sections": [
+          {
+            "kind": "finding",
+            "title": "The observed queue needs attention—not just faster case closure",
+            "text": "Across all functions and regions, backlog grew 23.1% during July–September 2026, from 260 to 320 cases. At September 30, 43 open cases breached SLA and 29 were unassigned; these groups may overlap. Although 92.0% of resolved cases met SLA during the quarter, that measure excludes open cases and therefore does not establish that the backlog is healthy.",
+            "evidenceRefs": [
+              "E1",
+              "E2",
+              "E4",
+              "E5",
+              "E7"
+            ]
+          },
+          {
+            "kind": "finding",
+            "title": "Like-for-like model: staffing is cheaper and clears the queue sooner",
+            "text": "Both options use an independent hypothetical opening queue of 420 cases, 1,000 monthly arrivals and 10 baseline agents resolving 95 cases each per month over a forward 12-month horizon.\n\n• Staffing adds two agents at an assumed loaded cost of $6,800 each per month: capacity is 1,140 cases/month, backlog first reaches zero in month 3, and incremental first-year funding is $163.2k.\n• Assisted resolution assumes a 15% productivity improvement without adding agents: capacity is 1,092.5 cases/month, backlog first reaches zero in month 5, and first-year funding is $240k, including $48,000 setup and $16,000 recurring monthly cost.\n\nBoth end month 12 with zero backlog. These are conditional capacity and funding results—not realized savings.",
+            "evidenceRefs": [
+              "E8",
+              "E9"
+            ]
+          },
+          {
+            "kind": "finding",
+            "title": "Automation's productivity assumption is consequential",
+            "text": "In a downside test changing only automation's assumed productivity gain from 15% to 5%, monthly capacity falls to 997.5 cases against 1,000 arrivals. The hypothetical closing backlog becomes 450 after 12 months, while first-year funding remains $240k. Buying the technology does not itself establish enough effective capacity.",
+            "evidenceRefs": [
+              "E9",
+              "E20"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "Recommended experiment: a reversible staffing pilot",
+            "text": "Have the HR service lead run a proposed 12-week pilot using two temporary, appropriately trained agents, subject to availability and a separately approved pilot budget. Staffing is the stronger initial option because the baseline model offers more capacity at lower funding—not because its real-world effect is already proven.\n\nBefore starting, record arrivals, case mix, staffed hours, resolutions, reopenings and assignment delays. Where comparable service teams exist, use a matched comparison team or randomized phased rollout; otherwise label a before-and-after result as weaker evidence. Give urgent and sensitive cases normal service protection rather than withholding support for the experiment. Standardize assignment rules across comparison groups so routing changes do not masquerade as a staffing effect.",
+            "evidenceRefs": [
+              "E4",
+              "E5",
+              "E8",
+              "E9"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "Measure durable resolution and set a decision gate",
+            "text": "Review weekly backlog, age distribution, SLA breaches and unassigned work alongside durable resolutions per paid hour and fully loaded cost per durable resolution. Track reopenings, quality-review errors, employee satisfaction and agent workload; the observed quarterly case survey score of 4.15 out of 5 is context, not a pilot-specific baseline.\n\nBefore launch, agree acceptable quality and satisfaction tolerances and the required backlog trajectory. At the pilot review, extend staffing only if it demonstrably improves flow at acceptable cost without worsening those guardrails. Include recruiting, ramp-up and any source-team backfill costs; the annual scenario funding is not a pilot quote.",
+            "evidenceRefs": [
+              "E6",
+              "E8"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "Keep automation as a bounded challenger",
+            "text": "If a low-cost trial is available, test assisted resolution on routine, well-documented case types using comparable agent groups with and without assistance. Keep humans accountable for answers, restrict data access, and exclude sensitive employee-relations decisions from automated resolution. Measure net productivity after review, corrections and escalations—not drafting speed alone. Pause for material privacy or quality failures. Scale only when measured performance and actual pricing make a stronger case than staffing, or when separately evidenced service benefits justify the premium.",
+            "evidenceRefs": [
+              "E9",
+              "E20"
+            ]
+          },
+          {
+            "kind": "limitation",
+            "title": "What this comparison does not establish",
+            "text": "All workspace data are synthetic. The governed September snapshot contains 320 open cases; the scenario starts with an independent hypothetical 420 and does not inherit dashboard filters. Steady arrivals, constant productivity and immediate usable capacity simplify implementation. Neither the observed metrics nor the scenarios establish whether insufficient staffing, assignment delays, case complexity or rework is the primary cause of backlog growth.",
+            "evidenceRefs": [
+              "E2",
+              "E8",
+              "E9",
+              "E19"
+            ]
+          }
+        ],
+        "unknowns": [
+          "Actual arrivals, sustainable agent productivity and case complexity by service type.",
+          "Availability, ramp-up time and fully loaded pilot cost for temporary agents.",
+          "Automation eligibility, adoption, net quality-adjusted productivity and trial pricing.",
+          "Whether comparable teams and sufficient case volume support a credible controlled experiment."
+        ],
+        "followups": [
+          "Validate queue-level demand, staffed hours and rework before tailoring the scenario to an operational decision.",
+          "Agree the backlog-clearance objective, pilot budget and quality stop rules with the HR service lead.",
+          "Obtain staffing and automation trial quotes, then rerun both options using validated assumptions."
+        ]
+      },
+      "panels": [
+        {
+          "id": "panel-1",
+          "title": "Observed backlog growth",
+          "why": "Establishes the service problem while keeping observed data separate from the hypothetical queue.",
+          "action": {
+            "type": "metric",
+            "metricId": "O04",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Backlog growth",
+              "value": "23.1%",
+              "note": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic."
+            },
+            {
+              "label": "Beginning / ending queue",
+              "value": "260 / 320",
+              "note": "Inflow + beginning backlog − resolved = ending backlog"
+            }
+          ],
+          "evidenceRefs": [
+            "E1"
+          ]
+        },
+        {
+          "id": "panel-2",
+          "title": "Two-agent staffing scenario",
+          "why": "Shows the modeled queue trajectory and first-year funding for staffing.",
+          "action": {
+            "type": "scenario",
+            "metricId": null,
+            "caseId": "service",
+            "overrides": {
+              "servicePlan": "staff",
+              "openingQueue": 420,
+              "arrivals": 1000,
+              "agents": 10,
+              "agentProductivity": 95,
+              "automationGain": 15,
+              "agentMonthlyCost": 6800,
+              "automationMonthlyCost": 16000,
+              "serviceSetup": 48000
+            }
+          },
+          "facts": [
+            {
+              "label": "Monthly capacity",
+              "value": "1,140",
+              "note": "Independent hypothetical queue; forward 12 months"
+            },
+            {
+              "label": "Monthly arrivals",
+              "value": "1,000",
+              "note": "Assumed independent queue"
+            },
+            {
+              "label": "Closing backlog",
+              "value": "0",
+              "note": "After 12 monthly periods"
+            },
+            {
+              "label": "First-year funding",
+              "value": "$163.2k",
+              "note": "Incremental staffing / automation and setup"
+            },
+            {
+              "label": "Assumptions",
+              "value": "Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%",
+              "note": "Shipped baseline plus requested changes; all synthetic"
+            }
+          ],
+          "evidenceRefs": [
+            "E8"
+          ]
+        },
+        {
+          "id": "panel-3",
+          "title": "Assisted-resolution scenario",
+          "why": "Provides the same-population comparison at the assumed 15% productivity gain.",
+          "action": {
+            "type": "scenario",
+            "metricId": null,
+            "caseId": "service",
+            "overrides": {
+              "servicePlan": "automate",
+              "openingQueue": 420,
+              "arrivals": 1000,
+              "agents": 10,
+              "agentProductivity": 95,
+              "automationGain": 15,
+              "agentMonthlyCost": 6800,
+              "automationMonthlyCost": 16000,
+              "serviceSetup": 48000
+            }
+          },
+          "facts": [
+            {
+              "label": "Monthly capacity",
+              "value": "1,092.5",
+              "note": "Independent hypothetical queue; forward 12 months"
+            },
+            {
+              "label": "Monthly arrivals",
+              "value": "1,000",
+              "note": "Assumed independent queue"
+            },
+            {
+              "label": "Closing backlog",
+              "value": "0",
+              "note": "After 12 monthly periods"
+            },
+            {
+              "label": "First-year funding",
+              "value": "$240k",
+              "note": "Incremental staffing / automation and setup"
+            },
+            {
+              "label": "Assumptions",
+              "value": "Plan automate; opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%",
+              "note": "Shipped baseline plus requested changes; all synthetic"
+            }
+          ],
+          "evidenceRefs": [
+            "E9"
+          ]
+        },
+        {
+          "id": "panel-4",
+          "title": "Automation downside test",
+          "why": "Shows why measured productivity must be a condition of any automation investment.",
+          "action": {
+            "type": "scenario",
+            "metricId": null,
+            "caseId": "service",
+            "overrides": {
+              "servicePlan": "automate",
+              "openingQueue": 420,
+              "arrivals": 1000,
+              "agents": 10,
+              "agentProductivity": 95,
+              "automationGain": 5,
+              "agentMonthlyCost": 6800,
+              "automationMonthlyCost": 16000,
+              "serviceSetup": 48000
+            }
+          },
+          "facts": [
+            {
+              "label": "Monthly capacity",
+              "value": "997.5",
+              "note": "Independent hypothetical queue; forward 12 months"
+            },
+            {
+              "label": "Monthly arrivals",
+              "value": "1,000",
+              "note": "Assumed independent queue"
+            },
+            {
+              "label": "Closing backlog",
+              "value": "450",
+              "note": "After 12 monthly periods"
+            },
+            {
+              "label": "First-year funding",
+              "value": "$240k",
+              "note": "Incremental staffing / automation and setup"
+            },
+            {
+              "label": "Assumptions",
+              "value": "Plan automate; opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 5%",
+              "note": "Shipped baseline plus requested changes; all synthetic"
+            }
+          ],
+          "evidenceRefs": [
+            "E20"
+          ]
+        }
+      ],
+      "beatCount": 8,
+      "submittedBeats": 8,
+      "acceptedBeats": 8,
+      "maximumAudioRms": 0.1664209946832564,
+      "audioSamples": 1122,
+      "scene": "Test temporary staffing first; require automation to prove its productivity and cost case",
+      "analysisCanvasVisible": true,
+      "focusChanges": [
+        {
+          "millisecondsAfterAnalysis": 1008,
+          "panel": "panel-1",
+          "fact": "0"
+        },
+        {
+          "millisecondsAfterAnalysis": 8734,
+          "panel": "panel-2",
+          "section": "3"
+        }
+      ],
+      "modelAuthoredAnalysis": true,
+      "screenshot": "turn-1.png"
+    },
+    {
+      "index": 1,
+      "question": "How would you distinguish a capacity problem from a routing problem? What would make you change that recommendation?",
+      "inputDuration": 7.056,
+      "observedQuietAfterSentence": true,
+      "millisecondsToAnalysis": 67131,
+      "millisecondsToPostAnalysisSpeech": 68156,
+      "millisecondsObserved": 95793,
+      "recognizedQuestion": "How distinguish a capacity problem from a routing problem? What would make you change change that recommendation",
+      "spokenExcerpt": "Let's see what the analyst finds. Here's what the analyst says. A capacity problem is not enough qualified service hours—work piling up. A routing problem is when the right people aren't getting the work. The data here shows pressure, not which one. To tease them apart, the analyst suggests a two-week baseline, then a four-week routing pilot. If that alone reduces the backlog, then the answer is better routing, not more headcount. That's what would change the team's recommendation.",
+      "answerTitle": "Test where cases wait before deciding that more agents are the answer",
+      "analysis": {
+        "summary": "A capacity problem means insufficient qualified service hours; a routing problem means available capacity is not reaching the right work. The current evidence shows queue pressure, but cannot distinguish those causes. I would refine my earlier recommendation: test routing at unchanged staffing first, with temporary staffing available for urgent protection. Continue the staffing experiment only if a workload shortfall remains after routing improves.",
+        "sections": [
+          {
+            "kind": "finding",
+            "title": "The queue needs attention—but backlog is not a diagnosis",
+            "text": "Across all functions and regions, the July–September 2026 backlog grew 23.1%, from 260 to 320 cases. At September 30, 29 open cases were unassigned and 43 breached SLA; these groups may overlap. Backlog grew in every function. These observations establish service pressure, not whether staffing or routing caused it. The quarter’s 92.0% resolved-within-SLA result excludes open cases, so it cannot rule out serious waiting in the unresolved queue.",
+            "evidenceRefs": [
+              "E1",
+              "E4",
+              "E5",
+              "E9",
+              "E11"
+            ]
+          },
+          {
+            "kind": "hypothesis",
+            "title": "Distinguish insufficient capacity from capacity in the wrong place",
+            "text": "Capacity hypothesis: correctly assigned cases wait because qualified agents lack available hours, and incoming workload persistently exceeds sustainable throughput. Look for rising assigned-case age, sustained overtime and limited spare capacity within the required skill and shift.\n\nRouting hypothesis: cases wait for ownership, bounce between teams or queue behind the wrong specialist while another suitably qualified team has spare capacity. Look for long assignment delays, repeated transfers and uneven workload within comparable skill groups.\n\nBoth can coexist. An assigned case can still be misrouted; an unassigned case can reflect understaffed triage. Waiting for approvals, access or employee information is a third explanation that neither additional generalists nor reassignment necessarily fixes.",
+            "evidenceRefs": [
+              "E4",
+              "E5"
+            ]
+          },
+          {
+            "kind": "finding",
+            "title": "The staffing model supports a conditional option, not the diagnosis",
+            "text": "Retaining your assumptions, the independent hypothetical queue starts at 420 cases, receives 1,000 monthly arrivals and adds two agents to 10 baseline agents at 95 cases per agent per month. Modeled monthly capacity is 1,140, the queue reaches zero in Month 3, and first-year incremental funding is $163.2k. This is separate from the observed queue. The calculation assumes productive capacity is usable; it does not test assignment delays, skill mismatch or blocked approvals.",
+            "evidenceRefs": [
+              "E17"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "Run a routing-first diagnostic with a staffing comparison",
+            "text": "Ask the HR service lead to run a proposed two-week baseline followed by a four-week routing pilot in comparable service queues. Keep staffing hours unchanged; introduce a named triage owner, skill-based assignment, daily aging review and explicit escalation ownership. Use matched queues or a staggered rollout, accounting for case complexity, priority, arrivals and agent availability.\n\nMeasure time to qualified ownership, transfers, active handling time, blocked time, arrivals, quality-checked resolutions and open-case age. Track reopen rates, employee satisfaction, overtime and SLA performance as guardrails. If a shortfall remains, test temporary additional qualified hours while keeping routing rules stable. Protect urgent cases throughout; do not withhold necessary cover for experimental purity.",
+            "evidenceRefs": [
+              "E1",
+              "E4",
+              "E5",
+              "E17"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "What would change my recommendation",
+            "text": "Favor routing over added headcount if routing-only changes produce sustained backlog reduction and better open-case age versus the comparison queue, without extra hours, easier case mix or poorer quality.\n\nRetain targeted staffing if ownership becomes prompt but correctly assigned work still accumulates, qualified hours remain insufficient, and added hours improve quality-adjusted throughput beyond routing alone.\n\nFavor specialist coverage or process redesign if delays concentrate in a particular skill, approval or access dependency rather than general workload.\n\nReconsider automation if a controlled pilot demonstrates usable end-to-end capacity gains after review and rework, with acceptable quality and total costs—not merely faster drafting. I would stop expansion if any option only shifts work downstream or increases errors. Agree practical improvement thresholds before the pilot rather than selecting them after seeing results.",
+            "evidenceRefs": [
+              "E4",
+              "E5",
+              "E17"
+            ]
+          },
+          {
+            "kind": "limitation",
+            "title": "What is still missing",
+            "text": "The retrieved aggregates do not provide assignment histories, qualified available hours, active-versus-waiting time, blocked reasons or case-mix-adjusted productivity. Function breakdowns are not a substitute for servicing-team capacity. Consequently, neither a staffing shortage nor a routing failure is established. All workspace figures are synthetic.",
+            "evidenceRefs": []
+          }
+        ],
+        "unknowns": [
+          "Where elapsed case time is spent: awaiting ownership, qualified handling, approvals or external information.",
+          "Whether spare capacity exists in the right skill and shift—not merely elsewhere in HR.",
+          "Whether routing changes or additional hours improve durable resolutions without increasing rework."
+        ],
+        "followups": [
+          "Can the service lead provide aggregate assignment-delay, transfer, blocked-time and staffed-hour measures by service queue?",
+          "Which comparable queues could support a routing pilot without compromising urgent-case coverage?",
+          "What open-case aging, quality and cost thresholds should govern continuation or reversal?"
+        ]
+      },
+      "panels": [
+        {
+          "id": "panel-1",
+          "title": "Observed backlog pressure",
+          "why": "Establishes the queue problem without presuming its cause.",
+          "action": {
+            "type": "metric",
+            "metricId": "O04",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Backlog growth",
+              "value": "23.1%",
+              "note": "(Ending open cases − beginning open cases) / beginning open cases for selected flow window. The catalog maps this label to closed-case age; this app uses explicit backlog arithmetic."
+            },
+            {
+              "label": "Beginning / ending queue",
+              "value": "260 / 320",
+              "note": "Inflow + beginning backlog − resolved = ending backlog"
+            }
+          ],
+          "evidenceRefs": [
+            "E1"
+          ]
+        },
+        {
+          "id": "panel-2",
+          "title": "Unassigned cases",
+          "why": "Provides a routing diagnostic signal, not proof of routing failure.",
+          "action": {
+            "type": "metric",
+            "metricId": "O09",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Unassigned open cases",
+              "value": "29",
+              "note": "Open cases unassigned at selected month end; may overlap SLA breaches."
+            }
+          ],
+          "evidenceRefs": [
+            "E5"
+          ]
+        },
+        {
+          "id": "panel-3",
+          "title": "Conditional staffing case",
+          "why": "Shows the staffing option under your retained assumptions, separately from observed operations.",
+          "action": {
+            "type": "scenario",
+            "metricId": null,
+            "caseId": "service",
+            "overrides": {
+              "servicePlan": "staff",
+              "openingQueue": 420,
+              "arrivals": 1000,
+              "agents": 10,
+              "agentProductivity": 95,
+              "automationGain": 15,
+              "agentMonthlyCost": 6800,
+              "automationMonthlyCost": 16000,
+              "serviceSetup": 48000
+            }
+          },
+          "facts": [
+            {
+              "label": "Monthly capacity",
+              "value": "1,140",
+              "note": "Independent hypothetical queue; forward 12 months"
+            },
+            {
+              "label": "Monthly arrivals",
+              "value": "1,000",
+              "note": "Assumed independent queue"
+            },
+            {
+              "label": "Closing backlog",
+              "value": "0",
+              "note": "After 12 monthly periods"
+            },
+            {
+              "label": "First-year funding",
+              "value": "$163.2k",
+              "note": "Incremental staffing / automation and setup"
+            },
+            {
+              "label": "Assumptions",
+              "value": "Plan staff (+2 agents); opening queue 420; 10 baseline agents at 95 cases/month; arrivals 1000/month; automation gain 15%",
+              "note": "Shipped baseline plus requested changes; all synthetic"
+            }
+          ],
+          "evidenceRefs": [
+            "E17"
+          ]
+        }
+      ],
+      "beatCount": 8,
+      "submittedBeats": 8,
+      "acceptedBeats": 8,
+      "maximumAudioRms": 0.24229665722650306,
+      "audioSamples": 958,
+      "scene": "Test where cases wait before deciding that more agents are the answer",
+      "analysisCanvasVisible": true,
+      "focusChanges": [
+        {
+          "millisecondsAfterAnalysis": 1076,
+          "panel": "panel-1",
+          "fact": "0"
+        },
+        {
+          "millisecondsAfterAnalysis": 5439,
+          "panel": "panel-1",
+          "section": "3",
+          "fact": "0"
+        },
+        {
+          "millisecondsAfterAnalysis": 5628,
+          "panel": "panel-2",
+          "section": "4"
+        },
+        {
+          "millisecondsAfterAnalysis": 16593,
+          "panel": "panel-1",
+          "section": "3"
+        },
+        {
+          "millisecondsAfterAnalysis": 21589,
+          "panel": "panel-2",
+          "section": "4"
+        }
+      ],
+      "modelAuthoredAnalysis": true,
+      "screenshot": "turn-2.png"
+    }
+  ],
+  "http": [
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/live/session",
+      "status": 201
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    }
+  ],
+  "browserErrors": [],
+  "limits": [
+    "Generated speech was injected into a real WebRTC microphone stream; this is not a physical microphone or speaker test.",
+    "Append acknowledgements confirm context injection, not completed audio playback.",
+    "Spoken excerpts and observed quiet intervals do not establish exact word-level visual synchronization."
+  ],
+  "final": {
+    "active": false,
+    "state": "Conversation ended (close_requested). Final voice duration received.",
+    "usage": "Voice duration: 239.0 s · final"
+  },
+  "completed": true
+}

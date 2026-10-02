@@ -4,7 +4,6 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from '../server.mjs';
-import { routingSchema } from '../engine.mjs';
 
 const scope = { function: 'Engineering', region: 'EMEA', period: '2026-09' };
 const sdp = 'v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n';
@@ -146,8 +145,12 @@ test('Live HTTP sessions belong to their creating cookie and logout hangs up own
     if (endpoint.endsWith('/hangup')) return new Response(null, { status: 200 });
     if (endpoint.endsWith('/live/sessions')) return Response.json({ session: { id: `owned_${++nextId}` }, transport: { type: 'webrtc', sdp } });
     assert.equal(endpoint, 'https://api.openai.com/v1/responses');
-    const overrides = Object.fromEntries(routingSchema.properties.overrides.required.map(key => [key, null]));
-    return Response.json({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ intent: 'metric', metricId: 'P01', caseId: null, overrides }) }] }] });
+    const input = JSON.parse(init.body).input;
+    const evidence = input.filter(item => item.type === 'function_call_output').flatMap(item => JSON.parse(item.output).items || []);
+    if (!evidence.length) return Response.json({ status: 'completed', output: [{ type: 'function_call', call_id: 'owned_metric', name: 'inspect_metrics', arguments: JSON.stringify({ metricIds: ['P01'], scope: { function: 'all', region: 'all', period: 'quarter' } }) }] });
+    const metric = evidence.find(item => item.response?.action.metricId === 'P01');
+    assert.ok(metric, 'the delegated analyst must retrieve governed metric evidence');
+    return Response.json({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ headline: 'Headcount evidence', summary: 'The active source provides the headcount baseline.', sections: [{ kind: 'finding', title: 'Headcount baseline', text: 'The headcount baseline is calculated from the active synthetic source.', evidenceRefs: [metric.refId] }], unknowns: [], followups: [], panels: [{ evidenceRef: metric.refId, title: 'Headcount', why: 'Inspect the governed baseline.' }] }) }] }] });
   } });
   const first = await login(url, password), second = await login(url, password);
   const created = await json(await post(url, '/api/live/session', { sdp }, first), 201);

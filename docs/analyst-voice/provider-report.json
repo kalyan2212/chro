@@ -1,0 +1,465 @@
+{
+  "schema": "chro-analyst-voice-eval.v1",
+  "at": "2026-10-02T14:29:38.664Z",
+  "environment": "Isolated local app using the real configured provider",
+  "generatedInput": true,
+  "physicalMicrophoneTested": false,
+  "physicalSpeakerTested": false,
+  "questions": [
+    "Compare Engineering and Sales on workforce cost against plan. Where should I investigate first?",
+    "Which supporting signals strengthen that concern, and what remains uncertain?",
+    "Now compare staffing and automation for the HR service queue. Which experiment would you recommend and why?"
+  ],
+  "turns": [
+    {
+      "index": 0,
+      "question": "Compare Engineering and Sales on workforce cost against plan. Where should I investigate first?",
+      "inputDuration": 6.048,
+      "observedQuietAfterSentence": true,
+      "recognizedQuestion": "Compare engineering and sales on workforce cost against plan. Where should I investigate first",
+      "spokenExcerpt": "Sure, let me take a look, one moment. The synthetic evidence shows Engineering is twelve million above plan, compared with five for Sales and marketing. And it has a capability gap, so I’d start there. Clarify what’s driving the run rate and whether the extra spend ties to needed capabilities and outcomes. For sales, a similar reconciliation makes sense, especially with higher attrition, but the bigger variance and gap point to Engineering first. Where would you like me to dig in?",
+      "answerTitle": "Investigate Engineering first—but diagnose the overrun before cutting capacity",
+      "analysis": {
+        "summary": "Engineering has the larger dollar overrun: $12m above annual plan, versus $5m for Sales & marketing. It also has a reported capability gap, making spend effectiveness the first investigation priority. These are annual run-rate comparisons at September 30, 2026—not quarterly actual overspend.",
+        "sections": [
+          {
+            "kind": "finding",
+            "title": "Cost against plan: Engineering has the larger exposure",
+            "text": "At September 30, 2026, Engineering’s annual loaded workforce cost is $420m, with a positive $12m variance above comparable annual plan. Sales & marketing is $180m, with a positive $5m variance above plan. Costs include overtime and contractors. Engineering is the first priority on absolute dollars; this does not establish which function has the larger percentage overrun.",
+            "evidenceRefs": [
+              "E1",
+              "E2"
+            ]
+          },
+          {
+            "kind": "finding",
+            "title": "The operational context differs",
+            "text": "Engineering has a reported capability gap of 16 FTE, versus 0 for Sales & marketing, as of September 30. Meanwhile, Sales & marketing has higher annualized voluntary attrition: 10.0%, versus Engineering’s 7.0%, based on July–September 2026. These are diagnostic signals, not evidence that capability shortages or turnover caused the cost overruns.",
+            "evidenceRefs": [
+              "E4",
+              "E5"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "First: reconcile Engineering’s overrun to the capability it buys",
+            "text": "Ask Finance and Engineering for a plan-to-run-rate reconciliation separating staffing volume, pay rates and job mix, contractors, overtime, and hiring timing. Map incremental spending to the capabilities and delivery commitments it supports. The key question is whether above-plan spending is closing the assessed gap, providing temporary cover, or funding work that can be stopped. Avoid a blanket hiring freeze until that distinction is clear.",
+            "evidenceRefs": [
+              "E1",
+              "E2",
+              "E4"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "Second: examine Sales & marketing’s replacement and compensation costs",
+            "text": "Run the same cost reconciliation for Sales & marketing, with particular attention to replacement hiring, temporary overlap, and variable compensation against plan and commercial results. Higher attrition makes replacement-related costs worth testing, but it does not establish their contribution. Separate justified performance-linked pay from controllable overspend.",
+            "evidenceRefs": [
+              "E2",
+              "E5"
+            ]
+          },
+          {
+            "kind": "limitation",
+            "title": "Scope and evidence boundaries",
+            "text": "“Sales” is represented by the combined Sales & marketing function; a sales-only result is not available here. The retrieved evidence does not decompose cost variances or report percentage-to-plan comparisons, so the recommendation is based on dollar materiality and capability risk—not proven inefficiency. All workspace figures are synthetic.",
+            "evidenceRefs": [
+              "E1",
+              "E2",
+              "E4"
+            ]
+          }
+        ],
+        "unknowns": [
+          "How much of each overrun reflects approved investment versus unplanned cost?",
+          "Which cost components and teams account for the variances?",
+          "Is Engineering’s incremental spending improving assessed readiness and delivery?"
+        ],
+        "followups": [
+          "Obtain Finance’s component-level plan-to-run-rate reconciliation for Engineering and Sales & marketing.",
+          "Link Engineering’s incremental spending to capability assessments and delivery milestones."
+        ]
+      },
+      "panels": [
+        {
+          "id": "panel-1",
+          "title": "Annual workforce cost variance against plan",
+          "why": "Establishes the dollar exposure that drives investigation priority.",
+          "action": {
+            "type": "breakdown",
+            "metricId": "E05",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Engineering",
+              "value": "$12m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Customer services",
+              "value": "$3m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Sales & marketing",
+              "value": "$5m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Operations",
+              "value": "$7m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Corporate",
+              "value": "$3m",
+              "note": "2026-09-30"
+            }
+          ],
+          "evidenceRefs": [
+            "E2"
+          ]
+        },
+        {
+          "id": "panel-2",
+          "title": "Annual workforce cost by function",
+          "why": "Provides the spending scale behind each variance.",
+          "action": {
+            "type": "breakdown",
+            "metricId": "E02",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Engineering",
+              "value": "$420m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Customer services",
+              "value": "$150m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Sales & marketing",
+              "value": "$180m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Operations",
+              "value": "$176m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Corporate",
+              "value": "$104m",
+              "note": "2026-09-30"
+            }
+          ],
+          "evidenceRefs": [
+            "E1"
+          ]
+        },
+        {
+          "id": "panel-3",
+          "title": "Assessed capability gaps",
+          "why": "Shows why Engineering’s cost review must consider readiness, not just spending.",
+          "action": {
+            "type": "breakdown",
+            "metricId": "E06",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Engineering",
+              "value": "16",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Customer services",
+              "value": "0",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Sales & marketing",
+              "value": "0",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Operations",
+              "value": "0",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Corporate",
+              "value": "0",
+              "note": "2026-09-30"
+            }
+          ],
+          "evidenceRefs": [
+            "E4"
+          ]
+        }
+      ],
+      "beatCount": 8,
+      "submittedBeats": 8,
+      "acceptedBeats": 8,
+      "maximumAudioRms": 0.20491141585043565,
+      "audioSamples": 725,
+      "scene": "Investigate Engineering first—but diagnose the overrun before cutting capacity",
+      "modelAuthoredAnalysis": true,
+      "screenshot": "turn-1.png"
+    },
+    {
+      "index": 1,
+      "question": "Which supporting signals strengthen that concern, and what remains uncertain?",
+      "inputDuration": 4.464,
+      "observedQuietAfterSentence": true,
+      "recognizedQuestion": "Which supporting signal strengthen that concern, and what remains uncertain",
+      "spokenExcerpt": "Okay, checking that. The synthetic evidence points to Engineering because the overspend sits next to a capability shortfall and thinner succession coverage. But two things keep it from being a clear-cut problem. Hiring is slightly faster in Engineering and attrition is lower. A few possibilities. They're investing ahead, still ramping, or funding different skills. Biggest uncertainty: we don’t yet see the cost breakdown or productivity link. So we can’t tell if that’s inefficient or intentional.",
+      "answerTitle": "Engineering’s readiness gap strengthens the concern—not evidence of broad hiring or retention failure",
+      "analysis": {
+        "summary": "Investigate Engineering first for spend effectiveness: its larger dollar variance coexists with a capability shortfall and weaker succession coverage than Sales & marketing. However, aggregate hiring speed and voluntary attrition do not indicate worse performance in Engineering. The evidence supports investigation, not a conclusion that spending is wasteful.",
+        "sections": [
+          {
+            "kind": "finding",
+            "title": "The strongest supporting signals are capability and succession readiness",
+            "text": "At September 30, 2026, Engineering’s annual workforce cost run rate is $12m above plan, versus $5m for Sales & marketing. Engineering also reports a 16 FTE capability gap, versus 0 for Sales, and ready-now succession coverage of 66.7%, versus 75.0%. These strengthen the concern that higher spending is not yet accompanied by sufficient readiness; they do not establish that the cost variance caused the gaps.",
+            "evidenceRefs": [
+              "E2",
+              "E3",
+              "E6"
+            ]
+          },
+          {
+            "kind": "finding",
+            "title": "Two counter-signals limit the diagnosis",
+            "text": "For July–September 2026, Engineering’s time to fill is 44.9 days versus Sales & marketing’s 46.6 days. Its annualized voluntary attrition is also lower: 7.0% versus 10.0%. Thus, the aggregate evidence does not support slower hiring or higher turnover as Engineering’s distinguishing problem. Time to fill covers filled roles, while the attrition figures are annualized observations—not forecasts.",
+            "evidenceRefs": [
+              "E4",
+              "E5"
+            ]
+          },
+          {
+            "kind": "hypothesis",
+            "title": "A skill-mix or timing mismatch is plausible",
+            "text": "Engineering may be spending on capacity that is still ramping, on skills outside the measured shortage, or on temporary coverage while scarce capabilities develop. Alternatively, the higher spending may be justified investment against future delivery needs. Skill-specific readiness dates, spending components and delivery outcomes would distinguish these explanations.",
+            "evidenceRefs": [
+              "E2",
+              "E3"
+            ]
+          },
+          {
+            "kind": "limitation",
+            "title": "What remains uncertain",
+            "text": "The comparison establishes a larger dollar variance, not a larger percentage overrun or lower productivity. Engineering’s annual loaded workforce cost is $420m, versus $180m for Sales & marketing, so scale matters. These are September-end annual run rates, not quarterly actual overspend. The retrieved evidence does not explain the variance by payroll, contractors, overtime or hiring mix, connect it to delivery results, or establish whether capability assessments cover comparable needs across functions. All figures are synthetic.",
+            "evidenceRefs": [
+              "E1",
+              "E2",
+              "E3"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "Start with a cost-to-readiness review, not a blanket cost cut",
+            "text": "Ask Finance and Engineering to reconcile the variance by cost driver, then map the capability shortfall to funded work, required skills, assessed readiness and delivery deadlines. Check whether spending is closing those specific gaps and whether uncovered priority roles overlap critical delivery dependencies. Use that review to distinguish justified ramp-up investment from persistent allocation problems.",
+            "evidenceRefs": [
+              "E2",
+              "E3",
+              "E6"
+            ]
+          }
+        ],
+        "unknowns": [
+          "Which cost components and approved business changes explain the variance?",
+          "Are the capability gaps temporary ramp-up gaps or persistent shortages in critical skills?",
+          "What delivery outcomes and business value accompany the additional spending?"
+        ],
+        "followups": [
+          "Check whether cost variance and capability readiness have improved or deteriorated over time.",
+          "Request a Finance-validated cost bridge and skill-level readiness assessment for Engineering."
+        ]
+      },
+      "panels": [
+        {
+          "id": "panel-1",
+          "title": "Annual workforce cost against plan",
+          "why": "Confirms the dollar variance motivating the investigation.",
+          "action": {
+            "type": "breakdown",
+            "metricId": "E05",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Engineering",
+              "value": "$12m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Customer services",
+              "value": "$3m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Sales & marketing",
+              "value": "$5m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Operations",
+              "value": "$7m",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Corporate",
+              "value": "$3m",
+              "note": "2026-09-30"
+            }
+          ],
+          "evidenceRefs": [
+            "E2"
+          ]
+        },
+        {
+          "id": "panel-2",
+          "title": "Capability shortfall",
+          "why": "Shows the readiness gap that makes Engineering the first investigation priority.",
+          "action": {
+            "type": "breakdown",
+            "metricId": "E06",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Engineering",
+              "value": "16",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Customer services",
+              "value": "0",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Sales & marketing",
+              "value": "0",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Operations",
+              "value": "0",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Corporate",
+              "value": "0",
+              "note": "2026-09-30"
+            }
+          ],
+          "evidenceRefs": [
+            "E3"
+          ]
+        },
+        {
+          "id": "panel-3",
+          "title": "Ready-now succession coverage",
+          "why": "Adds a separate measure of readiness risk.",
+          "action": {
+            "type": "breakdown",
+            "metricId": "E04",
+            "caseId": null,
+            "overrides": {}
+          },
+          "facts": [
+            {
+              "label": "Engineering",
+              "value": "66.7%",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Customer services",
+              "value": "80.0%",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Sales & marketing",
+              "value": "75.0%",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Operations",
+              "value": "75.0%",
+              "note": "2026-09-30"
+            },
+            {
+              "label": "Corporate",
+              "value": "66.7%",
+              "note": "2026-09-30"
+            }
+          ],
+          "evidenceRefs": [
+            "E6"
+          ]
+        }
+      ],
+      "beatCount": 8,
+      "submittedBeats": 8,
+      "acceptedBeats": 8,
+      "maximumAudioRms": 0.19250838988999835,
+      "audioSamples": 747,
+      "scene": "Engineering’s readiness gap strengthens the concern—not evidence of broad hiring or retention failure",
+      "modelAuthoredAnalysis": true,
+      "screenshot": "turn-2.png"
+    }
+  ],
+  "http": [
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/speech",
+      "status": 200
+    },
+    {
+      "path": "/api/live/session",
+      "status": 201
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 502
+    }
+  ],
+  "browserErrors": [],
+  "limits": [
+    "Generated speech was injected into a real WebRTC microphone stream; this is not a physical microphone or speaker test.",
+    "Append acknowledgements confirm context injection, not completed audio playback.",
+    "Spoken excerpts and observed quiet intervals do not establish exact word-level visual synchronization."
+  ],
+  "failure": "page.waitForFunction: Timeout 120000ms exceeded.",
+  "final": {
+    "active": false,
+    "state": "Conversation ended (close_requested). Final voice duration received.",
+    "usage": "Voice duration: 284.0 s · final"
+  },
+  "completed": false
+}

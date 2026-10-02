@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-02T15:07:58.516Z",
+  "checks": [
+    "Board perspective reaches request; actual recorded Astra response renders findings and calculated panels",
+    "Evidence panel selection updates follow-up context and visible chart",
+    "Claim citation navigates to its calculated evidence panel",
+    "Downloaded brief maps every cited reference to its scope, revision and metric definitions",
+    "Narration transcript cues highlight a finding and its panel, then clear",
+    "Panel investigation persists across reload with server-calculated lineage",
+    "Saved breakdowns preserve Engineering and Sales segment observations instead of only the aggregate",
+    "User-selected chart is normalized, previewed and sent only while attached",
+    "Changing perspective cancels an in-flight typed answer and retains the previous scene",
+    "Adding or removing an attachment cancels stale typed analysis",
+    "Leaving Studio with an attachment keeps that hidden image out of Workspace voice",
+    "Manual evidence selection cancels pending analysis without losing the selected panel",
+    "Multi-panel saves retain each observation scope, server value and source revision",
+    "Follow-ups use the selected panel scope as well as its metric context",
+    "Presentation, tablet and phone layouts fit the viewport; reduced motion is honored",
+    "No browser JavaScript errors"
+  ],
+  "errors": [],
+  "provider": "Recorded actual Astra response and local scoped calculations; no external provider calls in this browser test"
+}
