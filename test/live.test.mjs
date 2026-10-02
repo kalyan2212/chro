@@ -141,6 +141,27 @@ test('broad analysis preserves a late recommendation and evidence limit within t
  assert.match(spoken,/Suggested next step: Test a reversible service intervention/);
  assert.match(spoken,/Evidence limit: The scenario does not establish actual implementation readiness/);
 });
+
+test('mixed dashboard and scenario narration begins with the independent model population before any finding',async t=>{
+ const scenario=answer(validateRequest({question:'Model service capacity'}),{intent:'scenario',metricId:null,caseId:'service',overrides:{servicePlan:'staff',openingQueue:420}},'api');
+ const analysis={summary:'The observed queue contains 320 cases. The staffing model supports testing extra capacity.',sections:[
+  {kind:'finding',title:'Model comparison',text:'In the independent hypothetical model, additional staffing clears the queue sooner.',evidenceRefs:['E2']},
+  {kind:'recommendation',title:'A reversible trial',text:'Propose a controlled staffing trial before committing permanently.',evidenceRefs:['E2']},
+  {kind:'limitation',title:'Population boundary',text:'The modeled queue does not forecast clearance of the observed backlog.',evidenceRefs:['E1','E2']}
+ ]};
+ const panels=[{id:'staffing',title:'Staffing scenario',evidenceRefs:['E2'],response:scenario}];
+ const {live,calls}=service({ask:async body=>({...await governed(body),analysis,panels})});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ const result=await live.delegate({sessionId:'live_1',delegationId:'mixed_populations',...request});
+ assert.equal(result.narration.beats[0].kind,'boundary');
+ assert.match(result.event.content,/independent hypothetical models use different populations/);
+ assert.match(result.event.content,/opening queue is 420 cases/);assert.doesNotMatch(result.event.content,/320/);
+ assert.match(result.event.content,/conditional, not predictions for the observed population/);
+ assert.ok(result.events.slice(1).some(event=>event.content.includes('observed queue contains 320 cases')));
+ assert.ok(result.events.some(event=>event.content.includes('Suggested next step: Propose a controlled staffing trial')));
+ assert.ok(result.events.some(event=>event.content.includes('Evidence limit: The modeled queue')));
+ assert.ok(result.events.every(event=>Buffer.byteLength(event.content)<=450));assert.ok(result.events.length<=8);
+ const sent=JSON.parse(calls[0].init.body);assert.match(sent.session.instructions,/Never attach a modeled clearance time or benefit to an observed queue/);
+});
 test('attached images and source revision reach only the governed delegation backend as immutable input',async t=>{
  const image={dataUrl:'data:image/png;base64,dGVzdA==',mimeType:'image/png',name:'user-chart.png'};let seen;
  const {live,calls}=service({ask:async body=>{seen=body;return governed(body);}});t.after(()=>live.shutdown());await live.create({sdp:SDP,image});
@@ -276,6 +297,20 @@ test('browser assembles delegation question from transcript and displays only co
  const result=h.peers[0].channel.sent.find(x=>x.type==='session.commentary.append');assert.equal(result.delegation_id,'item_voice');
  h.event({type:'session.closed',usage:{seconds:4}});
 });
+test('a transcript fragment spanning the delegation offset is consumed once across follow-up turns',async()=>{
+ const h=browser();await h.start();
+ h.event({type:'session.input_transcript.delta',delta:'What is retention, and ',start_ms:100,end_ms:339});
+ h.event({type:'session.input_transcript.delta',delta:'why',start_ms:340,end_ms:400});
+ h.event({type:'session.delegation.created',offset_ms:350,delegation:{id:'item_span_first',target:'client'}});await h.fireTimers(300);
+ h.event({type:'session.input_transcript.delta',delta:'What about capacity?',start_ms:1000,end_ms:1300});
+ const utterance=h.emitted.filter(event=>event.type==='wi-voice-transcript'&&event.detail.role==='user').at(-1);
+ assert.equal(utterance.detail.utteranceText,'What about capacity?');
+ h.event({type:'session.delegation.created',offset_ms:1400,delegation:{id:'item_span_second',target:'client'}});await h.fireTimers(300);
+ const questions=h.requests.filter(request=>request.url==='/api/live/delegate').map(request=>JSON.parse(request.init.body).question);
+ assert.deepEqual(questions,['What is retention, and why','What about capacity?']);
+ h.event({type:'session.closed',usage:{seconds:4}});
+});
+
 test('richer voice beats wait for their own injection acknowledgements and emit honest presentation events',async()=>{
  const h=browser({multiBeat:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_beats',target:'client'}});await h.fireTimers(300);
  const spoken=()=>h.peers[0].channel.sent.filter(event=>event.type==='session.commentary.append');

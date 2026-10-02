@@ -215,7 +215,11 @@
   // fragments arrive; it is not a claim that a transcript turn is complete.
   run.delegationTimer = setTimeout(async () => {
    if (!current(run) || closing || order !== run.delegationOrder) return;
-   const question = run.transcript.text('user', run.answeredOffset, event.offset_ms).trim();
+    const question = run.transcript.text('user', run.answeredOffset, event.offset_ms).trim();
+    // A transcript delta can start before the delegation offset and end after
+    // it. Its whole text belongs to this question; consume that same span when
+    // the result succeeds so the final word cannot leak into the next turn.
+    const questionThrough = run.transcript.entries().filter(entry => entry.role === 'user' && entry.end > run.answeredOffset && entry.start <= event.offset_ms).reduce((end, entry) => Math.max(end, entry.end), event.offset_ms);
    if (!question || question.length > 2000) {
     command(run, 'session.commentary.append', { delegation_id: delegationId, content: 'I could not safely assemble that question from the speech transcript. Please ask a short, specific metric or scenario question again.' });
     $('#wl-result').textContent = 'Transcript was incomplete or too long. Please repeat a short question.'; return;
@@ -236,7 +240,7 @@
     const shown = await api().showResponse(result.response, { origin: 'voice', isCurrent: () => current(run) && !closing && !ctrl.signal.aborted && revision === run.inputRevision && order === run.delegationOrder && scopeAtStart === JSON.stringify(scope()) && imageAtStart?.dataUrl === attachedImage()?.dataUrl && audienceAtStart===audience() });
     if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder) return;
     if (shown === false) throw Error('The data changed during this lookup. Ask again to use the latest evidence.');
-    run.answeredOffset = event.offset_ms;
+     run.answeredOffset = questionThrough;
     $('#wl-result').textContent = 'Validated visual briefing: ' + result.response.title + '. Exact figures and scenario assumptions appear in the evidence card.';
     window.WI_VOICE_GUIDE?.prepare(result.response);
     run.contextKey = JSON.stringify({ scope: scope(), metric: context().metricId || null, scenario: context().caseId || null, audience:audience() });
