@@ -31,6 +31,7 @@ jobs:
           node scripts/check-studio-voice.mjs
           node scripts/check-studio-home.mjs
           node scripts/check-analysis.mjs
+          node scripts/check-discovery.mjs
           node scripts/check-voice-recovery.mjs
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

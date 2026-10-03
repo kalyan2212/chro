@@ -16,16 +16,19 @@ If the user continues speaking while a delegated lookup is running, or during it
 
 Recovery carries an application correlation ID and an explicit `recovery:true` flag. Returned commentary uses `delegation_id:null`, the Live append form for application-triggered work; the internal correlation ID is not presented as a provider delegation. A real provider redelegation supersedes the queued recovery. At most two consecutive unsuccessful application recoveries are allowed before an explicit retry instruction; success or a normal provider delegation resets that bound. Provider errors and exhaustion leave the session stoppable instead of showing indefinite progress.
 
+Explicit requests to discover categories or available evidence can also start this application-owned path if no provider delegation arrives. After exhaustion, a fresh explicit discovery utterance starts a new bounded recovery turn; ordinary backchannels do not. A long unanswered speech span retains the latest complete sentences as the question and an original topic anchor plus limited recent speech in user history. An unsplittable oversized utterance is reported and consumed so a later short request can proceed. These limits are not a requirement to remember metric names.
+
 Typed questions, navigation, changed scope or image, source refresh, Stop and release invalidate pending recovery as appropriate. Context changes discard the old unhandled speech span, and a late delegation for already consumed speech cannot cancel a newer narration. Matching acknowledgements still govern narration injection; recovery does not turn an acknowledgement into proof of audible playback.
 
 ## Calculation and evidence boundary
 
 `analyst.mjs` runs a bounded Responses tool loop. It supplies the workspace catalogue, selected scope, current context, up to 24 recent messages, and any attachment as user context. The model may call several tools and request more evidence after inspecting an earlier result. Current limits are four investigation/synthesis rounds, an optional fifth verification-only repair with no additional tools, sixteen tool calls per question, and six rendered evidence panels. These are execution limits, not a fixed vocabulary of supported strategic questions.
 
-`evidence-tools.mjs` provides five fixed functions:
+`evidence-tools.mjs` provides six fixed functions:
 
 | Tool | Available evidence |
 | --- | --- |
+| `discover_evidence` | Topic inventory of available metrics, mapped views and scenario labs, with calculated previews; includes the existing Economics cost-component chart. |
 | `inspect_metrics` | One to twelve of the 50 metric definitions and calculated observations in a validated scope. |
 | `compare_metrics` | One to six measures split by function, region or month, with the engine's periods, units and suppression rules. |
 | `calculate_scenario` | One of six local calculators with validated, typed assumptions and explicit hypothetical populations. |
@@ -41,6 +44,14 @@ Spoken assistant transcripts are no longer rendered in Studio, the analytical ca
 The final structured answer contains a headline, summary, typed sections, unknowns, follow-ups and evidence panel requests. Findings must cite retrieved identifiers. Numerical tokens in findings are checked against their cited calculated evidence, including signs and units; invalid explanations may receive a bounded repair attempt and otherwise fail visibly. Panels must point to an actual engine response. These checks catch several forms of fabricated arithmetic and invalid citation, but do not prove every claim, interpretation or causal inference correct. Human review remains necessary.
 
 The tool catalogue exposes all 50 metric definitions and all 38 mapped views. Some views are gated, suppressed or definition-only. Search returns at most ten bounded matches, history is finite, and a question has a fixed work budget. Therefore the application does **not** claim 100% website understanding, exhaustive retrieval, unrestricted analytics, causal attribution or a reliable answer to every question. This implementation uses a tool-driven catalogue and local keyword retrieval; it has no vector database or separate DAG orchestration layer.
+
+## Discovering available evidence
+
+An ordinary request such as “Show me the workforce cost categories you have” should discover available evidence before asking the user to name a metric. The cost inventory includes the Economics page's existing employee loaded cost, overtime and external contractor components, with their annual run-rate basis and source revision. These are distinct from related rewards/earnings measures and hypothetical scenario costs. Base salary, benefits, bonuses and payroll taxes are not separately reported in the available component chart.
+
+The discovery view presents server-owned choices and calculated values, rather than asking the model to invent a menu. Observed evidence and hypothetical calculators are labelled separately. Selecting already retrieved evidence opens it directly. A cost-component view can be exported, but it cannot be saved as a component-level investigation: the current persistence schema supports metric observations, and saving only its aggregate would lose the component detail. Existing metric and scenario saves retain their normal lineage behavior.
+
+The previous metric-only catalogue omitted the existing component chart. A real-provider replay consequently asserted that separate overtime and contractor amounts were unavailable. Passing metric/tool unit tests did not detect that mismatch between visible dashboard content and assistant access. Discovery-specific provider and browser checks are therefore reported separately from deterministic regression tests.
 
 ## HTTP and lifecycle
 

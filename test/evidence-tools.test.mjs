@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEvidenceTools } from '../evidence-tools.mjs';
-import { answer, cases, exportDataset, hydrateDataset, metricIds, scenario } from '../engine.mjs';
+import { answer, cases, exportDataset, hydrateDataset, metricIds, scenario, summary } from '../engine.mjs';
 
 const scope = { function: 'all', region: 'all', period: 'quarter' };
 const setup = extra => createEvidenceTools({ snapshot: { ...exportDataset(), sourceVersion: 'evidence-test-v1' }, ...extra });
@@ -135,9 +135,70 @@ test('fixed argument validation rejects extra properties, oversized lists and in
     ['inspect_metrics', { metricIds: ['E01'], scope, code: 'process.exit()' }],
     ['compare_metrics', { metricIds: ['P01'], scope, dimension: 'employee' }],
     ['search_workspace', { query: 'x'.repeat(501) }],
+    ['discover_evidence', { topic: '', scope }],
+    ['discover_evidence', { topic: 'x'.repeat(501), scope }],
+    ['discover_evidence', { topic: 'cost', scope: { ...scope, region: 'Mars' } }],
+    ['discover_evidence', { topic: 'cost', scope, path: '.env' }],
     ['get_scenario_catalog', { path: '.env' }]
   ]) assert.throws(() => service.execute(name, args), error => error.status === 400 && typeof error.publicMessage === 'string');
   assert.deepEqual(service.evidence(), []);
+});
+
+test('cost discovery retrieves the existing scoped cost components and separates unavailable payroll splits', () => {
+  for (const selectedScope of [scope, { function: 'Engineering', region: 'EMEA', period: 'quarter' }]) {
+    const service = setup();
+    const result = service.execute('discover_evidence', { topic: 'cost category for workforce', scope: selectedScope });
+    const inventory = result.items.find(item => item.kind === 'discovery');
+    const components = inventory.discovery.items.filter(item => item.id.startsWith('cost:'));
+    assert.deepEqual(components.map(item => item.label), ['Employee loaded cost', 'Overtime', 'External contractors']);
+    const mix = result.items.find(item => item.refId === components[0].evidenceRefs[0]);
+    const expected = summary(selectedScope).workforce;
+    assert.deepEqual(mix.response.presentation.chart.rows.map(row => row.value), [expected.costBreakdown.employeeLoaded, expected.costBreakdown.overtime, expected.costBreakdown.contractors]);
+    assert.equal(mix.response.presentation.chart.rows.reduce((total, row) => total + row.value, 0), expected.annualCostRunRate);
+    assert.equal(mix.response.presentation.chart.unit, 'usd');
+    assert.equal(mix.response.savePolicy.supported, false);
+    assert.match(mix.response.savePolicy.reason, /Save the annual workforce cost or plan-variance/);
+    assert.equal(mix.response.action.metricId, 'E02');
+    assert.equal(mix.response.sourceVersion, inventory.sourceVersion);
+    assert.deepEqual(mix.response.scope, selectedScope);
+    assert.equal(mix.response.facts.length, 4);
+    assert.match(inventory.discovery.limitations.join(' '), /not split into base salary, bonuses, benefits or employer taxes/);
+    assert.match(inventory.discovery.limitations.join(' '), /not booked year-to-date/);
+    assert.ok(inventory.discovery.items.some(item => item.metricId === 'E05'));
+    assert.ok(!inventory.discovery.items.some(item => item.metricId === 'P01'));
+    assert.deepEqual(inventory.discovery.items.filter(item => item.id.startsWith('cost-view:')).map(item => item.id), ['cost-view:function', 'cost-view:region', 'cost-view:month']);
+    assert.ok(inventory.discovery.items.filter(item => item.kind === 'scenario').every(item => item.basis === 'modelled'));
+    assert.ok(inventory.discovery.views.some(view => view.id === 'workforce-cost-components'));
+    assert.throws(() => { mix.response.presentation.chart.rows[0].value = 0; }, TypeError);
+    const native = result.items.find(item => item.kind === 'metric' && item.response.action.metricId === 'E02');
+    assert.equal(native.response.savePolicy, undefined);
+    assert.deepEqual(native.response.facts[0], mix.response.facts[0]);
+    const again = service.execute('discover_evidence', { topic: 'cost category for workforce', scope: selectedScope });
+    assert.equal(again.items[0], inventory);
+  }
+});
+
+test('discovery inventories every governed metric, mapped chart and lab, including distinct topic requests', () => {
+  const service = setup();
+  const all = service.execute('discover_evidence', { topic: 'all', scope }).items[0].discovery;
+  assert.deepEqual(all.items.filter(item => item.id.startsWith('metric:')).map(item => item.metricId).sort(), [...metricIds].sort());
+  assert.deepEqual(all.items.filter(item => item.kind === 'scenario').map(item => item.caseId).sort(), [...cases].sort());
+  assert.equal(all.views.filter(view => /^[OP]\d{2}$/.test(view.id)).length, 38);
+  assert.equal(all.items.find(item => item.metricId === 'P09').available, false);
+  const hiring = service.execute('discover_evidence', { topic: 'hiring', scope }).items[0].discovery;
+  assert.ok(hiring.items.some(item => item.metricId === 'P14'));
+  assert.ok(hiring.items.some(item => item.metricId === 'P01'));
+  assert.ok(!hiring.items.some(item => item.id.startsWith('cost:')));
+  const combined = service.execute('discover_evidence', { topic: 'cost and headcount', scope }).items[0].discovery;
+  assert.ok(combined.items.some(item => item.id.startsWith('cost:')));
+  assert.ok(combined.items.some(item => item.metricId === 'P01'));
+  const small = service.execute('discover_evidence', { topic: 'retention', scope: { function: 'Corporate', region: 'Other', period: 'quarter' } });
+  const cohort = small.items.find(item => item.response?.action.metricId === 'C01');
+  assert.equal(cohort.facts[0].value, 'Suppressed');
+  assert.match(cohort.response.answer, /privacy|threshold|broader/i);
+  const unknown = service.execute('discover_evidence', { topic: 'xqzvzzzzwy', scope }).items[0].discovery;
+  assert.equal(unknown.items.length, 0);
+  assert.match(unknown.limitations.join(' '), /full catalogue remains available/);
 });
 
 test('compact model catalogue preserves all definitions, display coverage and scenario assumptions', () => {

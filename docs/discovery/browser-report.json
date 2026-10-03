@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-03T07:53:27.422Z",
+  "checks": [
+    "Every matched category, measure, scenario and dashboard view is listed; all three calculated cost categories fit above the desktop composer",
+    "Internal voice cues highlight matching catalogue cards without rendering the spoken transcript",
+    "Retrieved component chart opens immediately with exact USD bars and export; unsupported component persistence is clearly excluded",
+    "Back restores the full catalogue and a retrieved function comparison opens without another model request",
+    "Annual total remains savable with the original governed metric, scope and source revision",
+    "An uncalculated scenario choice uses its server-authored question through the existing analytical flow",
+    "Laptop, tablet and phone retain the entire catalogue without horizontal page overflow",
+    "Discovery without calculated panels still presents useful choices and narration without an empty-canvas prompt",
+    "An unavailable DEI composite is explicitly labelled unavailable and cannot be opened as an observed measure",
+    "Catalogue labels render as literal text, never executable markup",
+    "No browser errors or external provider calls"
+  ],
+  "errors": [],
+  "provider": "Local provider stub with real governed discovery tools and engine calculations",
+  "externalProviderCalls": 0
+}

@@ -54,6 +54,13 @@
       };
     }
     const computed = response.presentation?.chart;
+    if (response.action?.type === 'metric' && computed?.type === 'bar' && computed.unit === 'usd' && Array.isArray(computed.rows) && computed.rows.length) {
+      return {
+        title: clean(computed.title), eyebrow: 'OBSERVED COST COMPONENTS · USD',
+        rows: computed.rows.map(row => ({ label: clean(row.label), value: finite(row.value) ? row.value : null, formatted: finite(row.value) ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(row.value) : 'Suppressed', fact: factIndex(response, row.label) })),
+        caption: [computed.basis, 'USD. Components share a zero baseline; the total is not added as another component.'].filter(Boolean).join(' · ')
+      };
+    }
     if (response.action?.type === 'scenario' && computed && ['bar', 'line'].includes(computed.type) && ['usd', 'count'].includes(computed.unit) && Array.isArray(computed.rows) && computed.rows.length) {
       const caseId = response.action.caseId, retention = caseId === 'retention';
       const units = { retention: 'USD · 12 months', service: 'Open cases · forward 12 months', skills: 'FTE', capacity: 'FTE', continuity: 'Services', delivery: 'Accepted units per week' };

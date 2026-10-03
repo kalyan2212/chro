@@ -1,0 +1,214 @@
+{
+  "checkedAt": "2026-10-03T07:54:35.424Z",
+  "environment": "Isolated local application; real configured Astra and GPT-Live services; synthetic workforce source",
+  "originalUserSessionTranscriptAvailable": false,
+  "providerReplays": {
+    "costBefore": {
+      "elapsedMs": 21583,
+      "tools": [
+        "inspect_metrics",
+        "search_workspace",
+        "get_scenario_catalog"
+      ],
+      "summary": "Here are the available cost measures and evidence, with hypothetical model costs separated from reported figures. All workspace data is synthetic.",
+      "sections": [
+        {
+          "kind": "finding",
+          "title": "Workforce cost and budget",
+          "text": "Across all functions and regions, September 30, 2026 annual loaded workforce cost is $1.03bn against a $1bn annual plan: $30m above plan. Includes overtime and contractors; not year-to-date actual spending.",
+          "evidenceRefs": [
+            "E1",
+            "E2"
+          ]
+        },
+        {
+          "kind": "finding",
+          "title": "Rewards and earnings",
+          "text": "Recorded rewards total $408k for July–September 2026. Annual on-target earnings per employee are $108.4k at September 30. These have different periods and denominators; they are not additive cost categories.",
+          "evidenceRefs": [
+            "E3",
+            "E4"
+          ]
+        },
+        {
+          "kind": "finding",
+          "title": "Related financial measure—not a cost",
+          "text": "Revenue per employee is $265.5k at September 30, 2026: annual revenue run rate divided by FTE, not booked per-person revenue.",
+          "evidenceRefs": [
+            "E5"
+          ]
+        },
+        {
+          "kind": "limitation",
+          "title": "Additional costs exist only in models",
+          "text": "Model categories include retention funding, replacement value, training, backfill, recruiting, payroll, workflow spend, agent staffing, automation setup/recurring costs, redeployment transition, source opportunity cost, and delay exposure. These are hypothetical—not reported expenditure.",
+          "evidenceRefs": [
+            "E16"
+          ]
+        },
+        {
+          "kind": "limitation",
+          "title": "What the available evidence cannot show",
+          "text": "No separate reported amounts are available here for base salary, benefits, bonuses, overtime, or contractors. The loaded total does not provide that breakdown; I won’t invent one.",
+          "evidenceRefs": [
+            "E1"
+          ]
+        }
+      ],
+      "inventoryCount": 0,
+      "error": null
+    },
+    "costAfter": {
+      "elapsedMs": 11527,
+      "tools": [
+        "discover_evidence"
+      ],
+      "summary": "The full cost inventory is displayed: three cost components, related measures, comparison views and separate hypothetical scenario labs.",
+      "sections": [
+        {
+          "kind": "finding",
+          "title": "Available cost categories",
+          "text": "Across all functions and regions at September 30, 2026: employee loaded cost $997,040,000; overtime $12,360,000; external contractors $20,600,000. These are annual run-rate components, not quarterly or year-to-date spending.",
+          "evidenceRefs": [
+            "E1"
+          ]
+        },
+        {
+          "kind": "finding",
+          "title": "Other available details",
+          "text": "The inventory also includes total cost, cost versus plan, rewards, revenue per employee, on-target earnings per employee, and function, region and monthly views. Separate hypothetical labs cover retention, skills, delivery, service and capacity.",
+          "evidenceRefs": [
+            "E10"
+          ]
+        },
+        {
+          "kind": "limitation",
+          "title": "What is not supplied",
+          "text": "Base salary, benefits, bonuses and employer taxes are not separately supplied within employee loaded cost. Scenario amounts are not additional payroll categories or realized savings. All workspace data is synthetic.",
+          "evidenceRefs": [
+            "E10",
+            "E1"
+          ]
+        }
+      ],
+      "inventoryCount": 16,
+      "error": null
+    },
+    "hiringAndOnboarding": {
+      "elapsedMs": 16925,
+      "tools": [
+        "discover_evidence",
+        "inspect_metrics"
+      ],
+      "summary": "The inventory shows available evidence and previews; you can explore hiring, onboarding or early retention without knowing metric names.",
+      "sections": [
+        {
+          "kind": "finding",
+          "title": "Available evidence",
+          "text": "Hiring covers fill time, internal/external mix and workforce context. Onboarding covers closed-case duration, trends and HR-service breakdowns. Related evidence includes ramp-up completion, first-year exits, voluntary and regrettable attrition.",
+          "evidenceRefs": [
+            "E7",
+            "E9",
+            "E10"
+          ]
+        },
+        {
+          "kind": "finding",
+          "title": "Current previews",
+          "text": "Across all functions and regions, July–September 2026 hiring averaged 45.9 days to fill; internal moves represented 16.7% of filled roles. Closed onboarding cases averaged 1.5 days; ramp-up assignment completion was 84.8%.",
+          "evidenceRefs": [
+            "E3",
+            "E4",
+            "E8",
+            "E9"
+          ]
+        },
+        {
+          "kind": "recommendation",
+          "title": "Your choices",
+          "text": "Start with function or regional comparisons, monthly trends, or onboarding service breakdowns. Separate hypothetical labs explore retention investment and building, buying or redeploying Operations capacity.",
+          "evidenceRefs": [
+            "E7"
+          ]
+        },
+        {
+          "kind": "limitation",
+          "title": "Interpretation matters",
+          "text": "All data is synthetic. Onboarding case duration is not time to proficiency; first-year exits use a matured hire cohort, not this quarter. Scenario populations are independent, and modeled value is not realized savings.",
+          "evidenceRefs": [
+            "E8",
+            "E10",
+            "E7"
+          ]
+        }
+      ],
+      "inventoryCount": 16,
+      "error": null
+    }
+  },
+  "voice": {
+    "completed": true,
+    "generatedInput": true,
+    "physicalMicrophoneTested": false,
+    "physicalSpeakersTested": false,
+    "turns": [
+      {
+        "question": "Show me all the workforce cost categories you have, because I don't remember their names. Put the evidence on screen.",
+        "recognizedQuestion": "Show me all the workforce cost categories you have because I don't remember their names Put the evidence on screen",
+        "backendQuestionMatchesRecognized": true,
+        "spokenExcerpt": "Welcome to Workforce Studio. Okay. Uh-huh. Checking that now. Okay. Still checking. Here’s what the analyst found in cost categories, synthetic figures, Employee loaded cost is about 997 million, overtime about 12.4 million, and external contractors about twenty point six million. Those are annual run rates. The evidence is now on screen.",
+        "millisecondsAfterInputFinished": 14892,
+        "millisecondsFromAnalysisToSpeech": 749,
+        "inventoryCount": 16,
+        "acceptedNarrationBeats": 8,
+        "maximumAudioRms": 0.14147366468040526,
+        "captionFree": true,
+        "visualEmphasisObserved": true
+      },
+      {
+        "question": "Which of those are actual workforce costs, and which are hypothetical costs in a model?",
+        "recognizedQuestion": "Which of those are actual workforce costs and which are hypothetical costs in a model",
+        "backendQuestionMatchesRecognized": true,
+        "spokenExcerpt": "Checking that now. Employee loaded cost, overtime, and contractors are observed workforce costs. The hypothetical ones belong to separate scenarios, like retention funding, training, automation, and capacity. The first three are observed run rates. The hypothetical ones are model assumptions. The suggestion is to keep them separate, and not label modeled value as actual savings.",
+        "millisecondsAfterInputFinished": 12478,
+        "millisecondsFromAnalysisToSpeech": 935,
+        "inventoryCount": 16,
+        "acceptedNarrationBeats": 8,
+        "maximumAudioRms": 0.12451926340628236,
+        "captionFree": true,
+        "visualEmphasisObserved": true
+      }
+    ],
+    "requests": [
+      {
+        "question": "Show me all the workforce cost categories you have because I don't remember their names",
+        "recovery": false
+      },
+      {
+        "question": "Show me all the workforce cost categories you have because I don't remember their names Put the evidence on screen",
+        "recovery": true
+      },
+      {
+        "question": "Which of those are actual workforce costs and which are hypothetical costs in a model",
+        "recovery": false
+      }
+    ],
+    "final": {
+      "active": false,
+      "state": "Conversation ended (close_requested). Final voice duration received.",
+      "usage": "Voice duration: 98.0 s · final",
+      "peersClosed": true,
+      "microphoneTracksEnded": true
+    },
+    "browserErrors": [],
+    "protocolErrors": []
+  },
+  "limitations": [
+    "These are new diagnostic replays, not recovered recordings of the original user session.",
+    "Timings are individual samples, not a latency guarantee.",
+    "Provider voice input was generated; physical microphone and speaker compatibility remain untested.",
+    "The first question caused early delegation; its continued speech was recovered automatically and the complete question answered.",
+    "voice-1920.png shows the actual voice response before the final discovery spacing adjustment; cost-discovery-1920.png shows the final browser-checked layout.",
+    "Mapped specialized chart dimensions remain limited to the existing engine; inventory coverage is not a claim that every dashboard detail has a reconstructed analytical tool."
+  ]
+}

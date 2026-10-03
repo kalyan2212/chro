@@ -25,6 +25,10 @@ The connector emits seven paginated synthetic report names: `CoreHCM`, `Talent`,
 
 ## Questions, voice and media
 
+Topic discovery requests can return an additional `discovery` object with `title`, `description`, `sourceVersion`, `scope`, `items`, `views`, `limitations` and a map of trusted `responses` indexed by evidence reference. Items describe observed metrics or hypothetical scenario labs and retain explicit availability, definitions and references. The server constructs this inventory from its governed catalogue, including the existing Economics cost-component chart; model prose cannot introduce executable actions or arbitrary source queries. A response with `savePolicy.supported:false` remains viewable/exportable but cannot be represented faithfully by the current metric-investigation save format. Native metric and scenario saves are unchanged.
+
+Application-owned voice recovery accepts an optional `recoveryTurnId` beginning with `utterance_` only when `recovery:true`. The client creates this after an exhausted recovery receives a fresh explicit discovery request. A new validated identity starts a new two-attempt budget; retired identities cannot be reused, and the existing session-wide delegation cap and ownership checks remain. Long accumulated speech uses the latest complete sentences plus bounded earlier user-history context, rather than permanently rejecting subsequent requests. This is bounded conversational context, not persistent learning or a recording of the whole session.
+
 `POST /api/ask` accepts `{question,scope:{function,region,period},context?,history?,sourceVersion?,audience?,image?,requestId?,operation?}`. `audience` is `chro`, `ceo` or `board` and changes presentation only. History is bounded to 24 messages of at most 2,000 characters each. The common response retains:
 
 ```js

@@ -134,3 +134,73 @@ test('voice synthesis is concise while preserving all tools, reasoning and evide
     assert.equal(round,2);assert.equal(result.evidenceReferences.length,2);assert.match(result.analysis.sections[0].text,/month 3/);
   }
 });
+
+test('ordinary cost category discovery displays all components and instant-open evidence without requiring names',async()=>{
+  const questions=['You tell me cost category for workforce','Show me everything that you have for the cost category','All the cost categories because I do not remember'];
+  for(const question of questions){
+    let round=0;
+    const history=[{role:'user',text:'I want to explore workforce spending.'},{role:'assistant',text:'Which cost metric do you mean?'}];
+    const result=await analyze({request:{...request(question,{},history),channel:'voice'},snapshot,upstream:async payload=>{
+      assert.match(payload.instructions,/The user does not need to know metric IDs or category names/);
+      assert.ok(payload.tools.some(tool=>tool.name==='discover_evidence'));
+      if(++round===1){assert.deepEqual(JSON.parse(payload.input.find(item=>item.role==='user').content[0].text).history,history);return calls({name:'discover_evidence',args:{topic:'workforce cost',scope:{function:'all',region:'all',period:'quarter'}}});}
+      const mix=toolItems(payload).find(item=>item.response?.chart?.title==='Annual workforce cost mix');
+      assert.ok(mix);
+      return finished(narrative({headline:'Here are the available workforce cost categories',summary:'Employee loaded cost, overtime and external contractors are shown separately, alongside related measures and modeled investment options.',sections:[{kind:'finding',title:'Available cost categories',text:'Employee loaded cost is $997,040,000; overtime is $12,360,000; external contractors are $20,600,000.',evidenceRefs:[mix.refId]},{kind:'limitation',title:'Unavailable splits',text:'Base salary, benefits, bonuses and employer taxes are not separately supplied within employee loaded cost.',evidenceRefs:[mix.refId]}],panels:[]}));
+    }});
+    assert.equal(round,2);assert.equal(result.discovery.items.length,16);
+    const components=result.discovery.items.filter(item=>item.id.startsWith('cost:'));
+    assert.deepEqual(components.map(item=>item.value),['$997,040,000','$12,360,000','$20,600,000']);
+    assert.equal(result.panels.length,3);
+    assert.equal(result.panels[0].response.savePolicy.supported,false);
+    assert.equal(result.panels[1].response.savePolicy,undefined);
+    assert.equal(result.panels[1].response.action.metricId,'E02');
+    assert.equal(result.panels[2].response.action.metricId,'E05');
+    for(const item of result.discovery.items.filter(item=>item.evidenceRefs.length)){
+      const opened=result.discovery.responses[item.evidenceRefs[0]];
+      assert.ok(opened);assert.equal(opened.sourceVersion,snapshot.sourceVersion);assert.equal(opened.action.metricId,item.metricId);
+    }
+    assert.equal(Object.keys(result.discovery.responses).length,9);
+    assert.deepEqual(result.discovery.responses[components[0].evidenceRefs[0]],result.panels[0].response);
+    assert.ok(result.evidenceReferences.some(item=>item.kind==='discovery'));
+  }
+});
+
+test('general discovery preserves another topic and all inventories while refusing invented component amounts',async()=>{
+  for(const topic of ['hiring','all']){
+    let round=0;
+    const result=await analyze({request:request(`What evidence do you have for ${topic}?`),snapshot,upstream:async payload=>{
+      if(++round===1)return calls({name:'discover_evidence',args:{topic,scope:{function:'all',region:'all',period:'quarter'}}});
+      const inventory=toolItems(payload).find(item=>item.kind==='discovery');
+      return finished(narrative({sections:[{kind:'finding',title:'Available evidence',text:'The inventory lists the available measures, mapped dashboard views and related scenario labs.',evidenceRefs:[inventory.refId]}]}));
+    }});
+    assert.ok(result.discovery.items.some(item=>item.metricId==='P14'));
+    if(topic==='all'){assert.equal(result.discovery.items.filter(item=>item.id.startsWith('metric:')).length,50);assert.equal(result.discovery.items.filter(item=>item.kind==='scenario').length,6);assert.equal(result.discovery.views.length,39);}
+    else assert.ok(!result.discovery.items.some(item=>item.id.startsWith('cost:')));
+  }
+  let round=0;
+  await assert.rejects(analyze({request:request('Show workforce cost categories'),snapshot,upstream:async payload=>{
+    if(++round===1)return calls({name:'discover_evidence',args:{topic:'cost',scope:{function:'all',region:'all',period:'quarter'}}});
+    const mix=toolItems(payload).find(item=>item.response?.chart?.unit==='usd');
+    return finished(narrative({sections:[{kind:'finding',title:'Invented salary split',text:'Base salaries total $777,000,000.',evidenceRefs:[mix.refId]}]}));
+  }}),error=>error.status===502&&/numerical finding/.test(error.message));
+});
+
+test('evidence retrieved after discovery becomes instantly openable without crossing scope boundaries',async()=>{
+  let round=0;
+  const result=await analyze({request:request('Show all hiring and onboarding evidence'),snapshot,upstream:async payload=>{
+    if(++round===1)return calls({name:'discover_evidence',args:{topic:'hiring and onboarding',scope:{function:'all',region:'all',period:'quarter'}}});
+    if(round===2)return calls({name:'inspect_metrics',call_id:'later_evidence',args:{metricIds:['O01','C01','P05'],scope:{function:'all',region:'all',period:'quarter'}}},{name:'inspect_metrics',call_id:'other_scope',args:{metricIds:['O01'],scope:{function:'Engineering',region:'all',period:'quarter'}}});
+    return finished(narrative());
+  }});
+  for(const metricId of ['O01','C01','P05']){
+    const item=result.discovery.items.find(item=>item.id==='metric:'+metricId);
+    assert.ok(item);assert.equal(item.evidenceRefs.length,1);
+    const opened=result.discovery.responses[item.evidenceRefs[0]];
+    assert.equal(opened.action.metricId,metricId);
+    assert.equal(opened.scope.function,'all');
+    assert.equal(item.value,opened.facts[0].value);
+  }
+  assert.equal(result.discovery.items.find(item=>item.metricId==='P05').group,'Additional retrieved measures');
+  assert.ok(result.discovery.views.some(view=>view.id==='P05'));
+});

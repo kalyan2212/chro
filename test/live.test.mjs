@@ -30,6 +30,14 @@ test('creates documented WebRTC client-delegation session and keeps key/config p
  assert.deepEqual(result.session,{id:'live_1'}); assert.equal(JSON.stringify(result).includes('private-test-key'),false); assert.equal(JSON.stringify(result).includes('secret'),false);
  assert.ok(Object.isFrozen(result.transport));
 });
+
+test('Live explicitly delegates business-topic discovery without requiring metric names or inventing missing data',async t=>{
+ const seen=[];const {live,calls}=service({ask:async value=>{seen.push(value);return governed(request);}});t.after(()=>live.shutdown());
+ const session=await live.create({sdp:SDP});const prompt=JSON.parse(calls[0].init.body).session.instructions;
+ assert.match(prompt,/cost categories/);assert.match(prompt,/does not need metric names/);assert.match(prompt,/Never claim requested data is unavailable before the backend/);assert.match(prompt,/Never claim the screen has changed before the application accepts/);
+ for(const [i,question] of ['You tell me cost category for workforce','Show me everything that you have for the cost category','Show me all the cost categories because I do not remember'].entries())await live.delegate({sessionId:session.session.id,delegationId:'topic_'+i,question});
+ assert.deepEqual(seen.map(value=>value.question),['You tell me cost category for workforce','Show me everything that you have for the cost category','Show me all the cost categories because I do not remember']);assert.ok(seen.every(value=>value.channel==='voice'));
+});
 test('validates SDP, source context and session capacity before contacting OpenAI',async t => {
  const {live,calls}=service({maxSessions:1}); t.after(() => live.shutdown());
   await assert.rejects(live.create({sdp:'https://attacker.invalid'}),{status:400});
@@ -83,6 +91,19 @@ test('backend permits only two unsuccessful automatic recoveries until a fresh d
  await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'recovery_3',recovery:true,...request}),{status:429});assert.equal(calls,2);
  await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'item_new_turn',...request}),/Controlled evidence failure/);
  await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'recovery_new_turn',recovery:true,...request}),/Controlled evidence failure/);assert.equal(calls,4);
+});
+test('a fresh explicitly identified discovery retry gets two attempts without reviving a retired utterance',async t=>{
+ let calls=0;const {live}=service({ask:async()=>{calls++;throw Error('Controlled evidence failure');}});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ const retry=(id,turn,extra={})=>live.delegate({sessionId:'live_1',delegationId:'recovery_'+id,recovery:true,recoveryTurnId:turn,...request,...extra});
+ for(const turn of ['utterance_first','utterance_second']){
+  for(let i=1;i<=2;i++)await assert.rejects(retry(turn+i,turn),/Controlled evidence failure/);
+  await assert.rejects(retry(turn+'exhausted',turn),{status:429});
+ }
+ assert.equal(calls,4);await assert.rejects(retry('retired','utterance_first'),{status:409});
+ await assert.rejects(retry('invalid','other_turn'),{status:400});
+ await assert.rejects(retry('not_recovery','utterance_third',{recovery:false}),{status:400});
+ await assert.rejects(retry('invalid_question','utterance_third',{question:''}),{status:400});
+ await assert.rejects(retry('still_exhausted','utterance_second'),{status:429});assert.equal(calls,4);
 });
 test('spoken backend content preserves whole decimal facts and never slices a long fact',async t => {
  let words='The rate is 12.3% with a 0.5 percentage-point scenario change.';
@@ -299,6 +320,52 @@ test('transcripts preserve exact spaces, repeated words and overlap independentl
  assert.equal(t.text('user'),'I I mean retention');assert.equal(t.text('assistant'),'Yes');
  assert.equal(t.add({type:'session.input_transcript.delta',event_id:'a',delta:'duplicate',start_ms:100,end_ms:200}),false);
  assert.equal(t.add({type:'session.input_transcript.delta',delta:'bad',start_ms:-1,end_ms:2}),false);
+});
+
+test('bounded speech preserves the latest complete question and earlier business context after repeated complaints',()=>{
+ const h=browser(),entries=[{role:'user',text:'Show the workforce cost categories for Engineering. ',start:0,end:100}];
+ for(let i=0;i<12;i++)entries.push({role:'user',text:'I am asking you to discover the choices already available in this application, because I do not remember their names and need you to show the evidence rather than keep asking me to supply a metric name. ',start:1500+i*1500,end:1700+i*1500});
+ const latest='Show me all the categories because I do not remember.',start=22000;entries.push({role:'user',text:latest,start,end:start+300});
+ const result=h.window.WI_LIVE_PROTOCOL.speechRequest(entries,-1,start+400);
+ assert.equal(result.question,latest);assert.equal(result.compacted,true);assert.ok(result.history.some(item=>item.text.includes('workforce cost categories for Engineering')));assert.ok(result.history.length<=3);assert.ok(result.history.every(item=>item.role==='user'&&item.text.length<=2000));assert.equal(result.through,start+400);
+ assert.doesNotThrow(()=>validateRequest({question:result.question,history:result.history}));
+});
+
+test('discovery detection covers business catalogue requests but leaves greetings, casual backchannels and unrelated requests alone',()=>{
+ const {discoveryRequest}=browser().window.WI_LIVE_PROTOCOL;
+ for(const question of ['You tell me cost category for workforce','Show me everything that you have for the cost category','Show me all the cost categories because I do not remember','What workforce data do you have?','What do you have?','Show me everything','Which capability metrics are available?'])assert.equal(discoveryRequest(question),true,question);
+ for(const question of ['Hello','Okay thanks','What can you do?','Tell me a joke','List available recipes','Do not show the cost categories'])assert.equal(discoveryRequest(question),false,question);
+});
+
+test('explicit discovery quietly reaches the governed backend even when Live never delegates it',async()=>{
+ const h=browser();await h.start();const question='Show me all the cost categories because I do not remember';
+ h.event({type:'session.input_transcript.delta',delta:question,start_ms:100,end_ms:800});assert.equal(h.requests.some(r=>r.url==='/api/live/delegate'),false);
+ await h.fireTimers(900);const requestBody=JSON.parse(h.requests.find(r=>r.url==='/api/live/delegate').init.body);
+ assert.equal(requestBody.question,question);assert.equal(requestBody.recovery,true);assert.equal(h.shown.length,1);
+ const result=h.peers[0].channel.sent.find(e=>e.event_id==='result_mock');assert.equal(result.delegation_id,null);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('real delegation, navigation and Stop supersede the queued discovery fallback without duplicate work',async()=>{
+ for(const action of ['delegate','navigate','stop']){
+  const h=browser();await h.start();h.event({type:'session.input_transcript.delta',delta:'Show all cost categories',start_ms:100,end_ms:800});
+  if(action==='delegate'){h.event({type:'session.delegation.created',offset_ms:900,delegation:{id:'discovery_provider',target:'client'}});await h.fireTimers(300);}
+  else if(action==='navigate')h.window.dispatchEvent({type:'wi-context-changed'});else h.window.WI_LIVE.stop();
+  await h.fireTimers(900);const requests=h.requests.filter(r=>r.url==='/api/live/delegate');assert.equal(requests.length,action==='delegate'?1:0,action);if(requests.length)assert.equal(JSON.parse(requests[0].init.body).recovery,undefined);h.event({type:'session.closed',usage:{seconds:1}});
+ }
+});
+
+test('complaint-style accumulated speech over 2000 characters still dispatches its recent discovery request',async()=>{
+ const h=browser();await h.start();h.event({type:'session.input_transcript.delta',delta:'I need workforce cost categories. ',start_ms:10,end_ms:100});
+ for(let i=0;i<12;i++)h.event({type:'session.input_transcript.delta',delta:'You keep asking me to remember the names of metrics, but I want you to discover the evidence and show the options that already exist in the dashboard. Please help me explore rather than asking for another metric. ',start_ms:1500+i*1500,end_ms:1700+i*1500});
+ const question='Show me everything that you have for the cost category';h.event({type:'session.input_transcript.delta',delta:question,start_ms:22000,end_ms:22500});await h.fireTimers(900);
+ const body=JSON.parse(h.requests.find(r=>r.url==='/api/live/delegate').init.body);assert.equal(body.question,question);assert.ok(body.history.some(item=>item.text.includes('workforce cost categories')));assert.ok(body.history.length<=24&&body.history.every(item=>item.text.length<=2000));assert.equal(h.shown.length,1);assert.ok(h.emitted.some(e=>e.detail?.message?.includes('limited earlier conversation context')));h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('one oversized unsplittable utterance cannot permanently block a later ordinary question',async()=>{
+ const h=browser();await h.start();h.event({type:'session.input_transcript.delta',delta:'unbroken'.repeat(400),start_ms:10,end_ms:800});h.event({type:'session.delegation.created',offset_ms:900,delegation:{id:'oversized',target:'client'}});await h.fireTimers(300);
+ assert.equal(h.requests.some(r=>r.url==='/api/live/delegate'),false);assert.match(h.node('#wl-result').textContent,/business topic is enough/);assert.doesNotMatch(h.node('#wl-result').textContent,/metric or scenario/);
+ h.event({type:'session.input_transcript.delta',delta:'What data do you have for workforce costs?',start_ms:1000,end_ms:1600});await h.fireTimers(900);
+ assert.equal(JSON.parse(h.requests.find(r=>r.url==='/api/live/delegate').init.body).question,'What data do you have for workforce costs?');assert.equal(h.shown.length,1);h.event({type:'session.closed',usage:{seconds:1}});
 });
 test('late permission after Stop is released without creating a session',async()=>{
  const h=browser({permissionPending:true});await tick();const start=h.node('#wl-start').fire('click');await tick();h.node('#wl-stop').fire('click');h.resolvePermission();await start;
@@ -541,6 +608,16 @@ test('two interrupted recovery attempts end in a visible listening-state error w
  assert.equal(h.requests.filter(request=>request.url==='/api/live/delegate').length,2);assert.match(h.node('#wl-result').textContent,/two recovery attempts/);
  const status=h.emitted.filter(event=>event.type==='wi-voice-state').at(-1);assert.equal(status.detail.phase,'listening');assert.equal(status.detail.reason,'recovery-exhausted');assert.equal(h.node('#wl-stop').disabled,false);
  h.resolveDelegate();await tick();assert.equal(h.shown.length,0);h.node('#wl-stop').fire('click');h.event({type:'session.closed',usage:{seconds:4}});assert.equal(h.timers.size,0);
+});
+
+test('after exhausted recovery a fresh discovery request can retry while backchannels cannot reset its budget',async()=>{
+ const h=browser({delegatePending:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'Show all workforce cost categories.',start_ms:100,end_ms:200});
+ for(let i=0;i<3;i++){await h.fireTimers(900);h.event({type:'session.input_transcript.delta',delta:' More context.',start_ms:400+i*400,end_ms:600+i*400});}
+ await h.fireTimers(900);assert.equal(h.requests.filter(r=>r.url==='/api/live/delegate').length,2);assert.match(h.node('#wl-result').textContent,/two recovery attempts/);
+ h.event({type:'session.input_transcript.delta',delta:' Okay.',start_ms:1700,end_ms:1800});await h.fireTimers(900);assert.equal(h.requests.filter(r=>r.url==='/api/live/delegate').length,2);
+ h.event({type:'session.input_transcript.delta',delta:' Show me all the cost categories because I do not remember.',start_ms:2200,end_ms:2800});await h.fireTimers(900);
+ const requests=h.requests.filter(r=>r.url==='/api/live/delegate');assert.equal(requests.length,3);const body=JSON.parse(requests[2].init.body);assert.equal(body.recovery,true);assert.match(body.recoveryTurnId,/^utterance_/);assert.match(body.question,/workforce cost categories/);assert.match(body.question,/because I do not remember/);
+ h.resolveDelegate();await tick();await tick();assert.equal(h.shown.length,1);h.node('#wl-stop').fire('click');h.event({type:'session.closed',usage:{seconds:4}});assert.equal(h.timers.size,0);
 });
 
 test('recoverable evidence errors retain listening controls while rejected close releases all media',async()=>{
