@@ -9,6 +9,10 @@ const categories = [
   ['talent', 'Talent and learning'], ['listening', 'Listening'], ['service', 'HR service']
 ].map(([id, label]) => Object.freeze({ id, label }));
 const fields = [];
+const payLevels = Object.freeze(['individual', 'manager', 'director', 'executive']);
+const payAllocation = 'preserve_pay_level_proportions';
+const allocationOptions = Object.freeze([{ id: payAllocation, label: 'Preserve current pay-level cost proportions',
+  description: 'Allocate the new employee cost using the existing pay-level cost shares, with deterministic cent rounding. Employee counts are unchanged.' }]);
 function add(category, unit, paths, editable = true, reason) {
   for (const [path, label] of paths) fields.push(Object.freeze({ path, label, category, unit, editable, ...(reason ? { reason } : {}) }));
 }
@@ -19,8 +23,8 @@ add('cost', 'usd', [
   ['stock.annualRevenueRunRate', 'Annual revenue run-rate'],
   ['stock.annualOTE', 'Annual on-target earnings'], ['flow.rewardsUSD', 'Recognition rewards']
 ]);
-add('cost', 'usd', [['stock.costBreakdown.employeeLoaded', 'Employee loaded cost']], false,
-  'Requires a reconciled pay-level allocation through a complete source import. The editor will not invent a distribution across pay levels.');
+fields.push(Object.freeze({ path: 'stock.costBreakdown.employeeLoaded', label: 'Employee loaded cost', category: 'cost', unit: 'usd',
+  editable: true, requiresAllocation: true, allocationOptions }));
 add('cost', 'usd', [['stock.annualCostRunRate', 'Annual workforce cost']], false,
   'Calculated from the three cost components. Edit a component to reconcile this total.');
 add('workforce', 'count', [
@@ -106,7 +110,8 @@ export function inspectSourceData(snapshot, filters = {}) {
       const value = get(cell, field.path);
       if (typeof value !== 'number' || !Number.isFinite(value)) continue;
       rows.push({ month: cell.month, function: cell.function, region: cell.region,
-        path: field.path, label: field.label, value, unit: field.unit, editable: field.editable, ...(field.reason ? { reason: field.reason } : {}) });
+        path: field.path, label: field.label, value, unit: field.unit, editable: field.editable, ...(field.reason ? { reason: field.reason } : {}),
+        ...(field.requiresAllocation ? { requiresAllocation: true, allocationOptions: clone(field.allocationOptions) } : {}) });
     }
   }
   const maxRows = 300, totalRows = rows.length, truncated = totalRows > maxRows;
@@ -144,17 +149,43 @@ function validateRelations(candidate) {
       throw sourceError('Source change rejected: virtual agent sessions must equal reported resolutions plus human handoffs in this synthetic source. Include the matching exact changes in the proposal.');
   }
 }
+function allocateEmployeeCost(cell, before, after, scope) {
+  const values = cell.stock.loadedPayByLevel;
+  if (!values || Object.keys(values).sort().join('|') !== [...payLevels].sort().join('|')) throw sourceError('Employee cost requires a complete known pay-level allocation.');
+  const weights = payLevels.map(level => {
+    validValue(values[level], { unit: 'usd', label: 'Existing pay-level allocation' });
+    return { level, before: values[level], cents: BigInt(Math.round(values[level] * 100)) };
+  });
+  const total = weights.reduce((sum, row) => sum + row.cents, 0n), target = BigInt(Math.round(after * 100));
+  if (total !== BigInt(Math.round(before * 100))) throw sourceError('Existing employee cost and pay-level allocations do not reconcile. Import a complete corrected source.');
+  if (total === 0n) throw sourceError('Existing employee pay-level cost shares are zero. A complete source allocation is required before increasing employee cost.');
+  const calculated = weights.map((row, index) => ({ ...row, index, next: target * row.cents / total, remainder: target * row.cents % total }));
+  const remaining = Number(target - calculated.reduce((sum, row) => sum + row.next, 0n));
+  const ranked = [...calculated].sort((a, b) => a.remainder === b.remainder ? a.index - b.index : a.remainder > b.remainder ? -1 : 1);
+  for (let index = 0; index < remaining; index++) ranked[index].next += 1n;
+  const changes = [];
+  for (const row of calculated) {
+    const next = Number(row.next) / 100; values[row.level] = next;
+    if (row.before !== next) changes.push({ ...scope, path: `stock.loadedPayByLevel.${row.level}`, label: 'Employee pay-level allocation',
+      unit: 'usd', before: row.before, after: next, derived: true, internal: true });
+  }
+  return { changes, summary: { ...scope, path: 'stock.costBreakdown.employeeLoaded', method: payAllocation,
+    beforeTotal: before, afterTotal: after, groupCount: payLevels.length, protectedBreakdownsOmitted: true,
+    description: 'The reviewed allocation preserves existing pay-level cost proportions, rounded to cents. Employee counts and protected demographic fields are unchanged. Raw pay-level values are omitted from this public proposal.' } };
+}
 // Pure preparation: no persistence or mutation. Caller validates the whole dataset
 // before persisting either the proposal or its subsequent exact application.
 export function prepareSourceChanges(snapshot, requested) {
   if (!Array.isArray(requested) || !requested.length || requested.length > 12) throw sourceError('A proposal needs between 1 and 12 exact source changes.');
-  const candidate = clone(snapshot), changes = [], seen = new Set(), costCells = new Set();
+  const candidate = clone(snapshot), changes = [], allocations = [], seen = new Set(), costCells = new Set();
   for (const change of requested) {
     if (!change || typeof change !== 'object' || Array.isArray(change)) throw sourceError('Each source change must be an object.');
-    const allowed = new Set(['month', 'function', 'region', 'path', 'operation', 'value']);
+    const allowed = new Set(['month', 'function', 'region', 'path', 'operation', 'value', 'allocation']);
     if (Object.keys(change).some(key => !allowed.has(key))) throw sourceError('Unknown source change field.');
     const field = fieldMap.get(change.path);
     if (!field || !field.editable) throw sourceError(field?.reason || 'This source path is not available for editing.');
+    if (field.requiresAllocation && change.allocation !== payAllocation) throw sourceError('Employee loaded cost requires an explicit allocation choice: preserve current pay-level cost proportions.');
+    if (!field.requiresAllocation && change.allocation != null) throw sourceError('An allocation choice is supported only for employee loaded cost.');
     const scope = dimensions(snapshot, change, true), cell = candidate.cells.find(row => cellKey(row) === cellKey(scope));
     const id = `${cellKey(scope)}|${field.path}`;
     if (seen.has(id)) throw sourceError('Each exact source field may appear only once in a proposal.');
@@ -171,12 +202,17 @@ export function prepareSourceChanges(snapshot, requested) {
     validValue(after, field);
     if (before === after) continue;
     set(cell, field.path, after);
-    changes.push({ ...scope, path: field.path, label: field.label, unit: field.unit, operation, value: change.value, before, after, derived: false });
+    changes.push({ ...scope, path: field.path, label: field.label, unit: field.unit, operation, value: change.value, before, after, derived: false,
+      ...(field.requiresAllocation ? { allocation: payAllocation } : {}) });
+    if (field.requiresAllocation) {
+      const allocated = allocateEmployeeCost(cell, before, after, scope);
+      changes.push(...allocated.changes); allocations.push(allocated.summary);
+    }
     if (field.path.startsWith('stock.costBreakdown.')) costCells.add(cellKey(scope));
   }
   for (const id of costCells) {
     const cell = candidate.cells.find(row => cellKey(row) === id), before = cell.stock.annualCostRunRate;
-    const after = Object.values(cell.stock.costBreakdown).reduce((total, value) => total + value, 0);
+    const after = Object.values(cell.stock.costBreakdown).reduce((total, value) => total + Math.round(value * 100), 0) / 100;
     if (!Number.isFinite(after) || after > 1e13) throw sourceError('Reconciled annual workforce cost exceeds the supported value range.');
     cell.stock.annualCostRunRate = after;
     if (before !== after) changes.push({ month: cell.month, function: cell.function, region: cell.region, path: 'stock.annualCostRunRate',
@@ -184,14 +220,15 @@ export function prepareSourceChanges(snapshot, requested) {
   }
   if (!changes.length) throw sourceError('The proposed values are unchanged.');
   validateRelations(candidate);
-  return { candidate, changes };
+  return { candidate, changes, allocations };
 }
 export function applySourceChanges(snapshot, changes, reverse = false) {
   const candidate = clone(snapshot);
   for (const change of changes) {
     const cell = candidate.cells.find(row => cellKey(row) === cellKey(change));
-    const field = fieldMap.get(change.path);
-    if (!cell || !field || (!field.editable && !(change.derived && change.path === 'stock.annualCostRunRate'))) throw sourceError('Stored source change is not supported.', 409);
+    const allocationField = change.internal === true && change.derived === true && payLevels.some(level => change.path === `stock.loadedPayByLevel.${level}`);
+    const field = fieldMap.get(change.path) || (allocationField ? { unit: 'usd', label: 'Stored employee pay allocation', editable: false } : null);
+    if (!cell || !field || (!field.editable && !(change.derived && change.path === 'stock.annualCostRunRate') && !allocationField)) throw sourceError('Stored source change is not supported.', 409);
     const expected = reverse ? change.after : change.before, next = reverse ? change.before : change.after;
     if (get(cell, change.path) !== expected) throw sourceError('The source no longer matches the exact proposal. Create a fresh proposal.', 409);
     validValue(next, field);

@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-03T12:22:05.821Z",
+  "checks": [
+    "A vague spoken update displays actual cost fields and asks its rendered field question without changing source data",
+    "A manual field selection immediately cancels a pending spoken choice and its delayed guide cannot overwrite or narrate the new selection",
+    "A short spoken field choice retains the exact population and advances only to the amount question",
+    "The spoken amount preserves its selected field and requires an explicit employee-cost allocation",
+    "The explicit allocation choice advances to rationale without inventing a reason or applying a change",
+    "The spoken rationale produces exact review rows; proposal review supersedes the earlier guide and remains unapplied",
+    "An incomplete spoken Apply prompts locally for exact confirmation, preserving the proposal without a write or analytical request",
+    "Explicit spoken Apply persists employee loaded cost with the exact user rationale and recalculates the dashboard",
+    "Spoken undo restores the original source values through the actual persistence endpoint"
+  ],
+  "errors": [],
+  "providerCalls": 0,
+  "delegations": 6,
+  "applyCalls": 1,
+  "undoCalls": 1,
+  "storage": "Isolated temporary directory; existing .state and .env untouched",
+  "transport": "Simulated speech and Live protocol; real source guide, renderer and HTTP persistence"
+}

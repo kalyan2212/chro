@@ -1,0 +1,335 @@
+{
+  "schema": "chro-guided-source-live-verification.v1",
+  "checkedAt": "2026-10-03T12:22:29.226Z",
+  "attempt": 2,
+  "environment": "Real OpenAI provider and WebRTC; isolated local source storage",
+  "generatedSpeechInput": true,
+  "physicalMicrophoneTested": false,
+  "physicalSpeakerTested": false,
+  "browserAutoplayPolicy": "Allowed explicitly in controlled browser",
+  "questions": [
+    "Update employee cost.",
+    "Employee loaded cost for Engineering in EMEA for September 2026. Increase it by one percent and preserve the current pay-level cost proportions.",
+    "Annual market alignment.",
+    "Apply these changes.",
+    "Undo that source change."
+  ],
+  "turns": [
+    {
+      "index": 0,
+      "question": "Update employee cost.",
+      "inputDurationSeconds": 2.112,
+      "recognized": "Update employee cost",
+      "spokenAfterVerifiedResult": "I see several editable fields. Employee loaded cost, overtime cost, external contractor cost, annual workforce budget, annual revenue run rate, annual on target earnings, and recognition rewards. Which one would you like to change?",
+      "millisecondsToVerifiedResult": 17397,
+      "millisecondsAfterInputFinished": 15285,
+      "millisecondsFromResultToFirstSpeech": 936,
+      "observedSentenceThenQuiet": true,
+      "maximumReceivedAudioRms": 0.14928125497151107,
+      "audioSamples": 334,
+      "visibleAssistantCaptionNodes": 0,
+      "voiceStillActive": true,
+      "renderedStep": "Which editable field should change? Available choices: Employee loaded cost, Overtime cost, External contractor cost, Annual workforce budget, Annual revenue run-rate, Annual on-target earnings, Recognition rewards.",
+      "guideContext": {
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "month": "2026-09",
+        "function": "all",
+        "region": "all",
+        "category": "cost",
+        "path": null,
+        "operation": null,
+        "value": null,
+        "allocation": null,
+        "reason": null
+      },
+      "confirmationRepeatedAfterPrompt": false,
+      "persistedEmployeeLoadedCost": 101640000,
+      "persistedAnnualCost": 105000000,
+      "spokenOutcomeMatches": true,
+      "onlyKnownCostFieldOptions": true
+    },
+    {
+      "index": 1,
+      "question": "Employee loaded cost for Engineering in EMEA for September 2026. Increase it by one percent and preserve the current pay-level cost proportions.",
+      "inputDurationSeconds": 10.848,
+      "recognized": "Employee loaded cost for engineering in EMEA for September 2026. Increase it by one percent and preserve the current pay level cost proportions.",
+      "spokenAfterVerifiedResult": "What’s the reason for this change? I'll record your wording in the audit trail.",
+      "millisecondsToVerifiedResult": 32748,
+      "millisecondsAfterInputFinished": 21900,
+      "millisecondsFromResultToFirstSpeech": 971,
+      "observedSentenceThenQuiet": true,
+      "maximumReceivedAudioRms": 0.10848241950878088,
+      "audioSamples": 394,
+      "visibleAssistantCaptionNodes": 0,
+      "voiceStillActive": true,
+      "renderedStep": "What is the reason for this change? I will record your wording in the audit trail.",
+      "guideContext": {
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "month": "2026-09",
+        "function": "Engineering",
+        "region": "EMEA",
+        "category": "cost",
+        "path": "stock.costBreakdown.employeeLoaded",
+        "operation": "scale",
+        "value": 1.01,
+        "allocation": "preserve_pay_level_proportions",
+        "reason": null
+      },
+      "confirmationRepeatedAfterPrompt": false,
+      "persistedEmployeeLoadedCost": 101640000,
+      "persistedAnnualCost": 105000000,
+      "spokenOutcomeMatches": true
+    },
+    {
+      "index": 2,
+      "question": "Annual market alignment.",
+      "inputDurationSeconds": 2.112,
+      "recognized": "Annual market alignment",
+      "spokenAfterVerifiedResult": "The proposed source update is ready for your review. It hasn't been applied yet. Check the before and after values, then say \"apply these changes\" to save this exact proposal.",
+      "millisecondsToVerifiedResult": 22662,
+      "millisecondsAfterInputFinished": 20550,
+      "millisecondsFromResultToFirstSpeech": 851,
+      "observedSentenceThenQuiet": true,
+      "maximumReceivedAudioRms": 0.12606121878137255,
+      "audioSamples": 349,
+      "visibleAssistantCaptionNodes": 0,
+      "voiceStillActive": true,
+      "renderedStep": "The proposed source update is ready for review. It has not been applied. Check the before and after values, then say \"apply these changes\" to save this exact proposal.",
+      "guideContext": null,
+      "confirmationRepeatedAfterPrompt": false,
+      "persistedEmployeeLoadedCost": 101640000,
+      "persistedAnnualCost": 105000000,
+      "spokenOutcomeMatches": true,
+      "rationaleMatchesRecognizedUserSpeech": true
+    },
+    {
+      "index": 3,
+      "question": "Apply these changes.",
+      "inputDurationSeconds": 2.16,
+      "recognized": "Apply these changes",
+      "spokenAfterVerifiedResult": "Okay, applyingGot it—those changes have been saved, and the dashboard now reflects the new values.",
+      "millisecondsToVerifiedResult": 3829,
+      "millisecondsAfterInputFinished": 1669,
+      "millisecondsFromResultToFirstSpeech": 80,
+      "observedSentenceThenQuiet": true,
+      "maximumReceivedAudioRms": 0.13036790893650446,
+      "audioSamples": 106,
+      "visibleAssistantCaptionNodes": 0,
+      "voiceStillActive": true,
+      "renderedStep": "The source update is saved. The dashboard now uses the new values.",
+      "guideContext": null,
+      "confirmationRepeatedAfterPrompt": false,
+      "persistedEmployeeLoadedCost": 102656400,
+      "persistedAnnualCost": 106016400,
+      "spokenOutcomeMatches": true
+    },
+    {
+      "index": 4,
+      "question": "Undo that source change.",
+      "inputDurationSeconds": 2.448,
+      "recognized": "Undo that source change",
+      "spokenAfterVerifiedResult": "Okay, undoingOkay, undoing it now.",
+      "millisecondsToVerifiedResult": 4082,
+      "millisecondsAfterInputFinished": 1634,
+      "millisecondsFromResultToFirstSpeech": 248,
+      "observedSentenceThenQuiet": true,
+      "maximumReceivedAudioRms": 0.15316719486566183,
+      "audioSamples": 82,
+      "visibleAssistantCaptionNodes": 0,
+      "voiceStillActive": true,
+      "renderedStep": "The source edit was undone and the dashboard recalculated.",
+      "guideContext": null,
+      "confirmationRepeatedAfterPrompt": false,
+      "persistedEmployeeLoadedCost": 101640000,
+      "persistedAnnualCost": 105000000,
+      "spokenOutcomeMatches": true
+    }
+  ],
+  "browserErrors": [],
+  "http": [
+    {
+      "path": "/api/source/history",
+      "status": 200
+    },
+    {
+      "path": "/api/live/session",
+      "status": 201
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    },
+    {
+      "path": "/api/source/apply",
+      "status": 200
+    },
+    {
+      "path": "/api/source/undo",
+      "status": 200
+    }
+  ],
+  "limitations": [
+    "Generated audio drives a genuine WebRTC connection; physical devices and permission prompts are not tested.",
+    "Incoming decoded audio RMS proves received audio, not sound from a physical speaker.",
+    "Commentary acknowledgement proves provider context acceptance, not word-perfect spoken playback."
+  ],
+  "expected": {
+    "month": "2026-09",
+    "function": "Engineering",
+    "region": "EMEA",
+    "field": "stock.costBreakdown.employeeLoaded",
+    "before": 101640000,
+    "proposedAfter": 102656400,
+    "originalAnnualCost": 105000000
+  },
+  "proposal": {
+    "status": "proposed",
+    "reason": "Annual market alignment",
+    "changes": [
+      {
+        "month": "2026-09",
+        "function": "Engineering",
+        "region": "EMEA",
+        "path": "stock.costBreakdown.employeeLoaded",
+        "label": "Employee loaded cost",
+        "unit": "usd",
+        "operation": "scale",
+        "value": 1.01,
+        "before": 101640000,
+        "after": 102656400,
+        "derived": false,
+        "allocation": "preserve_pay_level_proportions"
+      },
+      {
+        "month": "2026-09",
+        "function": "Engineering",
+        "region": "EMEA",
+        "path": "stock.annualCostRunRate",
+        "label": "Annual workforce cost",
+        "unit": "usd",
+        "before": 105000000,
+        "after": 106016400,
+        "derived": true
+      }
+    ]
+  },
+  "audit": {
+    "applied": 1,
+    "undone": 1
+  },
+  "sourceAudit": [
+    {
+      "kind": "apply",
+      "reason": "Annual market alignment"
+    },
+    {
+      "kind": "undo",
+      "reason": "Undo source edit 1fc7428f-880c-4cd4-b243-5e54b1aa2d6d"
+    }
+  ],
+  "final": {
+    "active": false,
+    "state": "Conversation ended (close_requested). Final voice duration received.",
+    "finalUsageSeconds": 155,
+    "usageLabel": "Voice duration: 155.0 s · final",
+    "peersClosed": true,
+    "microphoneTracksEnded": true
+  },
+  "protocolErrors": [],
+  "backendRequests": [
+    {
+      "path": "/api/live/delegate",
+      "at": 1791030175872,
+      "question": "Update employee cost",
+      "sourceEditContext": null,
+      "recovery": false,
+      "status": 200,
+      "returnedAt": 1791030190015
+    },
+    {
+      "path": "/api/live/delegate",
+      "at": 1791030218714,
+      "question": "Employee loaded cost for engineering in EMEA for September 2026. Increase it by one percent and preserve the current pay level cost proportions.",
+      "sourceEditContext": {
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "month": "2026-09",
+        "function": "all",
+        "region": "all",
+        "category": "cost",
+        "path": null,
+        "operation": null,
+        "value": null,
+        "allocation": null,
+        "reason": null
+      },
+      "recovery": false,
+      "status": 200,
+      "returnedAt": 1791030239026
+    },
+    {
+      "path": "/api/live/delegate",
+      "at": 1791030249766,
+      "question": "Annual market alignment",
+      "sourceEditContext": {
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "month": "2026-09",
+        "function": "Engineering",
+        "region": "EMEA",
+        "category": "cost",
+        "path": "stock.costBreakdown.employeeLoaded",
+        "operation": "scale",
+        "value": 1.01,
+        "allocation": "preserve_pay_level_proportions",
+        "reason": null
+      },
+      "recovery": false,
+      "status": 200,
+      "returnedAt": 1791030268506
+    },
+    {
+      "path": "/api/source/apply",
+      "at": 1791030284810,
+      "question": null,
+      "sourceEditContext": null,
+      "recovery": false,
+      "status": 200,
+      "returnedAt": 1791030284902
+    },
+    {
+      "path": "/api/source/undo",
+      "at": 1791030295809,
+      "question": null,
+      "sourceEditContext": null,
+      "recovery": false,
+      "status": 200,
+      "returnedAt": 1791030295901
+    }
+  ],
+  "completed": true,
+  "timingDefinitions": {
+    "millisecondsToVerifiedResult": "From generated input audio start until the rendered application result.",
+    "millisecondsAfterInputFinished": "Result time minus generated audio duration.",
+    "millisecondsFromResultToFirstSpeech": "Result to first subsequent assistant transcript delta, not a physical playback timestamp."
+  },
+  "earlierAttempt": {
+    "completed": false,
+    "sourceWrites": 0,
+    "guideAndProposalCorrect": true,
+    "observedIssues": [
+      "Voice invented cost-field examples when the earlier guide question omitted actual labels.",
+      "900ms guided recovery launched partial transcript requests.",
+      "Only Apply was recognized; analytical fallback hit NETWORK_CONNECT.",
+      "Transport closed locally but final provider usage was unconfirmed after context_injection_incomplete."
+    ],
+    "rationaleResultAfterInputFinishedMs": 72992,
+    "lastObservedUsageSeconds": 271
+  }
+}

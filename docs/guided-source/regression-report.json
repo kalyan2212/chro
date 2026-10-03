@@ -1,0 +1,115 @@
+{
+  "at": "2026-10-03T12:23:21.449Z",
+  "description": "Existing isolated browser regressions rerun for guided source editing",
+  "reports": {
+    "docs/analyst/browser-report.json": {
+      "checkedAt": "2026-10-03T12:18:28.041Z",
+      "checks": [
+        "Board perspective reaches request; actual recorded Astra response renders findings and calculated panels",
+        "Evidence panel selection updates follow-up context and visible chart",
+        "Claim citation navigates to its calculated evidence panel",
+        "Downloaded brief maps every cited reference to its scope, revision and metric definitions",
+        "Internal narration cues highlight written evidence without displaying spoken captions, then clear",
+        "Panel investigation persists across reload with server-calculated lineage",
+        "Saved breakdowns preserve Engineering and Sales segment observations instead of only the aggregate",
+        "Direct assumption recalculation excludes the attached image while keeping it available for analysis",
+        "User-selected chart is normalized, previewed and sent only while attached",
+        "Changing perspective cancels an in-flight typed answer and retains the previous scene",
+        "Adding or removing an attachment cancels stale typed analysis",
+        "Leaving Studio with an attachment keeps that hidden image out of Workspace voice",
+        "Manual evidence selection cancels pending analysis without losing the selected panel",
+        "Multi-panel saves retain each observation scope, server value and source revision",
+        "Follow-ups use the selected panel scope as well as its metric context",
+        "Presentation, tablet and phone layouts fit the viewport; reduced motion is honored",
+        "No browser JavaScript errors"
+      ],
+      "errors": [],
+      "provider": "Recorded actual Astra response and local scoped calculations; no external provider calls in this browser test"
+    },
+    "docs/assistant-actions/browser-report.json": {
+      "checkedAt": "2026-10-03T12:17:14.590Z",
+      "checks": [
+        "Typed chart commands change the selected chart immediately, without a model call or changing evidence",
+        "A manual chart change cancels pending analysis so an obsolete response cannot replace it",
+        "Report commands and controls switch executive, evidence and full layouts while retaining all sections",
+        "Repeated explicit report choices persist in this browser and can be inspected and reset",
+        "Exact source proposal shows current and proposed amounts, including derived changes, without mutating the source",
+        "Hidden Studio proposals cannot be confirmed from Workspace voice",
+        "Typed confirmation persists the requested source amount, reconciles its total and hydrates the dashboard revision",
+        "Source changes clear old charts and persistent undo is restored after reload",
+        "Typed undo restores prior values under a new audited source revision",
+        "Mobile source review fits the viewport and discarding removes the executable proposal",
+        "Source browser displays exact flat records and its field editor creates a reviewed proposal without a model call",
+        "Persistent history shows applied and undone source values",
+        "No browser JavaScript errors; all mutations stayed in isolated temporary source data"
+      ],
+      "errors": [],
+      "provider": "No external provider. UI uses local calculated evidence and a recorded analytical fixture."
+    },
+    "docs/studio-home/report.json": {
+      "at": "2026-10-03T12:18:47.508Z",
+      "checks": [
+        "Conversation is the visible right-hand centerpiece at 1920×1080, with one working form and no classic panel interruption",
+        "Visible home connects without a click and welcomes once after media/session readiness, without an analytical request or spoken transcript",
+        "Stop releases the microphone and returning home does not silently reconnect",
+        "Conversation remains in the home layout at laptop, tablet and phone widths without horizontal overflow",
+        "Typing still opens calculated evidence, and Home restores the centerpiece without duplicating the composer",
+        "Denied microphone access creates no paid session and leaves a visible home retry action",
+        "Blocked playback visibly offers Enable audio, mutes capture until recovery, and resumes the same session",
+        "The welcome starts while playback awaits first media, avoiding a circular wait for audio",
+        "Leaving Studio cancels an unanswered permission request and releases a late microphone result",
+        "A hidden page immediately releases media and does not silently reconnect on return",
+        "The explicit voice=manual link keeps the microphone off until the user starts it",
+        "No browser errors or external provider calls"
+      ],
+      "browserErrors": [],
+      "externalProviderCalls": 0,
+      "media": "Simulated permissions, WebRTC and playback; physical hardware not tested"
+    },
+    "docs/studio/report.json": {
+      "checkedAt": "2026-10-03T12:17:57.810Z",
+      "checks": [
+        "Default Studio displays server-calculated signals at1920×1080",
+        "Explore searches all50 metric definitions and6 scenario labs",
+        "Evidence question creates an investigation scene and cohort chart",
+        "Follow-ups retain the metric while changing comparison dimensions",
+        "Half-point downside exposes −$90k prominently and a signed economics chart",
+        "Editable assumptions and natural follow-ups retain the changed budget",
+        "Back restores the earlier assumptions without a new analysis request",
+        "Investigations and draft decisions persist across reload with original lineage",
+        "Ambiguous percent gets a targeted clarification and short reply resolves it",
+        "Narration highlights the existing scene without visible spoken captions and cleans up on stop",
+        "Compound question preserves both analytical steps",
+        "Opening a workflow step keeps the visible evidence and spoken briefing aligned",
+        "Delegated voice back restores an existing scene",
+        "All six labs produce charts from server calculations",
+        "1366/768/390px layouts have no page overflow; reduced motion is honored",
+        "Detailed workspace and Studio remain mutually accessible",
+        "Source refresh clears stale conversation lineage and allows a fresh question",
+        "No browser JavaScript errors"
+      ],
+      "errors": [],
+      "externalProviderCalls": 0,
+      "physicalMicrophoneVerified": false
+    },
+    "docs/voice-actions/browser-report.json": {
+      "checkedAt": "2026-10-03T12:17:31.237Z",
+      "checks": [
+        "Spoken bar-to-line and make-it-pie commands update the actual chart without analytical calls or changed evidence",
+        "The real renderer refuses a misleading scenario pie and voice reports its actual refusal",
+        "Spoken source inspection displays the real flat source records and exact current values without changing the scene or stored data",
+        "A spoken source-edit request displays exact before/after rows and leaves persisted data unchanged before confirmation",
+        "Explicit spoken confirmation persists the identified proposal, recalculates costs and keeps its own Live session connected",
+        "Explicit spoken undo restores exact values through the real endpoint and records both source operations",
+        "Final close releases simulated media; no JavaScript errors, physical microphone or external provider calls"
+      ],
+      "errors": [],
+      "providerCalls": 0,
+      "delegateCalls": 2,
+      "applyCalls": 1,
+      "undoCalls": 1,
+      "storage": "Isolated temporary directory; existing .state and .env untouched",
+      "transport": "Simulated recognition and Live protocol; real renderer and HTTP source persistence"
+    }
+  }
+}

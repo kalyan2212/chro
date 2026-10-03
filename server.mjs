@@ -1,5 +1,6 @@
 import http from 'node:http';
 import {analyze} from './analyst.mjs';
+import {buildSourceEditGuide} from './evidence-tools.mjs';
 import {validateImage} from './vision.mjs';
 import { contextualPlan, contextualWorkflow, isCompoundRequest, inheritAssumptions, enrichAnswer } from './intelligence.mjs';
 import { createCloudState } from './cloud-state.mjs';
@@ -20,7 +21,7 @@ import { createDiagnostics, assertAPIKey, connectionError, applicationError, api
 
 const VERSION = '2.0.1';
 const FILES = new Map([['/', ['index.html', 'text/html; charset=utf-8']], ['/index.html', ['index.html', 'text/html; charset=utf-8']]]);
-for (const name of ['conversation','live','operations','workspace','investigations','experience','focus','voice-guide','studio','studio-charts','analysis','assistant-actions']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
+for (const name of ['conversation','live','operations','workspace','investigations','experience','focus','voice-guide','studio','studio-charts','analysis','assistant-actions','source-guide']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
 FILES.set('/chart-types.css',['chart-types.css','text/css; charset=utf-8']);
 const AUDIO = new Map([['audio/webm', 'webm'], ['audio/mp4', 'mp4'], ['audio/wav', 'wav'], ['audio/mpeg', 'mp3']]);
 const fail = (status, message) => Object.assign(new Error(message), { status });
@@ -87,6 +88,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
     if (request.context?.sourceVersion && request.context.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'Conversation evidence belongs to an earlier source revision. Refresh and ask again.');
     if (request.viewContext && request.viewContext.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'The selected chart belongs to an earlier source revision. Refresh and ask again.');
     if (request.reportContext && request.reportContext.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'The selected report belongs to an earlier source revision. Refresh and ask again.');
+    if (request.sourceEditContext && request.sourceEditContext.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'The source edit draft belongs to an earlier source revision. Reopen the current source rows before continuing.');
     hydrateDataset(snapshot);
     const nav = navigation(request.question);
     if (nav && !nav.target) {
@@ -163,7 +165,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       const entryNavigation = req.method === 'GET' && ['/', '/index.html'].includes(path) && req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document';
       if (req.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(req.headers['sec-fetch-site']) && !entryNavigation) throw fail(403, 'Cross-site requests are not allowed');
       if (!path || path.includes('%') || path.includes('\\') || path.includes('..')) throw fail(404, 'Not found');
-      if (FILES.has(path) || /^\/api\/(?:login|logout|status|ask|transcribe|speech|audit|decisions|investigations|review|live\/(?:session|delegate|close)|diagnostics(?:\/connection)?|workday\/(?:sync|status|report)|source\/(?:catalog|data|history|propose|apply|undo)|data\/snapshot|studio\/bootstrap|analysis\/progress)$/.test(path)) requestPath = FILES.has(path) ? 'static.asset' : path;
+      if (FILES.has(path) || /^\/api\/(?:login|logout|status|ask|transcribe|speech|audit|decisions|investigations|review|live\/(?:session|delegate|close)|diagnostics(?:\/connection)?|workday\/(?:sync|status|report)|source\/(?:catalog|data|guide|history|propose|apply|undo)|data\/snapshot|studio\/bootstrap|analysis\/progress)$/.test(path)) requestPath = FILES.has(path) ? 'static.asset' : path;
       if (path === '/health' && req.method === 'GET') { await ready; return json(res, 200, { ok: true, synthetic: true, version: VERSION }); }
       if (path === '/api/login' && req.method === 'POST') {
         const value = await readJSON(req, 3000);
@@ -227,13 +229,19 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
         }
         res.writeHead(200, { 'content-type': type, 'content-length': bytes.length }); return res.end(req.method === 'HEAD' ? undefined : bytes);
       }
-      if (!['/api/ask','/api/transcribe','/api/speech','/api/workday/sync','/api/live/session','/api/live/delegate','/api/live/close','/api/decisions','/api/investigations','/api/review','/api/diagnostics/connection','/api/source/propose','/api/source/apply','/api/source/undo'].includes(path)) throw fail(404, 'Not found');
+      if (!['/api/ask','/api/transcribe','/api/speech','/api/workday/sync','/api/live/session','/api/live/delegate','/api/live/close','/api/decisions','/api/investigations','/api/review','/api/diagnostics/connection','/api/source/guide','/api/source/propose','/api/source/apply','/api/source/undo'].includes(path)) throw fail(404, 'Not found');
       if (req.method !== 'POST') throw fail(405, 'Method not allowed');
       if (active >= 4) throw fail(429, 'Too many active requests; try again shortly');
       active++; acquired = true; timer = setTimeout(() => controller.abort(new DOMException('Request timeout','TimeoutError')), timeoutMs); timer.unref();
       if (path === '/api/diagnostics/connection') {
         await readJSON(req,2000);
         return json(res,200,await diagnostics.check(controller.signal));
+      }
+      if(path==='/api/source/guide') {
+        const input=await readJSON(req,5000);
+        if(Object.keys(input).join(',')!=='context')throw fail(400,'Supply only the source edit context.');
+        const snapshot=workday.snapshot();
+        return json(res,200,buildSourceEditGuide({context:input.context,catalog:sourceCatalog(snapshot),inspect:args=>inspectSourceData(snapshot,args)}));
       }
       if (path === '/api/ask') {
         const input=await readJSON(req,8200000);let entry=null;

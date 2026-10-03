@@ -37,9 +37,13 @@ Typed questions, navigation, changed scope or image, source refresh, Stop and re
 | `change_chart` | Pending request for an available chart type on the current chart identity and source revision; the browser must apply it before success is confirmed. |
 | `change_report_view` | Pending executive/evidence/full layout request for the current analytical report. |
 | `inspect_source_data` | Bounded current aggregate source rows from a curated catalogue, when the source service is available. |
+| `request_source_edit` | Open a guided edit with current source rows and the next missing choice; no proposal or source write. |
+| `update_source_edit_draft` | Retain a selected source field/scope and collect the user's amount, explicit allocation choice and rationale across follow-ups. |
 | `propose_source_changes` | Persist an exact before/after proposal without changing source values. Actual application requires a separate user confirmation and application-owned endpoint. |
 
 Source-edit authorization, immutable proposals, confirmed writes, undo and browser-only display preferences are described in [ASSISTANT-ACTIONS.md](ASSISTANT-ACTIONS.md). The shared workspace has one editor role; these controls are not individual approval permissions.
+
+An incomplete request to update employee cost should open the actual source breakdown and guide the user through the missing field, population, amount, allocation and rationale. The model must use the user's rationale wording; new proposals require 3–1,000 trimmed characters. Employee loaded cost supports an explicit choice to preserve current pay-level cost proportions. The server calculates and privately records exact cent allocations, while public proposals/history show aggregate changes and an allocation summary. It does not invent headcount changes or disclose raw small-group pay adjustments through the proposal. The model still cannot apply the proposal itself.
 
 Each retrieved item receives an immutable request-local identifier such as `E1`, a source version and a scope where applicable. Computed evidence retains the full trusted engine response. The engine restores the question's snapshot immediately before each synchronous calculation. Model arguments never become executable code, SQL or arbitrary filesystem paths. Search reads only fixed, size-bounded shipped files and explicitly supplied saved records; it does not read `.env`, arbitrary `.state` files or the local filesystem on demand.
 
@@ -61,7 +65,7 @@ The previous metric-only catalogue omitted the existing component chart. A real-
 
 ## HTTP and lifecycle
 
-`POST /api/ask` accepts the existing question, scope, context and source revision, plus optional `audience`, `image`, `requestId`, `operation`, `viewContext`, `reportContext` and `presentationPreferences`. With an API key, ordinary questions use the analyst. `operation:"calculate"` requires an explicit scenario and assumptions and runs the deterministic calculator. A no-key request with an image fails clearly instead of claiming visual understanding.
+`POST /api/ask` accepts the existing question, scope, context and source revision, plus optional `audience`, `image`, `requestId`, `operation`, `viewContext`, `reportContext`, `presentationPreferences` and `sourceEditContext`. The latter is a validated partial source-edit draft tied to the current source revision. `POST /api/source/guide` validates it and returns current source rows and missing choices without a model call or source mutation. With an API key, ordinary questions use the analyst. `operation:"calculate"` requires an explicit scenario and assumptions and runs the deterministic calculator. A no-key request with an image fails clearly instead of claiming visual understanding.
 
 `GET /api/analysis/progress?id=…` returns bounded in-process phase metadata only to the identity that created the question. It carries no image, transcript or analytical document and does not refresh Cloud Storage on each poll. It is temporary progress feedback, not durable job state or a cross-instance queue. A stale source revision, including stale conversational context, returns HTTP 409; the server also checks for source changes before accepting completed analysis.
 

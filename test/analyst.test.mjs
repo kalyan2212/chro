@@ -270,7 +270,7 @@ test('remembered presentation preferences are bounded context and cannot authori
 test('the analyst displays actual source rows and an exact pending proposal without modifying the snapshot',async()=>{
   const original=structuredClone(snapshot),month=snapshot.months.at(-1),sourceService={catalog:sourceCatalog(snapshot),inspect:args=>inspectSourceData(snapshot,args),propose:async args=>({id:'proposal_test',status:'proposed',sourceVersion:snapshot.sourceVersion,reason:args.reason,createdAt:'2026-10-03T00:00:00Z',changes:prepareSourceChanges(snapshot,args.changes).changes})};
   let round=0;
-  const result=await analyze({request:request('Show Engineering EMEA overtime source data for the latest month and add $1,000 to that source value'),snapshot,sourceService,upstream:async payload=>{
+  const result=await analyze({request:request('Show Engineering EMEA overtime source data for the latest month and add $1,000 to that source value. Reason: Requested overtime correction'),snapshot,sourceService,upstream:async payload=>{
     assert.ok(payload.tools.some(tool=>tool.name==='inspect_source_data'));assert.ok(payload.tools.some(tool=>tool.name==='propose_source_changes'));assert.ok(!payload.tools.some(tool=>/^apply|undo/.test(tool.name)));
     if(++round===1)return calls({name:'inspect_source_data',args:{month,function:'Engineering',region:'EMEA',category:'cost'}});
     if(round===2)return calls({name:'propose_source_changes',call_id:'source_proposal',args:{changes:[{month,function:'Engineering',region:'EMEA',path:'stock.costBreakdown.overtime',operation:'add',value:1000}],reason:'Requested overtime correction'}});
@@ -285,8 +285,35 @@ test('the analyst displays actual source rows and an exact pending proposal with
 test('proposed source after-values cannot be presented as current observed numerical findings',async()=>{
   const month=snapshot.months.at(-1),sourceService={catalog:sourceCatalog(snapshot),inspect:args=>inspectSourceData(snapshot,args),propose:async args=>({id:'proposal_not_applied',status:'proposed',sourceVersion:snapshot.sourceVersion,reason:args.reason,createdAt:'2026-10-03T00:00:00Z',changes:prepareSourceChanges(snapshot,args.changes).changes})};
   let round=0;
-  await assert.rejects(analyze({request:request('Prepare an overtime source change'),snapshot,sourceService,upstream:async payload=>{
+  await assert.rejects(analyze({request:request('Prepare an overtime source change. Reason: Proposed value'),snapshot,sourceService,upstream:async payload=>{
     if(++round===1)return calls({name:'propose_source_changes',args:{changes:[{month,function:'Engineering',region:'EMEA',path:'stock.costBreakdown.overtime',operation:'set',value:1234567.89}],reason:'Proposed value'}});
     const proposal=toolItems(payload)[0];return finished(narrative({sections:[{kind:'finding',title:'False applied value',text:'Current overtime is $1,234,567.89.',evidenceRefs:[proposal.refId]}]}));
   }}),error=>error.status===502&&/numerical finding/.test(error.message));
+});
+
+test('guided employee cost editing carries exact choices across three turns and waits for the user rationale',async()=>{
+  const original=structuredClone(snapshot);let proposals=0;
+  const sourceService={catalog:sourceCatalog(snapshot),inspect:args=>inspectSourceData(snapshot,args),propose:async args=>{
+    proposals++;assert.equal(args.reason,'Reforecast');assert.equal(args.changes[0].allocation,'preserve_pay_level_proportions');
+    const prepared=prepareSourceChanges(snapshot,args.changes);
+    return {id:'guided_proposal',status:'proposed',sourceVersion:snapshot.sourceVersion,reason:args.reason,createdAt:'2026-10-03T00:00:00Z',changes:prepared.changes.filter(change=>!change.internal),allocations:prepared.allocations};
+  }};
+  async function turn(question,context,updates,propose=false){
+    let round=0;
+    return analyze({request:validateRequest({question,sourceEditContext:context}),snapshot,sourceService,upstream:async payload=>{
+      const sent=JSON.parse(payload.input.find(item=>item.role==='user').content[0].text);
+      if(context)assert.deepEqual(sent.request.sourceEditContext,context);
+      if(++round===1)return calls({name:context?'update_source_edit_draft':'request_source_edit',args:updates});
+      const guide=toolItems(payload).find(item=>item.kind==='source-edit-guide');assert.ok(guide);
+      if(propose&&round===2){const draft=guide.sourceEditGuide.context;assert.equal(guide.sourceEditGuide.readyForProposal,true);return calls({name:'propose_source_changes',call_id:'guided_propose',args:{changes:[{month:draft.month,function:draft.function,region:draft.region,path:draft.path,operation:draft.operation,value:draft.value,allocation:draft.allocation}],reason:draft.reason}});}
+      return finished(narrative({headline:'Guided source update',summary:propose?'The exact pending proposal is ready for review. No source value has changed.':guide.sourceEditGuide.nextQuestion,sections:[{kind:'question',title:'Next editing step',text:guide.sourceEditGuide.nextQuestion,evidenceRefs:[guide.refId]}],unknowns:[],followups:[]}));
+    }});
+  }
+  const first=await turn('Update employee cost',undefined,{category:'cost'});
+  assert.equal(first.sourceOnly,true);assert.equal(first.sourceEditGuide.context.path,null);assert.equal(first.sourceEditProposal,undefined);assert.ok(first.sourceEditGuide.sourceData.rows.length);
+  const second=await turn('Employee loaded cost for Engineering EMEA. Set it to 102 million and preserve current pay-level proportions.',first.sourceEditGuide.context,{path:'stock.costBreakdown.employeeLoaded',function:'Engineering',region:'EMEA',operation:'set',value:102000000,allocation:'preserve_pay_level_proportions'});
+  assert.deepEqual(second.sourceEditGuide.missing,['reason']);assert.equal(proposals,0);
+  const third=await turn('Reforecast',second.sourceEditGuide.context,{reason:'Reforecast'},true);
+  assert.equal(third.sourceEditGuide.context.value,102000000);assert.equal(third.sourceEditProposal.reason,'Reforecast');assert.equal(third.sourceEditProposal.status,'proposed');assert.ok(third.sourceEditProposal.changes.every(change=>!change.internal&&!change.path.includes('loadedPayByLevel')));assert.equal(third.sourceEditProposal.allocations[0].method,'preserve_pay_level_proportions');
+  assert.equal(proposals,1);assert.deepEqual(snapshot,original);
 });

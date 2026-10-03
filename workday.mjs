@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, writeFile, unlink, rmdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { setTimeout as waitForFileRelease } from 'node:timers/promises';
 import { prepareSourceChanges, applySourceChanges, sourceError } from './source-edits.mjs';
 
 // A synthetic custom-report adapter. These names and response envelopes are an
@@ -61,6 +62,7 @@ function between(n, upper, field) {
   if (!Number.isFinite(n) || n < 0 || n > upper) throw new Error(`Invalid numerator ${field}`);
 }
 function same(a, b, field) { if (a !== b) throw new Error(`Reconciliation failed: ${field}: ${a} != ${b}`); }
+function moneySum(object) { return Object.values(object).reduce((total, value) => total + Math.round(value * 100), 0); }
 
 function validate(dataset, baseline) {
   const { cells, cohorts, functions, regions, months } = dataset;
@@ -76,8 +78,8 @@ function validate(dataset, baseline) {
     const { stock: s, flow: f, service: q } = row;
     same(f.beginningHeadcount + f.hires - f.voluntaryExits - f.involuntaryExits, s.headcount, `${id} headcount`);
     same(s.fte, s.headcount, `${id} FTE`);
-    same(s.annualCostRunRate, sum(s.costBreakdown), `${id} cost components`);
-    same(s.costBreakdown.employeeLoaded, sum(s.loadedPayByLevel), `${id} employee pay-level allocation`);
+    same(Math.round(s.annualCostRunRate * 100), moneySum(s.costBreakdown), `${id} cost components`);
+    same(Math.round(s.costBreakdown.employeeLoaded * 100), moneySum(s.loadedPayByLevel), `${id} employee pay-level allocation`);
     same(q.beginningBacklog + q.inflow - q.resolved, q.backlog, `${id} service queue`);
     same(q.resolution.closed, q.resolved, `${id} closed cases`);
     same(f.externalHires, f.hires, `${id} external hires`);
@@ -167,7 +169,19 @@ export function createWorkday({ baseline, storageDir, fetchReport, objectStore }
   async function persist(next, expected=generation) {
     if(objectStore){generation=await objectStore.write("workday-synthetic-state.json",next,expected);state=next;return;}
     const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
-    try { await writeFile(temporary, JSON.stringify(next), { flag: 'wx', mode: 0o600 }); await rename(temporary, file); }
+    try {
+      await writeFile(temporary, JSON.stringify(next), { flag: 'wx', mode: 0o600 });
+      for (let attempt = 0; ; attempt++) {
+        try { await rename(temporary, file); break; }
+        catch (error) {
+          // Windows scanners can briefly hold the destination after a completed
+          // read. Keep the same atomic replacement and ownership while retrying;
+          // never remove the committed source or publish partial JSON.
+          if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(error.code) || attempt >= 5) throw error;
+          await waitForFileRelease(10 * 2 ** attempt);
+        }
+      }
+    }
     catch (error) { await unlink(temporary).catch(() => {}); throw error; }
     state = next;
   }
@@ -233,7 +247,13 @@ export function createWorkday({ baseline, storageDir, fetchReport, objectStore }
       sourceEdits: { activeCount: (state.activeEditIds || []).length, latestUndoableEditId: state.activeEditIds?.at(-1) || null,
         syncBlocked: !!state.activeEditIds?.length } });
   }
-  const publicEntry = entry => { const { owner, ...safe } = entry; return clone(safe); };
+  const publicEntry = entry => {
+    const { owner, ...safe } = entry;
+    // Internal pay-level allocation rows are needed for exact persistence/undo,
+    // but revealing them in proposals/history would bypass small-group displays.
+    if (safe.changes) safe.changes = safe.changes.filter(change => change.internal !== true);
+    return clone(safe);
+  };
   function editHistory() {
     ensureInit();
     return { sourceVersion: state.version, edits: (state.sourceEditHistory || []).slice(-100).map(publicEntry),
@@ -305,11 +325,12 @@ export function createWorkday({ baseline, storageDir, fetchReport, objectStore }
     return serialize(async () => {
       ensureInit(); await loadCurrent(); sourceVersionGuard(expectedSourceVersion);
       const actor = editOwner(owner);
-      if (typeof reason !== 'string' || reason.length > 1000) throw sourceError('A source change reason must be at most 1,000 characters.');
+      if (typeof reason !== 'string' || reason.trim().length < 3 || reason.trim().length > 1000)
+        throw sourceError('Explain why this source value is changing using 3–1,000 characters.');
       const prepared = prepareSourceChanges(state.snapshot, changes);
       checkedCoverage(prepared.candidate);
       const proposal = { id: randomUUID(), status: 'proposed', sourceVersion: state.version, reason: reason.trim(),
-        changes: prepared.changes, createdAt: new Date().toISOString(), owner: actor };
+        changes: prepared.changes, ...(prepared.allocations.length ? { allocations: prepared.allocations } : {}), createdAt: new Date().toISOString(), owner: actor };
       const pending = (state.sourceEditProposals || []).filter(item => item.status === 'proposed' && item.sourceVersion === state.version);
       await persist({ ...state, sourceEditProposals: [...pending.slice(-99), proposal] }, generation);
       return publicEntry(proposal);
@@ -328,6 +349,7 @@ export function createWorkday({ baseline, storageDir, fetchReport, objectStore }
       const version = hash({ sourceRevision, cells: candidate.cells, cohorts: candidate.cohorts });
       candidate.sourceVersion = version;
       const edit = { id, proposalId, kind: 'apply', reason: proposal.reason, changes: proposal.changes,
+        ...(proposal.allocations?.length ? { allocations: proposal.allocations } : {}),
         beforeSourceVersion: state.version, sourceVersion: version, at: new Date().toISOString(), owner: proposal.owner };
       const outcome = { at: edit.at, batch: 'source-edit', result: 'applied', editId: id, sourceRevision, sourceVersion: version };
       await persist({ ...state, snapshot: candidate, coverage, version, sourceRevision,
@@ -350,6 +372,8 @@ export function createWorkday({ baseline, storageDir, fetchReport, objectStore }
       candidate.sourceVersion = version;
       const edit = { id, kind: 'undo', undoOf: editId, proposalId: applied.proposalId, reason: `Undo source edit ${editId}`,
         changes: applied.changes.map(change => ({ ...change, before: change.after, after: change.before })),
+        ...(applied.allocations?.length ? { allocations: applied.allocations.map(item => ({ ...item, beforeTotal: item.afterTotal, afterTotal: item.beforeTotal,
+          description: 'Restores the exact employee pay-level allocation saved before the original edit. Raw pay-level values remain omitted.' })) } : {}),
         beforeSourceVersion: state.version, sourceVersion: version, at: new Date().toISOString(), owner: applied.owner };
       const outcome = { at: edit.at, batch: 'source-edit', result: 'undone', editId: id, undoOf: editId, sourceRevision, sourceVersion: version };
       await persist({ ...state, snapshot: candidate, coverage, version, sourceRevision,

@@ -1,0 +1,1233 @@
+{
+  "at": "2026-10-03T12:02:20.325Z",
+  "kind": "Actual Astra guided editing through an isolated local HTTP application; synthetic data only",
+  "model": "gpt-6-astra",
+  "reasoning": "medium",
+  "storage": "Disposable temporary directory; project .state untouched",
+  "cases": [
+    {
+      "name": "open-cost-edit-guide",
+      "question": "I want to update employee cost.",
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "elapsedMs": 3969,
+          "status": "completed",
+          "tools": [
+            "request_source_edit"
+          ],
+          "usage": {
+            "input_tokens": 14863,
+            "input_tokens_details": {
+              "cache_write_tokens": 14860,
+              "cached_tokens": 0
+            },
+            "output_tokens": 51,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 14914
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "elapsedMs": 5570,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 30329,
+            "input_tokens_details": {
+              "cache_write_tokens": 15466,
+              "cached_tokens": 14860
+            },
+            "output_tokens": 213,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 30542
+          }
+        },
+        {
+          "number": 3,
+          "http": 200,
+          "elapsedMs": 4452,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 36845,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 30326
+            },
+            "output_tokens": 179,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 37024
+          }
+        }
+      ],
+      "elapsedMs": 14290,
+      "analysis": {
+        "summary": "I’ve opened the guided update with current September 2026 source rows. No source values have changed.",
+        "sections": [
+          {
+            "kind": "finding",
+            "title": "Available cost choices",
+            "text": "The source separates employee loaded cost, overtime and external contractor cost. Other editable items include workforce budget, on-target earnings, revenue run-rate and recognition rewards. Total workforce cost is calculated from the three cost components rather than edited directly. Cost components are annual run rates, not monthly spending.",
+            "evidenceRefs": [
+              "E1"
+            ]
+          },
+          {
+            "kind": "question",
+            "title": "Which cost item should change?",
+            "text": "Choose employee loaded cost, overtime, external contractor cost, or another listed item in the guided source breakdown.",
+            "evidenceRefs": [
+              "E1"
+            ]
+          }
+        ],
+        "unknowns": [],
+        "followups": []
+      },
+      "sourceOnly": true,
+      "guide": {
+        "context": {
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "month": "2026-09",
+          "function": "all",
+          "region": "all",
+          "category": "cost",
+          "path": null,
+          "operation": null,
+          "value": null,
+          "allocation": null,
+          "reason": null
+        },
+        "missing": [
+          "path",
+          "function",
+          "region",
+          "operation",
+          "value",
+          "reason"
+        ],
+        "nextQuestion": "Which field should change? Choose from the actual source breakdown below.",
+        "readyForProposal": false,
+        "fields": [
+          {
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true,
+            "requiresAllocation": true,
+            "allocationOptions": [
+              {
+                "id": "preserve_pay_level_proportions",
+                "label": "Preserve current pay-level cost proportions",
+                "description": "Allocate the new employee cost using the existing pay-level cost shares, with deterministic cent rounding. Employee counts are unchanged."
+              }
+            ]
+          },
+          {
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ],
+        "displayedRowCount": 160,
+        "totalRows": 160,
+        "truncated": false,
+        "selectedActualRows": [
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "value": 1260000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "value": 2100000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "value": 102000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "value": 186000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "value": 88426800,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "value": 10200,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "value": 101640000,
+            "unit": "usd",
+            "editable": true,
+            "requiresAllocation": true,
+            "allocationOptions": [
+              {
+                "id": "preserve_pay_level_proportions",
+                "label": "Preserve current pay-level cost proportions",
+                "description": "Allocate the new employee cost using the existing pay-level cost shares, with deterministic cent rounding. Employee counts are unchanged."
+              }
+            ]
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "value": 105000000,
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ]
+      },
+      "verdict": "passed"
+    },
+    {
+      "name": "select-field-and-population",
+      "question": "Employee loaded cost for Engineering in EMEA, September 2026.",
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "elapsedMs": 3137,
+          "status": "completed",
+          "tools": [
+            "update_source_edit_draft"
+          ],
+          "usage": {
+            "input_tokens": 14999,
+            "input_tokens_details": {
+              "cache_write_tokens": 189,
+              "cached_tokens": 14807
+            },
+            "output_tokens": 62,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 15061
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "elapsedMs": 5957,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 16504,
+            "input_tokens_details": {
+              "cache_write_tokens": 1505,
+              "cached_tokens": 14996
+            },
+            "output_tokens": 192,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 16696
+          }
+        },
+        {
+          "number": 3,
+          "http": 200,
+          "elapsedMs": 4702,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 17212,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 16501
+            },
+            "output_tokens": 162,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 17374
+          }
+        }
+      ],
+      "elapsedMs": 14054,
+      "analysis": {
+        "summary": "The update draft now targets September 2026 employee loaded cost for Engineering in EMEA. No source values have changed.",
+        "sections": [
+          {
+            "kind": "finding",
+            "title": "Current source value",
+            "text": "Employee loaded cost is $101,640,000 USD for September 2026. This is an annual run rate, not September’s expense, and excludes the separately recorded overtime and external contractor costs.",
+            "evidenceRefs": [
+              "E1"
+            ]
+          },
+          {
+            "kind": "question",
+            "title": "What change should I use?",
+            "text": "What new amount, increase, decrease or multiplier should I use for employee loaded cost?",
+            "evidenceRefs": []
+          }
+        ],
+        "unknowns": [],
+        "followups": []
+      },
+      "sourceOnly": true,
+      "guide": {
+        "context": {
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "month": "2026-09",
+          "function": "Engineering",
+          "region": "EMEA",
+          "category": "cost",
+          "path": "stock.costBreakdown.employeeLoaded",
+          "operation": null,
+          "value": null,
+          "allocation": null,
+          "reason": null
+        },
+        "missing": [
+          "operation",
+          "value",
+          "allocation",
+          "reason"
+        ],
+        "nextQuestion": "What new amount, increase, decrease or multiplier should I use for Employee loaded cost?",
+        "readyForProposal": false,
+        "fields": [
+          {
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true,
+            "requiresAllocation": true,
+            "allocationOptions": [
+              {
+                "id": "preserve_pay_level_proportions",
+                "label": "Preserve current pay-level cost proportions",
+                "description": "Allocate the new employee cost using the existing pay-level cost shares, with deterministic cent rounding. Employee counts are unchanged."
+              }
+            ]
+          },
+          {
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ],
+        "displayedRowCount": 8,
+        "totalRows": 8,
+        "truncated": false,
+        "selectedActualRows": [
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "value": 1260000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "value": 2100000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "value": 102000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "value": 186000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "value": 88426800,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "value": 10200,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "value": 101640000,
+            "unit": "usd",
+            "editable": true,
+            "requiresAllocation": true,
+            "allocationOptions": [
+              {
+                "id": "preserve_pay_level_proportions",
+                "label": "Preserve current pay-level cost proportions",
+                "description": "Allocate the new employee cost using the existing pay-level cost shares, with deterministic cent rounding. Employee counts are unchanged."
+              }
+            ]
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "value": 105000000,
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ]
+      },
+      "verdict": "passed"
+    },
+    {
+      "name": "set-amount-and-allocation",
+      "question": "Set it to 103 million and keep the existing pay-level proportions.",
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "elapsedMs": 2897,
+          "status": "completed",
+          "tools": [
+            "update_source_edit_draft"
+          ],
+          "usage": {
+            "input_tokens": 15053,
+            "input_tokens_details": {
+              "cache_write_tokens": 243,
+              "cached_tokens": 14807
+            },
+            "output_tokens": 61,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 15114
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "elapsedMs": 4712,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 16559,
+            "input_tokens_details": {
+              "cache_write_tokens": 1506,
+              "cached_tokens": 15050
+            },
+            "output_tokens": 204,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 16763
+          }
+        },
+        {
+          "number": 3,
+          "http": 200,
+          "elapsedMs": 4114,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 17279,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 16556
+            },
+            "output_tokens": 173,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 17452
+          }
+        },
+        {
+          "number": 4,
+          "http": 200,
+          "elapsedMs": 5385,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 17972,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 16484
+            },
+            "output_tokens": 214,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 18186
+          }
+        }
+      ],
+      "elapsedMs": 17396,
+      "analysis": {
+        "summary": "Your requested amount and allocation method are captured in the draft. No source values have changed. A reason is still needed before preparing the validated proposal.",
+        "sections": [
+          {
+            "kind": "recommendation",
+            "title": "Requested change—not applied",
+            "text": "The pending instruction is to set September 2026 employee loaded cost for Engineering in EMEA to $103,000,000 on an annual run-rate basis, preserving existing pay-level cost proportions.",
+            "evidenceRefs": []
+          },
+          {
+            "kind": "finding",
+            "title": "Current source value",
+            "text": "The current employee loaded cost for that population and month is $101,640,000 on an annual run-rate basis.",
+            "evidenceRefs": [
+              "E1"
+            ]
+          },
+          {
+            "kind": "question",
+            "title": "Reason for the change",
+            "text": "What is the reason for this change? I will use your wording in the proposal.",
+            "evidenceRefs": []
+          }
+        ],
+        "unknowns": [
+          "The rationale for the requested change."
+        ],
+        "followups": []
+      },
+      "sourceOnly": true,
+      "guide": {
+        "context": {
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "month": "2026-09",
+          "function": "Engineering",
+          "region": "EMEA",
+          "category": "cost",
+          "path": "stock.costBreakdown.employeeLoaded",
+          "operation": "set",
+          "value": 103000000,
+          "allocation": "preserve_pay_level_proportions",
+          "reason": null
+        },
+        "missing": [
+          "reason"
+        ],
+        "nextQuestion": "What is the reason for this change? I will record your wording in the audit trail.",
+        "readyForProposal": false,
+        "fields": [
+          {
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true,
+            "requiresAllocation": true,
+            "allocationOptions": [
+              {
+                "id": "preserve_pay_level_proportions",
+                "label": "Preserve current pay-level cost proportions",
+                "description": "Allocate the new employee cost using the existing pay-level cost shares, with deterministic cent rounding. Employee counts are unchanged."
+              }
+            ]
+          },
+          {
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ],
+        "displayedRowCount": 8,
+        "totalRows": 8,
+        "truncated": false,
+        "selectedActualRows": [
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "value": 1260000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "value": 2100000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "value": 102000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "value": 186000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "value": 88426800,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "value": 10200,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "value": 101640000,
+            "unit": "usd",
+            "editable": true,
+            "requiresAllocation": true,
+            "allocationOptions": [
+              {
+                "id": "preserve_pay_level_proportions",
+                "label": "Preserve current pay-level cost proportions",
+                "description": "Allocate the new employee cost using the existing pay-level cost shares, with deterministic cent rounding. Employee counts are unchanged."
+              }
+            ]
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "value": 105000000,
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ]
+      },
+      "verdict": "passed"
+    },
+    {
+      "name": "collect-rationale-and-propose",
+      "question": "The reason is the approved annual compensation reforecast.",
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "elapsedMs": 2589,
+          "status": "completed",
+          "tools": [
+            "update_source_edit_draft"
+          ],
+          "usage": {
+            "input_tokens": 15114,
+            "input_tokens_details": {
+              "cache_write_tokens": 304,
+              "cached_tokens": 14807
+            },
+            "output_tokens": 62,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 15176
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "elapsedMs": 2791,
+          "status": "completed",
+          "tools": [
+            "propose_source_changes"
+          ],
+          "usage": {
+            "input_tokens": 16631,
+            "input_tokens_details": {
+              "cache_write_tokens": 1517,
+              "cached_tokens": 15111
+            },
+            "output_tokens": 78,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 16709
+          }
+        },
+        {
+          "number": 3,
+          "http": 200,
+          "elapsedMs": 8825,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 17255,
+            "input_tokens_details": {
+              "cache_write_tokens": 624,
+              "cached_tokens": 16628
+            },
+            "output_tokens": 261,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 17516
+          }
+        },
+        {
+          "number": 4,
+          "http": 200,
+          "elapsedMs": 5244,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 18188,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 17180
+            },
+            "output_tokens": 238,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 18426
+          }
+        }
+      ],
+      "elapsedMs": 19761,
+      "analysis": {
+        "summary": "Your rationale is included in the validated proposal for Engineering in EMEA, September 2026. The proposed change preserves existing pay-level cost proportions. No source values have changed.",
+        "sections": [
+          {
+            "kind": "recommendation",
+            "title": "Proposed annual run-rate changes",
+            "text": "For September 2026, Engineering / EMEA:\n• Employee loaded cost: $101,640,000 → $103,000,000.\n• Derived annual workforce cost: $105,000,000 → $106,360,000.\nThese are current-to-proposed values, not applied changes. Existing pay-level cost proportions are preserved with cent rounding; employee counts remain unchanged.",
+            "evidenceRefs": [
+              "E2"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "Rationale and next step",
+            "text": "Rationale captured verbatim: “The reason is the approved annual compensation reforecast.” Review and apply the displayed proposal if correct. The source update remains pending until application is confirmed.",
+            "evidenceRefs": [
+              "E2"
+            ]
+          }
+        ],
+        "unknowns": [],
+        "followups": []
+      },
+      "sourceOnly": true,
+      "guide": {
+        "context": {
+          "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+          "month": "2026-09",
+          "function": "Engineering",
+          "region": "EMEA",
+          "category": "cost",
+          "path": "stock.costBreakdown.employeeLoaded",
+          "operation": "set",
+          "value": 103000000,
+          "allocation": "preserve_pay_level_proportions",
+          "reason": "The reason is the approved annual compensation reforecast."
+        },
+        "missing": [],
+        "nextQuestion": "The draft is complete. Prepare and review the exact before/after proposal; no source value has changed.",
+        "readyForProposal": true,
+        "fields": [
+          {
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": true,
+            "requiresAllocation": true,
+            "allocationOptions": [
+              {
+                "id": "preserve_pay_level_proportions",
+                "label": "Preserve current pay-level cost proportions",
+                "description": "Allocate the new employee cost using the existing pay-level cost shares, with deterministic cent rounding. Employee counts are unchanged."
+              }
+            ]
+          },
+          {
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "category": "cost",
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ],
+        "displayedRowCount": 8,
+        "totalRows": 8,
+        "truncated": false,
+        "selectedActualRows": [
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "value": 1260000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "value": 2100000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "value": 102000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "value": 186000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "value": 88426800,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "value": 10200,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "value": 101640000,
+            "unit": "usd",
+            "editable": true,
+            "requiresAllocation": true,
+            "allocationOptions": [
+              {
+                "id": "preserve_pay_level_proportions",
+                "label": "Preserve current pay-level cost proportions",
+                "description": "Allocate the new employee cost using the existing pay-level cost shares, with deterministic cent rounding. Employee counts are unchanged."
+              }
+            ]
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "value": 105000000,
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ]
+      },
+      "proposal": {
+        "id": "a0654dca-9927-4685-884c-58de8910ad25",
+        "status": "proposed",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "reason": "The reason is the approved annual compensation reforecast.",
+        "changes": [
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "unit": "usd",
+            "operation": "set",
+            "value": 103000000,
+            "before": 101640000,
+            "after": 103000000,
+            "derived": false,
+            "allocation": "preserve_pay_level_proportions"
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "unit": "usd",
+            "before": 105000000,
+            "after": 106360000,
+            "derived": true
+          }
+        ],
+        "allocations": [
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.employeeLoaded",
+            "method": "preserve_pay_level_proportions",
+            "beforeTotal": 101640000,
+            "afterTotal": 103000000,
+            "groupCount": 4,
+            "protectedBreakdownsOmitted": true,
+            "description": "The reviewed allocation preserves existing pay-level cost proportions, rounded to cents. Employee counts and protected demographic fields are unchanged. Raw pay-level values are omitted from this public proposal."
+          }
+        ],
+        "createdAt": "2026-10-03T12:03:11.825Z"
+      },
+      "verdict": "passed"
+    }
+  ],
+  "operations": [
+    {
+      "operation": "apply",
+      "verdict": "passed",
+      "sourceVersion": "cdbd2209b563f2fdc9bfbfed12574cbf41fdda5d78b9bf05386ab9fc9a4026df",
+      "employeeLoadedBefore": 101640000,
+      "employeeLoadedAfter": 103000000,
+      "annualCostBefore": 105000000,
+      "annualCostAfter": 106360000,
+      "rationale": "The reason is the approved annual compensation reforecast.",
+      "headcountUnchanged": true,
+      "allocations": [
+        {
+          "month": "2026-09",
+          "function": "Engineering",
+          "region": "EMEA",
+          "path": "stock.costBreakdown.employeeLoaded",
+          "method": "preserve_pay_level_proportions",
+          "beforeTotal": 101640000,
+          "afterTotal": 103000000,
+          "groupCount": 4,
+          "protectedBreakdownsOmitted": true,
+          "description": "The reviewed allocation preserves existing pay-level cost proportions, rounded to cents. Employee counts and protected demographic fields are unchanged. Raw pay-level values are omitted from this public proposal."
+        }
+      ],
+      "privatePayLevelRowsAbsent": true
+    },
+    {
+      "operation": "undo",
+      "verdict": "passed",
+      "sourceVersion": "5c1ceb13021ee8a871a1851aef9fc8ed8009b280034f77dfcba1dc9ec97a66ae",
+      "allAggregateAndLinkedPayLevelCellsRestoredExactly": true,
+      "cohortsUnchanged": true,
+      "employeeLoadedRestored": 101640000,
+      "annualCostRestored": 105000000
+    }
+  ],
+  "limitations": [
+    "One provider sample per conversational turn. Timings are observations, not guarantees.",
+    "This acceptance validates real model tools and isolated HTTP persistence; browser and WebRTC acceptance are recorded separately."
+  ],
+  "verdict": "passed"
+}

@@ -1,6 +1,7 @@
 // Only trusted, shipped source scripts are evaluated. Model output is never executable.
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { sourceCatalog } from './source-edits.mjs';
 
 const html = readFileSync(new URL('./public/index.html', import.meta.url), 'utf8');
 const sandbox = vm.createContext({ window: {} }, { codeGeneration: { strings: false, wasm: false } });
@@ -93,6 +94,17 @@ export function validatePresentationPreferences(value) {
   if (value.reportLayout != null) { if (!['executive','evidence','full'].includes(value.reportLayout)) invalid(); result.reportLayout=value.reportLayout; }
   return result;
 }
+export function validateSourceEditContext(value) {
+  if (value == null) return undefined;
+  const fail = () => { throw Object.assign(new Error('Invalid source edit draft context'), {status:400}); };
+  const keys = ['sourceVersion','month','function','region','category','path','operation','value','allocation','reason'];
+  if (!value || typeof value !== 'object' || Array.isArray(value) || ![null,Object.prototype].includes(Object.getPrototypeOf(value)) || Object.keys(value).some(key=>!keys.includes(key)) || typeof value.sourceVersion !== 'string' || !/^[a-zA-Z0-9:_-]{1,160}$/.test(value.sourceVersion)) fail();
+  const catalog = sourceCatalog(baselineDataset);
+  const context = {sourceVersion:value.sourceVersion,month:value.month??D.months.at(-1),function:value.function??'all',region:value.region??'all',category:value.category??'all',path:value.path??null,operation:value.operation??null,value:value.value??null,allocation:value.allocation??null,reason:value.reason??null};
+  if (!D.months.includes(context.month) || !['all',...D.functions].includes(context.function) || !['all',...D.regions].includes(context.region) || !['all',...catalog.categories.map(item=>item.id)].includes(context.category) || (context.path!==null&&!catalog.fields.some(field=>field.path===context.path)) || ![null,'set','add','scale'].includes(context.operation) || (context.value!==null&&(typeof context.value!=='number'||!Number.isFinite(context.value)||Math.abs(context.value)>1e13)) || ![null,'preserve_pay_level_proportions'].includes(context.allocation) || (context.reason!==null&&(typeof context.reason!=='string'||context.reason.length>1000))) fail();
+  if (context.reason!==null) context.reason=context.reason.trim()||null;
+  return context;
+}
 export function validateRequest(body) {
   if (!body || typeof body.question !== 'string' || !body.question.trim() || body.question.length > 2000) throw new Error('Question must contain 1–2000 characters');
   const scope = scopeOf(body.scope);
@@ -145,7 +157,8 @@ export function validateRequest(body) {
   const viewContext = validateViewContext(body.viewContext);
   const reportContext = validateReportContext(body.reportContext);
   const presentationPreferences = validatePresentationPreferences(body.presentationPreferences);
-  return { question: body.question.trim(), scope, context, history: history.map(({ role, text }) => ({ role, text })), ...(viewContext ? { viewContext } : {}), ...(reportContext ? { reportContext } : {}), ...(presentationPreferences ? { presentationPreferences } : {}), ...(Object.keys(mentions).length ? { mentions } : {}), ...(window ? { window } : {}) };
+  const sourceEditContext = validateSourceEditContext(body.sourceEditContext);
+  return { question: body.question.trim(), scope, context, history: history.map(({ role, text }) => ({ role, text })), ...(viewContext ? { viewContext } : {}), ...(reportContext ? { reportContext } : {}), ...(presentationPreferences ? { presentationPreferences } : {}), ...(sourceEditContext ? {sourceEditContext} : {}), ...(Object.keys(mentions).length ? { mentions } : {}), ...(window ? { window } : {}) };
 }
 export function validatePlan(p) {
   const keys = p && typeof p === 'object' && !Array.isArray(p) ? Object.keys(p).sort().join(',') : '';

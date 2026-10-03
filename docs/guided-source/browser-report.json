@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-03T12:22:46.117Z",
+  "checks": [
+    "An incomplete update opens real source records and selectable fields without requiring memorized names",
+    "Selecting a source value carries its exact month, function, region and current amount into the edit",
+    "Amount and explicit allocation are retained; a missing rationale prevents proposal or source mutation",
+    "Reviewed proposal contains the user rationale and explicit allocation summary, without exposing protected pay-level rows",
+    "Apply persists employee cost and reconciled totals, displays the updated table and preserves workforce counts",
+    "Audit rationale survives reload and undo restores all linked source values exactly",
+    "Mobile guide fits the page, hidden guides cannot provide edit context, and cancelling discards the draft",
+    "New voice/assistant drafts supersede older field requests; history and browsing clear hidden draft context"
+  ],
+  "errors": [],
+  "externalProviderCalls": 0,
+  "sourceWrites": "Disposable temporary dataset only"
+}

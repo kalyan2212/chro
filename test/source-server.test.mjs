@@ -74,8 +74,26 @@ test('API analysis uses real source services and returns a proposal that the aut
     else {const items=payload.input.filter(item=>item.type==='function_call_output').flatMap(item=>JSON.parse(item.output).items||[]),proposal=items.find(item=>item.kind==='source-proposal');assert.ok(proposal);output=[{type:'message',content:[{type:'output_text',text:JSON.stringify({headline:'Source correction proposed',summary:'The actual source rows and exact pending correction are ready for review. No source value has changed.',sections:[{kind:'recommendation',title:'Review before applying',text:'Review the exact before and after values, including the reconciled total, then apply the proposal.',evidenceRefs:[proposal.refId]}],unknowns:[],followups:[],panels:[]})}]}];}
     return new Response(JSON.stringify({status:'completed',output}),{headers:{'content-type':'application/json'}});
   }});
-  const response=await request('/api/ask',{question:'Show latest Engineering EMEA overtime source data and add $1,000 to it',owner:'untrusted-client-owner'});assert.equal(response.status,200);
+  const response=await request('/api/ask',{question:'Show latest Engineering EMEA overtime source data and add $1,000 to it. Reason: Requested source correction',owner:'untrusted-client-owner'});assert.equal(response.status,200);
   const result=await response.json();assert.equal(round,3);assert.equal(result.sourceOnly,true);assert.equal(result.sourceEditProposal.status,'proposed');assert.equal(result.sourceEditProposal.owner,undefined);assert.ok(result.sourceData.rows.length);
   const unchanged=await (await request('/api/data/snapshot')).json();assert.equal(unchanged.sourceVersion,result.sourceEditProposal.sourceVersion);
   const applied=await request('/api/source/apply',{proposalId:result.sourceEditProposal.id,expectedSourceVersion:unchanged.sourceVersion});assert.equal(applied.status,200);assert.equal((await applied.json()).changed,true);
+});
+
+test('the guided edit endpoint validates choices without provider calls or source mutations and refuses stale drafts',async t=>{
+  let providerCalls=0;
+  const {request}=await setup(t,{apiKey:'sk-test-source-guide',fetchImpl:async()=>{providerCalls++;throw Error('Guide must not call the provider');}});
+  const initial=await(await request('/api/data/snapshot')).json();
+  const first=await request('/api/source/guide',{context:{sourceVersion:initial.sourceVersion,category:'cost'}});assert.equal(first.status,200);
+  const opened=await first.json();assert.equal(opened.missing[0],'path');assert.ok(opened.sourceData.rows.some(row=>row.path==='stock.costBreakdown.employeeLoaded'));
+  const context={...opened.context,path:'stock.costBreakdown.employeeLoaded',function:'Engineering',region:'EMEA',operation:'set',value:102000000};
+  const selected=await(await request('/api/source/guide',{context})).json();assert.deepEqual(selected.missing,['allocation','reason']);
+  const complete=await(await request('/api/source/guide',{context:{...context,allocation:'preserve_pay_level_proportions',reason:'Reforecast'}})).json();assert.equal(complete.readyForProposal,true);assert.equal(complete.context.reason,'Reforecast');
+  assert.equal((await request('/api/source/guide',{context:{...context,sourceVersion:'old-source'}})).status,409);
+  assert.equal((await request('/api/ask',{question:'Continue this source change',sourceEditContext:{...context,sourceVersion:'old-source'}})).status,409);
+  assert.equal((await request('/api/source/guide',{context:{...context,path:'stock.loadedPayByLevel.0'}})).status,400);
+  assert.equal((await request('/api/source/guide',{context,owner:'forged'})).status,400);
+  assert.equal((await request('/api/source/guide',{context},{origin:'https://untrusted.example'})).status,403);
+  assert.equal(providerCalls,0);assert.deepEqual(await(await request('/api/data/snapshot')).json(),initial);
+  const history=await(await request('/api/source/history')).json();assert.equal(history.edits.length,0);assert.equal(history.proposals.length,0);
 });

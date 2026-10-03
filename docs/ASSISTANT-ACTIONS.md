@@ -18,9 +18,9 @@ This is display preference storage only. It does not train a model, infer person
 
 ## Inspect, propose, apply and undo
 
-1. Select **Source data** and choose a month, function, region and category. Browsing can include all functions or regions; it shows actual aggregate source values with their units and editability. Broad previews stop at 300 field rows and explicitly report truncation.
-2. Select **Edit** beside an editable field, or ask for a change using a specific source cell and value. For example, identify Engineering, EMEA, September 2026 and external contractor cost. The application does not silently allocate a company-wide request across cells.
-3. Review the exact **Before** and **After** values. A cost component change also shows the derived annual workforce-cost total. A proposal is persisted for review but leaves the active source unchanged.
+1. Select **Source data → Guided source update**. The configured assistant can also open this guide when an edit request, such as updating employee cost, lacks the exact field or other choices. The guide shows actual source fields and values; internal field names do not need to be remembered. **Browse and edit source** provides the broader category/filter table. Previews stop at 300 field rows and explicitly report truncation.
+2. Select the field and exact month, function and region. Choose a new amount, signed addition/subtraction or percentage change, and enter why the source is changing. The application retains the draft across follow-ups and asks for the next missing choice. The rationale is required, trimmed to 3–1,000 characters and saved with the audit. It is user wording, not an automatically invented explanation. A company-wide edit is not silently distributed across cells.
+3. For employee loaded cost, explicitly select **keep the existing pay-level cost proportions**. Then choose **Review exact changes**. Review the exact **Before** and **After** amounts, the derived annual workforce-cost total, the allocation method and your rationale. A proposal is persisted for review but leaves the active source unchanged.
 4. Apply the visible proposal with **Apply these changes** or a supported explicit confirmation. The server commits the stored values, writes an audit record and creates a new source revision. The client refreshes its source dataset; saved investigations retain their original evidence.
 5. Undo the latest active source edit using its ID and current revision. Undo restores its prior values but creates a new revision and audit entry. Earlier edits can be undone only after later active edits have been reversed. Persisted source history makes confirmed operation IDs available after a reload or an interrupted response.
 
@@ -30,9 +30,13 @@ All changes affect the fictional synthetic dataset served by this application. T
 
 The catalogue has six categories: cost, workforce, hiring, talent, listening and service. It exposes only curated aggregate fields. Protected demographic subdivisions, cohort histories and individual records are not exposed by source-inspection/edit tools.
 
-Overtime, contractor cost, budgets and other eligible aggregate fields support exact `set`, signed `add` and multiplicative `scale` operations. The server computes the result; it accepts 1–12 distinct field/cell changes in a proposal, finite nonnegative resulting values up to 10 trillion, whole-number counts and currency to cents. Direct currency assignments with extra decimal places are rejected; arithmetic currency operations are rounded to cents.
+Employee loaded cost with an explicit allocation choice, overtime, contractor cost, budgets and other eligible aggregate fields support exact `set`, signed `add` and multiplicative `scale` operations. The guided percentage control converts an increase/decrease into a multiplier; the server computes the resulting amount. It accepts 1–12 distinct field/cell changes in a proposal, finite nonnegative resulting values up to 10 trillion, whole-number counts and currency to cents. Direct currency assignments with extra decimal places are rejected; arithmetic currency operations are rounded to cents.
 
-`stock.annualCostRunRate` is derived from employee loaded cost, overtime and contractor cost. Editing overtime or contractor cost recalculates that total. Employee loaded cost is read-only because its pay-level allocation must also reconcile; the application will not invent a distribution across levels. Average FTE is read-only because it derives from beginning/ending workforce in this synthetic source. Workforce continuity totals, linked distribution totals and some linked hiring/service fields also require a complete validated source import.
+`stock.annualCostRunRate` is derived from employee loaded cost, overtime and contractor cost. Editing an eligible component recalculates that total. Employee loaded cost requires `allocation:'preserve_pay_level_proportions'`: the existing cost proportions are retained, with deterministic largest-remainder rounding so the pay-level amounts add to the new employee total in cents. No employee counts, demographic fields or on-target earnings are inferred or changed. A zero existing cost total has no shares to preserve, so increasing it requires a complete source allocation rather than invented shares.
+
+The exact pay-level adjustments are stored with the proposal and audit for restoration. Public proposals/history omit those internal rows to avoid exposing small-group pay amounts. They instead show safe `allocations` summaries: the selected cell, method, before/after employee totals, group count and explanation. Undo restores the exact recorded prior values; it does not reverse a rounded percentage calculation.
+
+Average FTE remains read-only because it derives from beginning/ending workforce in this synthetic source. Workforce continuity totals, linked distribution totals and some linked hiring/service fields also require a complete validated source import. Previously persisted proposals remain applicable under their original stored values even if they predate the new rationale requirement.
 
 Other changes preserve applicable population and conservation checks. Hiring funnel counts remain ordered from applications through accepted offers. Survey invitations cannot exceed employees, and regrettable exits cannot exceed voluntary exits. Changing resolved cases within SLA requires a matching change to resolved cases outside SLA; reported virtual-agent resolutions and human handoffs must together match sessions. A rejected proposal leaves the source unchanged.
 
@@ -42,13 +46,16 @@ Every apply/undo requires the current `expectedSourceVersion`. A stored proposal
 
 `source-edits.mjs` owns the explicit field catalogue, bounded inspection, path validation, deterministic change arithmetic and derived totals. `workday.mjs` owns persistent proposals, snapshot validation, atomic application and undo, and the source audit. Snapshot and audit updates share one `workday-synthetic-state.json` commit. Local writes use an operation queue and an atomically published PID-owned lock. A live lock owner is not displaced; a provably dead owner can be recovered. Cloud Storage uses object-generation compare-and-swap instead.
 
-`evidence-tools.mjs` exposes `inspect_source_data` and `propose_source_changes` alongside fixed analytical tools. It exposes `change_chart` and `change_report_view` as pending presentation requests. It does not give the model an apply/undo tool. `public/assistant-actions.js` owns browser controls, display preferences and confirmed source HTTP requests. `public/studio-charts.js` owns immutable chart rendering, chart identity and chart-type eligibility.
+`evidence-tools.mjs` exposes `request_source_edit` and `update_source_edit_draft` to open and continue the guided selection, alongside `inspect_source_data` and `propose_source_changes`. The draft carries source revision, month, function, region, category, selected path, operation, value, allocation and rationale. The guide returns current rows and the next missing question; it does not persist a proposal or change source values. A new field selection clears the earlier field's amount, operation, allocation and rationale unless explicitly supplied again.
+
+The same module exposes `change_chart` and `change_report_view` as pending presentation requests. It does not give the model an apply/undo tool. `public/source-guide.js` owns guided field selection, incomplete draft inputs and review. `public/assistant-actions.js` owns browser controls, display preferences and confirmed source HTTP requests. `public/studio-charts.js` owns immutable chart rendering, chart identity and chart-type eligibility.
 
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/source/catalog` | Current source dimensions and curated editable/read-only fields. |
 | `GET /api/source/data` | Bounded source field rows for selected filters. |
 | `GET /api/source/history` | Recent audit entries, pending proposals and latest undoable ID. |
+| `POST /api/source/guide` | Validate a partial draft and return actual rows, available choices and the next missing question. |
 | `POST /api/source/propose` | Store a validated exact before/after proposal. |
 | `POST /api/source/apply` | Commit the named pending proposal against its exact source revision. |
 | `POST /api/source/undo` | Reverse the latest active edit against the current source revision. |
@@ -57,6 +64,8 @@ These routes use the application's existing authentication, origin restrictions 
 
 ## Verification boundaries
 
-`test/source-edits.test.mjs` uses isolated temporary state and a simulated cloud object store. It covers exact contractor-cost reconciliation, recalculated scoped/company cost metrics, unchanged data during proposal, restart persistence, undo, stale revisions, owner/path/numeric guards, local/cloud write races and dead/live local-lock ownership. It does not alter the developer's `.state`.
+`test/source-edits.test.mjs` uses isolated temporary state and a simulated cloud object store. It covers exact contractor and employee-cost reconciliation, cent allocation and tie-breaks, safe public summaries, required rationale, recalculated scoped/company cost metrics, unchanged data during proposal, restart persistence, undo, stale revisions, owner/path/numeric guards, local/cloud write races and dead/live local-lock ownership. It does not alter the developer's `.state`.
+
+`scripts/check-guided-source.mjs` exercises guided selection, rationale, explicit employee-cost allocation, reviewed application, audit reload and undo against isolated local state. Its browser artifacts are in `docs/guided-source/`. Provider interpretation and physical microphone behavior are separate checks.
 
 `scripts/check-chart-types.mjs` exercises the real local application in Chromium with synthetic data and no provider calls. Its screenshots in `docs/chart-types/` cover line and pie at 1920×1080 and 390-pixel width, plus refusal of a negative-value pie. These checks establish browser rendering and action behavior, not real microphone recognition or provider latency. Integrated regression and actual provider/media results are recorded separately in [VALIDATION.md](../VALIDATION.md).

@@ -44,7 +44,9 @@ test('catalogue and bounded source previews expose only curated aggregates acros
   const exact = inspectSourceData(snapshot, { ...scope, category: 'cost' });
   assert.equal(exact.rows.find(row => row.path === field).value, cell(snapshot).stock.costBreakdown.contractors);
   assert.equal(exact.rows.find(row => row.path === 'stock.annualCostRunRate').editable, false);
-  assert.equal(exact.rows.find(row => row.path === 'stock.costBreakdown.employeeLoaded').editable, false);
+  assert.equal(exact.rows.find(row => row.path === 'stock.costBreakdown.employeeLoaded').editable, true);
+  assert.equal(exact.rows.find(row => row.path === 'stock.costBreakdown.employeeLoaded').requiresAllocation, true);
+  assert.equal(exact.rows.find(row => row.path === 'stock.costBreakdown.employeeLoaded').allocationOptions[0].id, 'preserve_pay_level_proportions');
   assert.equal(catalogue.fields.find(row => row.path === 'flow.averageFte').editable, false);
   const broad = inspectSourceData(snapshot);
   assert.equal(broad.rows.length, 300); assert.equal(broad.truncated, true); assert.ok(broad.totalRows > 300);
@@ -172,7 +174,7 @@ test('editable funnel, survey and service aggregates retain their source populat
     ['service.virtualAgentResolved', row.service.virtualAgentResolved + 1, /resolutions plus human handoffs/],
     ['flow.averageFte', row.flow.averageFte + 1, /Derived from beginning/],
     ['stock.managers', row.stock.headcount + 1, /distribution totals/],
-    ['stock.costBreakdown.employeeLoaded', row.stock.costBreakdown.employeeLoaded + 1, /pay-level allocation/]
+    ['stock.costBreakdown.employeeLoaded', row.stock.costBreakdown.employeeLoaded + 1, /explicit allocation choice/]
   ];
   for (const [path, value, pattern] of invalid) await assert.rejects(proposal(workday, [change(value, 'set', { path })]), pattern);
   assert.deepEqual(workday.snapshot(), before); assert.equal(workday.editHistory().proposals.length, 0);
@@ -187,6 +189,90 @@ test('editable funnel, survey and service aggregates retain their source populat
   assert.equal(q.withinSLA + q.breachedResolved, q.resolved);
   const undone = await workday.undoEdit({ editId: applied.edit.id, expectedSourceVersion: applied.snapshot.sourceVersion, owner });
   assert.deepEqual(undone.snapshot.cells, before.cells);
+});
+
+test('employee cost requires explicit reviewed allocation and keeps public proposals free of raw pay-level amounts', async t => {
+  const { workday, storageDir } = await fixture(t), before = workday.snapshot(), initial = cell(before).stock;
+  const employeeChange = change(initial.costBreakdown.employeeLoaded + 1234.57, 'set', {
+    path: 'stock.costBreakdown.employeeLoaded', allocation: 'preserve_pay_level_proportions'
+  });
+  const proposed = await proposal(workday, [employeeChange], { reason: 'Reforecast' });
+  assert.equal(proposed.reason, 'Reforecast'); assert.equal(proposed.changes.length, 2);
+  assert.equal(proposed.changes[0].path, 'stock.costBreakdown.employeeLoaded');
+  assert.equal(proposed.changes[0].allocation, 'preserve_pay_level_proportions');
+  assert.equal(proposed.changes[1].path, 'stock.annualCostRunRate');
+  assert.equal(proposed.allocations[0].beforeTotal, initial.costBreakdown.employeeLoaded);
+  assert.equal(proposed.allocations[0].afterTotal, employeeChange.value);
+  assert.equal(proposed.allocations[0].protectedBreakdownsOmitted, true);
+  assert.ok(!JSON.stringify(proposed).includes('stock.loadedPayByLevel'));
+  assert.deepEqual(workday.snapshot(), before, 'allocation review does not apply data');
+  const persisted = JSON.parse(await readFile(join(storageDir, 'workday-synthetic-state.json'), 'utf8'));
+  const internal = persisted.sourceEditProposals.find(item => item.id === proposed.id).changes.filter(item => item.internal);
+  assert.equal(internal.length, 4); assert.ok(internal.every(item => item.derived && item.path.startsWith('stock.loadedPayByLevel.')));
+  const restarted = createWorkday({ baseline, storageDir }); await restarted.init();
+  const applied = await apply(restarted, proposed), actual = cell(applied.snapshot).stock;
+  assert.equal(actual.costBreakdown.employeeLoaded, employeeChange.value);
+  const cents = value => Math.round(value * 100);
+  assert.equal(Object.values(actual.loadedPayByLevel).reduce((sum, value) => sum + cents(value), 0), cents(employeeChange.value));
+  assert.equal(cents(actual.annualCostRunRate), Object.values(actual.costBreakdown).reduce((sum, value) => sum + cents(value), 0));
+  for (const [level, value] of Object.entries(initial.loadedPayByLevel)) {
+    const exactShare = cents(employeeChange.value) * value / initial.costBreakdown.employeeLoaded;
+    assert.ok(Math.abs(cents(actual.loadedPayByLevel[level]) - exactShare) < 1, 'cent allocation is within one cent of each existing exact share');
+  }
+  assert.deepEqual(actual.jobLevels, initial.jobLevels); assert.deepEqual(actual.genderByLevel, initial.genderByLevel);
+  assert.equal(actual.headcount, initial.headcount); assert.equal(actual.annualOTE, initial.annualOTE);
+  assert.ok(!JSON.stringify(applied.edit).includes('stock.loadedPayByLevel'));
+  assert.ok(!JSON.stringify(restarted.editHistory()).includes('stock.loadedPayByLevel'));
+  const undo = await restarted.undoEdit({ editId: applied.edit.id, expectedSourceVersion: applied.snapshot.sourceVersion, owner });
+  assert.deepEqual(undo.snapshot.cells, before.cells);
+  assert.equal(undo.edit.allocations[0].beforeTotal, employeeChange.value);
+  assert.equal(undo.edit.allocations[0].afterTotal, initial.costBreakdown.employeeLoaded);
+});
+
+test('employee allocation rounds deterministically, handles zero target, and rejects nonexistent or unspecified shares', async t => {
+  const { workday } = await fixture(t), before = workday.snapshot();
+  const make = (value, extra = {}) => change(value, 'set', { path: 'stock.costBreakdown.employeeLoaded', allocation: 'preserve_pay_level_proportions', ...extra });
+  const a = await proposal(workday, [make(.01)]), b = await proposal(workday, [make(.01)]);
+  assert.deepEqual(a.changes, b.changes); assert.deepEqual(a.allocations, b.allocations);
+  const oneCent = await apply(workday, a);
+  assert.equal(Object.values(cell(oneCent.snapshot).stock.loadedPayByLevel).filter(value => value === .01).length, 1);
+  const zero = await apply(workday, await proposal(workday, [make(0)]));
+  assert.ok(Object.values(cell(zero.snapshot).stock.loadedPayByLevel).every(value => value === 0));
+  await assert.rejects(proposal(workday, [make(1000)]), /shares are zero/);
+  await workday.undoEdit({ editId: zero.edit.id, expectedSourceVersion: zero.snapshot.sourceVersion, owner });
+  await workday.undoEdit({ editId: oneCent.edit.id, expectedSourceVersion: workday.status().sourceVersion, owner });
+  assert.deepEqual(workday.snapshot().cells, before.cells);
+  await assert.rejects(proposal(workday, [make(1000, { allocation: undefined })]), /explicit allocation choice/);
+  await assert.rejects(proposal(workday, [make(1000, { allocation: 'invent_new_distribution' })]), /explicit allocation choice/);
+  await assert.rejects(proposal(workday, [change(1000, 'set', { allocation: 'preserve_pay_level_proportions' })]), /only for employee/);
+  await assert.rejects(proposal(workday, [make(1000, { path: 'stock.loadedPayByLevel.manager' })]), /not available/);
+});
+
+test('equal employee-cost shares use a stable cent tie-break and reconcile exactly', async t => {
+  const storageDir = await mkdtemp(join(tmpdir(), 'chro-source-rounding-'));
+  t.after(() => rm(storageDir, { recursive: true, force: true }));
+  const equalShares = structuredClone(baseline), stock = cell(equalShares).stock;
+  stock.loadedPayByLevel = { individual: 1, manager: 1, director: 1, executive: 1 };
+  stock.costBreakdown.employeeLoaded = 4;
+  stock.annualCostRunRate = Object.values(stock.costBreakdown).reduce((sum, value) => sum + value, 0);
+  const workday = createWorkday({ baseline: equalShares, storageDir }); await workday.init();
+  const proposed = await proposal(workday, [change(.02, 'set', { path: 'stock.costBreakdown.employeeLoaded', allocation: 'preserve_pay_level_proportions' })]);
+  const applied = await apply(workday, proposed);
+  assert.deepEqual(cell(applied.snapshot).stock.loadedPayByLevel, { individual: .01, manager: .01, director: 0, executive: 0 });
+  assert.equal(cell(applied.snapshot).stock.costBreakdown.employeeLoaded, .02);
+});
+
+test('new proposals need a user rationale, while older stored proposals remain applicable', async t => {
+  const { workday, storageDir } = await fixture(t);
+  for (const reason of ['', '  ', ' x ', 'x'.repeat(1001), null]) await assert.rejects(proposal(workday, [change(1)], { reason }), /Explain why/);
+  const proposed = await proposal(workday, [change(1)], { reason: '  Reforecast  ' });
+  assert.equal(proposed.reason, 'Reforecast');
+  const file = join(storageDir, 'workday-synthetic-state.json'), stored = JSON.parse(await readFile(file, 'utf8'));
+  stored.sourceEditProposals.find(item => item.id === proposed.id).reason = '';
+  await writeFile(file, JSON.stringify(stored));
+  const restarted = createWorkday({ baseline, storageDir }); await restarted.init();
+  const applied = await apply(restarted, proposed); assert.equal(applied.changed, true);
+  assert.equal(applied.edit.reason, '', 'old persisted proposals are not retroactively invalidated');
 });
 
 test('independent local connectors cannot overwrite each other during an apply race', async t => {

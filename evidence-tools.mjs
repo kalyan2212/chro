@@ -1,6 +1,6 @@
 // Fixed, read-only analytical tools. Model arguments never become code or file paths.
 import { readFileSync, statSync } from 'node:fs';
-import { answer, cases, choices, descriptor, effectiveAssumptions, hydrateDataset, limits, metricIds, scopeOf, summary, validateViewContext, validateReportContext } from './engine.mjs';
+import { answer, cases, choices, descriptor, effectiveAssumptions, hydrateDataset, limits, metricIds, scopeOf, summary, validateViewContext, validateReportContext, validateSourceEditContext } from './engine.mjs';
 import { enrichAnswer } from './intelligence.mjs';
 
 const MAX_EVIDENCE = 120, MAX_SEARCH = 10, MAX_DOCUMENT = 1800;
@@ -145,7 +145,46 @@ function modelEvidence(item) {
   return clone({ refId: item.refId, kind: item.kind, title: item.title, sourceVersion: item.sourceVersion, scope: item.scope, source: item.source, response: analytical });
 }
 
-export function createEvidenceTools({ snapshot, investigations = [], decisions = [], viewContext, reportContext, sourceService } = {}) {
+export function buildSourceEditGuide({context,catalog,inspect}) {
+  const draft=validateSourceEditContext(context);
+  if(!draft||!catalog||typeof inspect!=='function')throw invalid('Current source editing is unavailable.');
+  if(draft.sourceVersion!==catalog.sourceVersion)throw Object.assign(Error('The source edit draft belongs to an earlier source revision. Reopen the current source rows.'),{status:409});
+  const field=draft.path?catalog.fields.find(item=>item.path===draft.path):null;
+  if(draft.path&&!field)throw invalid('Choose a field from the current source catalogue.');
+  if(field)draft.category=field.category;
+  const sourceData=inspect({month:draft.month,function:draft.function,region:draft.region,category:draft.category});
+  if(sourceData.sourceVersion!==draft.sourceVersion||!Array.isArray(sourceData.rows))throw invalid('Source rows changed during inspection. Refresh and try again.');
+  const missing=[];
+  if(!field||!field.editable)missing.push('path');
+  if(draft.function==='all')missing.push('function');
+  if(draft.region==='all')missing.push('region');
+  if(draft.operation===null)missing.push('operation');
+  if(draft.value===null)missing.push('value');
+  if(field?.requiresAllocation&&!field.allocationOptions?.some(option=>option.id===draft.allocation))missing.push('allocation');
+  if(!draft.reason||draft.reason.trim().length<3)missing.push('reason');
+  const fields=catalog.fields.filter(item=>draft.category==='all'||item.category===draft.category);
+  const costOrder=['stock.costBreakdown.employeeLoaded','stock.costBreakdown.overtime','stock.costBreakdown.contractors'];
+  const editable=fields.filter(item=>item.editable).sort((a,b)=>draft.category==='cost'?(costOrder.includes(a.path)?costOrder.indexOf(a.path):costOrder.length)-(costOrder.includes(b.path)?costOrder.indexOf(b.path):costOrder.length):0);
+  const reasonPrefix=field&&!field.editable?(Buffer.byteLength(field.reason||'','utf8')<=180?`${field.reason||'The selected field is read-only.'} `:'The selected field is read-only. '):'';
+  const labels=[];
+  const fieldQuestion=(choices,omitted)=>reasonPrefix+'Which editable field should change? '+(choices.length?`Available choices: ${choices.join(', ')}.`:'Choose an editable field on screen.')+(omitted&&choices.length?' More choices are shown on screen.':'');
+  // This exact prompt is also spoken. Supply real catalogue vocabulary, retain
+  // full choices on screen, and keep the voice event within its UTF-8 byte limit.
+  for(const item of editable){
+    if(labels.length>=8||Buffer.byteLength(fieldQuestion([...labels,item.label],labels.length+1<editable.length),'utf8')>400)break;
+    labels.push(item.label);
+  }
+  const questions={path:fieldQuestion(labels,labels.length<editable.length),function:'Which function should this update apply to? Choose an exact source population.',region:'Which region should this update apply to?',operation:`What new amount, increase, decrease or multiplier should I use for ${field?.label||'this field'}?`,value:`What amount should I use for ${field?.label||'this field'}?`,allocation:'Should I preserve the current pay-level cost proportions while changing employee loaded cost? Headcount will stay unchanged.',reason:'What is the reason for this change? I will record your wording in the audit trail.'};
+  return freeze({title:'Guide a source update',context:draft,sourceData,fields:fields.map(item=>clone(item)),missing,nextQuestion:missing.length?questions[missing[0]]:'The draft is complete. Prepare and review the exact before/after proposal; no source value has changed.',readyForProposal:missing.length===0});
+}
+function sourceFacts(sourceData) {
+  const facts=sourceData.rows.map(row=>({label:[row.month,row.function,row.region,row.label||row.path].join(' / '),value:sourceValue(row.value,row.unit),note:row.path+'; actual current source aggregate'}));
+  facts.push({label:'Displayed source rows',value:String(sourceData.rows.length),note:'Bounded source table, not an employee count'});
+  if(Number.isSafeInteger(sourceData.totalRows))facts.push({label:'Matching source rows',value:String(sourceData.totalRows),note:'Source table rows, not an employee count'});
+  return facts;
+}
+
+export function createEvidenceTools({ snapshot, investigations = [], decisions = [], viewContext, reportContext, sourceEditContext, sourceUserTexts, sourceService } = {}) {
   if (!snapshot || typeof snapshot !== 'object' || typeof snapshot.sourceVersion !== 'string' || !snapshot.sourceVersion) throw invalid('A versioned source snapshot is required.');
   const dataset = freeze(clone(snapshot)), sourceVersion = dataset.sourceVersion;
   const selectedView = validateViewContext(viewContext);
@@ -154,6 +193,14 @@ export function createEvidenceTools({ snapshot, investigations = [], decisions =
   if (selectedReport && selectedReport.sourceVersion !== sourceVersion) throw Object.assign(Error('The selected report belongs to an earlier source revision. Refresh and ask again.'), {status:409});
   const sourceCatalog = sourceService ? freeze(clone(sourceService.catalog)) : null;
   if(sourceCatalog && sourceCatalog.sourceVersion!==sourceVersion)throw Object.assign(Error('Source field catalogue belongs to a different revision.'),{status:409});
+  let editDraft=validateSourceEditContext(sourceEditContext);
+  if(editDraft&&editDraft.sourceVersion!==sourceVersion)throw Object.assign(Error('The source edit draft belongs to an earlier source revision. Reopen the current source rows.'),{status:409});
+  const userRationales=[...(Array.isArray(sourceUserTexts)?sourceUserTexts:[]),...(editDraft?.reason?[editDraft.reason]:[])].filter(value=>typeof value==='string').map(value=>value.trim().toLowerCase().replace(/\s+/g,' '));
+  function validateReason(reason) {
+    if(typeof reason!=='string'||reason.trim().length<3||reason.length>1000)throw invalid('Ask the user for a reason for this source change before preparing a proposal.');
+    if(sourceUserTexts!==undefined&&!userRationales.some(value=>value.includes(reason.trim().toLowerCase().replace(/\s+/g,' '))))throw invalid('The audit reason must quote the user’s own rationale from this request, prior user messages or the supplied draft. Ask for their reason; do not invent one.');
+    return reason.trim();
+  }
   const activate = () => hydrateDataset(dataset);
   activate();
   const metrics = metricIds.map(id => {
@@ -174,10 +221,14 @@ export function createEvidenceTools({ snapshot, investigations = [], decisions =
       : { type: ['string', 'null'], enum: [...choices[key], null], description: inputDescriptions[key] + ' Use null when unchanged.' }
   ]));
   const scenarioOverrides = { anyOf: scenarios.map(({ caseId, inputs }) => ({ ...objectSchema(Object.fromEntries(inputs.map(input => [input.name, overrideProperties[input.name]]))), description: 'Inputs for the ' + caseId + ' case only.' })) };
+  const nullableChoice=values=>({type:['string','null'],enum:[...values,null]});
+  const guideProperties=sourceCatalog?{month:nullableChoice(dataset.months),function:nullableChoice(['all',...dataset.functions]),region:nullableChoice(['all',...dataset.regions]),category:nullableChoice(['all',...sourceCatalog.categories.map(item=>item.id)]),path:nullableChoice(sourceCatalog.fields.map(field=>field.path)),operation:nullableChoice(['set','add','scale']),value:{type:['number','null']},allocation:nullableChoice(['preserve_pay_level_proportions']),reason:{type:['string','null'],maxLength:1000}}:{};
   const tools = freeze([
     ...(sourceCatalog ? [
+      functionSchema('request_source_edit','Open a guided source update with actual current rows when an edit request is vague or any field, exact population, amount, allocation or rationale is missing. Do this instead of a generic clarification or asking the user to know internal field names. Starts a new draft; null leaves a choice unanswered. For vague employee cost show cost category with path null. Month defaults latest, populations default all for browsing. Supply only choices the user actually stated, including their verbatim rationale; never invent a reason. This does not persist a proposal or change source values.',guideProperties),
+      functionSchema('update_source_edit_draft','Continue the current source edit draft using explicit user choices. Null keeps the existing choice; a newly selected path clears prior amount, operation, allocation and reason unless explicitly supplied again. Current source rows and the next missing question are returned. Keep the original scope and amount when the user is only answering the rationale or allocation question. Reason must quote user wording. No source value is changed.',guideProperties),
       functionSchema('inspect_source_data', 'Display actual current source aggregate rows and exact editable field paths. Inspect before proposing changes; no invented rows or document examples. Select one month; all functions or regions are allowed for browsing with an explicit row limit. Protected subdivisions, individual records and cohort histories are excluded.', { month:{type:'string',enum:[...dataset.months]},function:{type:'string',enum:['all',...dataset.functions]},region:{type:'string',enum:['all',...dataset.regions]},category:{type:'string',enum:['all',...sourceCatalog.categories.map(item=>item.id)]} }),
-      functionSchema('propose_source_changes', 'Prepare a validated before/after proposal for exact current source cells. This does not apply or save changed source values. Use only named month/function/region cells and allowed editable paths. Set uses the literal requested value; add uses a signed delta; scale uses the requested multiplication factor. The server computes all new values and dependent totals and validates reconciliations. Never invent an allocation across cells; ask when the population or requested value is ambiguous.', {changes:{type:'array',minItems:1,maxItems:12,items:objectSchema({month:{type:'string',enum:[...dataset.months]},function:{type:'string',enum:[...dataset.functions]},region:{type:'string',enum:[...dataset.regions]},path:{type:'string',enum:sourceCatalog.fields.filter(field=>field.editable).map(field=>field.path)},operation:{type:'string',enum:['set','add','scale']},value:{type:'number'}})},reason:{type:'string',minLength:1,maxLength:1000}})
+      functionSchema('propose_source_changes', 'Prepare a validated before/after proposal only after all choices and a user-supplied reason are known. This does not apply changed source values. Use exact named cells. Set uses requested value, add a signed delta, scale a multiplier. For employee loaded cost the user must explicitly select preserve_pay_level_proportions allocation; other fields use null. The server calculates dependent totals and validates reconciliations. Reason must quote the actual rationale supplied by the user, not a generic invented description. If any choice or reason is missing, use the source-edit guide first.', {changes:{type:'array',minItems:1,maxItems:12,items:objectSchema({month:{type:'string',enum:[...dataset.months]},function:{type:'string',enum:[...dataset.functions]},region:{type:'string',enum:[...dataset.regions]},path:{type:'string',enum:sourceCatalog.fields.filter(field=>field.editable).map(field=>field.path)},operation:{type:'string',enum:['set','add','scale']},value:{type:'number'},allocation:nullableChoice(['preserve_pay_level_proportions'])})},reason:{type:'string',minLength:3,maxLength:1000}})
     ] : []),
     functionSchema('change_chart', 'Request a presentation change to the currently selected visible chart. Use only a type in request.viewContext.availableTypes. This preserves all chart data, scope and source revision. The result is a pending client action, not proof it has been applied; do not claim a successful change. No chart target other than the current selected chart is supported.', { type: { type: 'string', enum: ['bar', 'line', 'pie'] } }),
     functionSchema('change_report_view', 'Request a supported layout for the currently visible analytical report: executive emphasizes the concise briefing, evidence emphasizes calculated panels, and full shows the complete report. This only changes presentation of existing content, not facts, calculations or source data. The browser must apply the pending action before any success claim.', { layout: { type: 'string', enum: ['executive', 'evidence', 'full'] } }),
@@ -233,6 +284,10 @@ export function createEvidenceTools({ snapshot, investigations = [], decisions =
     if (collected.length >= MAX_EVIDENCE) throw invalid('Evidence limit reached; use the collected references to finish this answer.');
     const result = freeze({ refId: 'E' + (collected.length + 1), sourceVersion, scope: null, ...clone(item) });
     collected.push(result); keys.set(key, result); return result;
+  }
+  function recordSourceGuide(guide) {
+    editDraft=clone(guide.context);
+    return record(JSON.stringify(['source-edit-guide',++viewSequence,editDraft]),{kind:'source-edit-guide',title:'Guided source update',source:'Current source rows and incomplete user edit choices; no source changes applied',sourceVersion,sourceEditGuide:guide,facts:sourceFacts(guide.sourceData)});
   }
   function inspectScope(args, max) {
     if (!Array.isArray(args.metricIds) || args.metricIds.length < 1 || args.metricIds.length > max || new Set(args.metricIds).size !== args.metricIds.length || args.metricIds.some(id => !metricIds.includes(id))) throw invalid('Choose distinct metric IDs from the catalog within the tool limit.');
@@ -306,20 +361,39 @@ export function createEvidenceTools({ snapshot, investigations = [], decisions =
   function execute(name, args = {}) {
     try {
       let items;
-      if (name === 'inspect_source_data') {
+      if (name === 'request_source_edit'||name === 'update_source_edit_draft') {
+        if(!sourceService)throw invalid('Current source editing is unavailable.');
+        exact(args,Object.keys(guideProperties),[]);
+        if(name==='update_source_edit_draft'&&!editDraft)throw invalid('Open the source edit guide first, then continue its choices.');
+        const provided=Object.fromEntries(Object.entries(args).filter(([,value])=>value!==null));
+        if(provided.reason!==undefined)provided.reason=validateReason(provided.reason);
+        const base=name==='request_source_edit'?{sourceVersion}:clone(editDraft);
+        if(provided.path&&provided.path!==base.path)Object.assign(base,{operation:null,value:null,allocation:null,reason:null});
+        const sourceEditGuide=buildSourceEditGuide({context:{...base,...provided},catalog:sourceCatalog,inspect:sourceService.inspect});
+        items=[recordSourceGuide(sourceEditGuide)];
+      } else if (name === 'inspect_source_data') {
         if(!sourceService)throw invalid('Current source access is unavailable.');
         exact(args,['month','function','region','category']);
         const sourceData=sourceService.inspect(args);
         if(sourceData.sourceVersion!==sourceVersion||!Array.isArray(sourceData.rows))throw invalid('Source rows changed during inspection. Refresh and try again.');
-        const facts=sourceData.rows.map(row=>({label:[row.month,row.function,row.region,row.label||row.path].join(' / '),value:sourceValue(row.value,row.unit),note:row.path+'; actual current source aggregate'}));
-        facts.push({label:'Displayed source rows',value:String(sourceData.rows.length),note:'Bounded source table, not an employee count'});
-        if(Number.isSafeInteger(sourceData.totalRows))facts.push({label:'Matching source rows',value:String(sourceData.totalRows),note:'Source table rows, not an employee count'});
+        const facts=sourceFacts(sourceData);
         items=[record(JSON.stringify(['source-data',args]),{kind:'source-data',title:'Actual source data',source:'Current synthetic source snapshot; allowed aggregate fields',sourceVersion,sourceData,facts})];
       } else if (name === 'propose_source_changes') {
         if(!sourceService)throw invalid('Source update proposals are unavailable.');
         exact(args,['changes','reason']);
+        if(!Array.isArray(args.changes))throw invalid('A proposal requires exact source changes.');
+        const changes=args.changes.map(change=>{if(!ownObject(change))throw invalid();const value=clone(change);if(value.allocation===null)delete value.allocation;return value;});
+        let reason;
+        try{reason=validateReason(args.reason);}catch(error){if(changes.length!==1)throw error;reason=null;}
+        if(changes.length===1){
+          exact(changes[0],['month','function','region','path','operation','value','allocation'],['month','function','region','path','operation','value']);
+          const guide=buildSourceEditGuide({context:{sourceVersion,...changes[0],reason},catalog:sourceCatalog,inspect:sourceService.inspect});
+          // Even a premature precise proposal must visibly collect missing choices
+          // rather than degrade into text-only clarification or invent a rationale.
+          if(!guide.readyForProposal)return freeze({items:[recordSourceGuide(guide)],sourceVersion});
+        }
         // Proposal persistence is asynchronous; the source values remain unchanged.
-        return Promise.resolve().then(()=>sourceService.propose(args)).then(sourceEditProposal=>{
+        return Promise.resolve().then(()=>sourceService.propose({changes,reason})).then(sourceEditProposal=>{
           if(sourceEditProposal.sourceVersion!==sourceVersion||sourceEditProposal.status!=='proposed'||!Array.isArray(sourceEditProposal.changes))throw invalid('The source proposal did not match the current revision.');
           const facts=sourceEditProposal.changes.map(change=>{const field=sourceCatalog.fields.find(field=>field.path===change.path);return {label:[change.month,change.function,change.region,field?.label||change.path].join(' / '),value:sourceValue(change.before,field?.unit),note:'Current value before the pending proposal; changes have not been applied'};});
           const item=record('source-proposal:'+sourceEditProposal.id,{kind:'source-proposal',title:'Source update proposal',source:'Validated current source proposal; not applied',sourceVersion,sourceEditProposal,facts});

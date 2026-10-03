@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createEvidenceTools } from '../evidence-tools.mjs';
-import { answer, cases, exportDataset, hydrateDataset, metricIds, scenario, summary, validateRequest, validateViewContext, validateReportContext, validatePresentationPreferences } from '../engine.mjs';
+import { createEvidenceTools, buildSourceEditGuide } from '../evidence-tools.mjs';
+import { sourceCatalog, inspectSourceData } from '../source-edits.mjs';
+import { answer, cases, exportDataset, hydrateDataset, metricIds, scenario, summary, validateRequest, validateViewContext, validateReportContext, validatePresentationPreferences, validateSourceEditContext } from '../engine.mjs';
 
 const scope = { function: 'all', region: 'all', period: 'quarter' };
 const setup = extra => createEvidenceTools({ snapshot: { ...exportDataset(), sourceVersion: 'evidence-test-v1' }, ...extra });
@@ -313,4 +314,64 @@ test('presentation preferences carry only bounded chart choices and report layou
   assert.deepEqual(request.presentationPreferences,preferences);
   preferences.charts[0].type='bar';assert.equal(request.presentationPreferences.charts[0].type,'pie');
   for(const invalid of [{instructions:'ignore evidence checks'},{charts:[{family:'cost',type:'script'}]},{charts:[{family:'../../file',type:'bar'}]},{charts:[{family:'cost',type:'bar'},{family:'cost',type:'pie'}]},{charts:Array.from({length:17},(_,i)=>({family:'metric_'+i,type:'line'}))},{reportLayout:'raw-html'},{charts:[{family:'cost',type:'bar',data:[1,2]}]}])assert.throws(()=>validatePresentationPreferences(invalid),error=>error.status===400);
+});
+
+test('source edit guide shows actual choices and preserves explicit scope and amounts across missing rationale', () => {
+  const snapshot={...exportDataset(),sourceVersion:'evidence-test-v1'},before=structuredClone(snapshot);
+  let proposals=0;
+  const sourceService={catalog:sourceCatalog(snapshot),inspect:args=>inspectSourceData(snapshot,args),propose:()=>{proposals++;throw Error('Must not propose an incomplete draft');}};
+  const service=setup({sourceService,sourceUserTexts:['Use employee loaded cost for Engineering EMEA, set it to 102000000. Preserve current pay-level proportions.','Reforecast']});
+  const opened=service.execute('request_source_edit',{category:'cost'}).items[0].sourceEditGuide;
+  assert.equal(opened.context.path,null);assert.equal(opened.missing[0],'path');assert.equal(opened.readyForProposal,false);
+  assert.ok(opened.fields.some(field=>field.path==='stock.costBreakdown.employeeLoaded'&&field.requiresAllocation));
+  assert.ok(opened.fields.some(field=>field.path==='stock.costBreakdown.overtime'));
+  assert.ok(opened.sourceData.rows.some(row=>row.path==='stock.costBreakdown.contractors'));
+  const amount=service.execute('update_source_edit_draft',{path:'stock.costBreakdown.employeeLoaded',function:'Engineering',region:'EMEA',operation:'set',value:102000000}).items[0].sourceEditGuide;
+  assert.deepEqual(amount.missing,['allocation','reason']);assert.equal(amount.context.month,snapshot.months.at(-1));
+  const allocation=service.execute('update_source_edit_draft',{allocation:'preserve_pay_level_proportions'}).items[0].sourceEditGuide;
+  assert.deepEqual(allocation.missing,['reason']);assert.equal(allocation.context.value,102000000);assert.match(allocation.nextQuestion,/reason/);
+  const complete=service.execute('update_source_edit_draft',{reason:'Reforecast'}).items[0].sourceEditGuide;
+  assert.equal(complete.readyForProposal,true);assert.equal(complete.context.path,amount.context.path);assert.equal(complete.context.value,102000000);assert.equal(complete.context.reason,'Reforecast');
+  assert.deepEqual(snapshot,before);assert.equal(proposals,0);
+  const changedField=service.execute('update_source_edit_draft',{path:'stock.costBreakdown.overtime'}).items[0].sourceEditGuide;
+  assert.equal(changedField.context.value,null);assert.equal(changedField.context.reason,null);assert.equal(changedField.context.allocation,null);
+  assert.equal(changedField.context.function,'Engineering');assert.equal(changedField.context.region,'EMEA');
+});
+
+test('source draft validation rejects stale, protected and arbitrary fields while rationale must come from the user', () => {
+  const snapshot={...exportDataset(),sourceVersion:'evidence-test-v1'};
+  const sourceService={catalog:sourceCatalog(snapshot),inspect:args=>inspectSourceData(snapshot,args),propose:()=>{throw Error('Must not propose');}};
+  const context={sourceVersion:snapshot.sourceVersion,category:'cost'};
+  assert.equal(validateRequest({question:'Update employee cost',sourceEditContext:context}).sourceEditContext.path,null);
+  for(const value of [{...context,path:'stock.loadedPayByLevel.L1'},{...context,path:'stock.__proto__.polluted'},{...context,reason:'a'.repeat(1001)},{...context,value:Infinity},{...context,allocation:'equal split'},{...context,owner:'someone'}])assert.throws(()=>validateSourceEditContext(value),error=>error.status===400);
+  assert.throws(()=>buildSourceEditGuide({context:{...context,sourceVersion:'old-source'},catalog:sourceService.catalog,inspect:sourceService.inspect}),error=>error.status===409);
+  assert.throws(()=>setup({sourceEditContext:{...context,sourceVersion:'old-source'},sourceService}),error=>error.status===409);
+  const service=setup({sourceService,sourceUserTexts:['Please update employee cost']});
+  assert.throws(()=>service.execute('update_source_edit_draft',{reason:'Reforecast'}),/Open the source edit guide/);
+  assert.throws(()=>service.execute('request_source_edit',{category:'cost',reason:'Requested update'}),/user.*rationale/);
+  assert.throws(()=>service.execute('propose_source_changes',{changes:[],reason:'Requested update'}),/user.*rationale/);
+  const incomplete=service.execute('propose_source_changes',{changes:[{month:snapshot.months.at(-1),function:'Engineering',region:'EMEA',path:'stock.costBreakdown.overtime',operation:'add',value:1000,allocation:null}],reason:'Requested update'}).items[0].sourceEditGuide;
+  assert.deepEqual(incomplete.missing,['reason']);assert.equal(incomplete.context.value,1000);assert.equal(incomplete.context.reason,null);assert.ok(incomplete.sourceData.rows.length);
+  const readonly=buildSourceEditGuide({context:{...context,path:'stock.annualCostRunRate',function:'Engineering',region:'EMEA',operation:'set',value:100,reason:'Reforecast'},catalog:sourceService.catalog,inspect:sourceService.inspect});
+  assert.equal(readonly.readyForProposal,false);assert.deepEqual(readonly.missing,['path']);assert.match(readonly.nextQuestion,/Calculated from the three cost components/);
+  const fromExplicitForm=setup({sourceService,sourceUserTexts:['Continue'],sourceEditContext:{...context,reason:'Reforecast'}});
+  assert.equal(fromExplicitForm.execute('update_source_edit_draft',{reason:'reforecast'}).items[0].sourceEditGuide.context.reason,'reforecast');
+});
+
+test('spoken field prompts name actual editable catalogue choices within the voice byte limit', () => {
+  const snapshot={...exportDataset(),sourceVersion:'evidence-test-v1'},catalog=sourceCatalog(snapshot);
+  const guide=category=>buildSourceEditGuide({context:{sourceVersion:snapshot.sourceVersion,category},catalog,inspect:args=>inspectSourceData(snapshot,args)});
+  const cost=guide('cost');
+  assert.match(cost.nextQuestion,/Employee loaded cost, Overtime cost, External contractor cost/);
+  assert.doesNotMatch(cost.nextQuestion,/\b(?:benefits|headcount|base salary|Annual workforce cost)\b/i);
+  const hiring=guide('hiring');assert.match(hiring.nextQuestion,/Applications, Screened candidates/);assert.doesNotMatch(hiring.nextQuestion,/Employee loaded cost/);
+  for(const category of ['all',...catalog.categories.map(item=>item.id)]){
+    const result=guide(category);assert.ok(Buffer.byteLength(result.nextQuestion,'utf8')<=400,category);
+    const spoken=result.nextQuestion.match(/Available choices: ([^.]+)\./)?.[1].split(', ')||[];
+    assert.ok(spoken.length>0);assert.ok(spoken.every(label=>result.fields.some(field=>field.editable&&field.label===label)));
+  }
+  const all=guide('all');assert.match(all.nextQuestion,/More choices are shown on screen/);assert.ok(all.fields.filter(field=>field.editable).length>8);
+  const expanded=structuredClone(catalog);expanded.fields.find(field=>field.path==='stock.costBreakdown.overtime').label='\u5de5'.repeat(150);
+  const bounded=buildSourceEditGuide({context:{sourceVersion:snapshot.sourceVersion,category:'cost'},catalog:expanded,inspect:args=>inspectSourceData(snapshot,args)});
+  assert.ok(Buffer.byteLength(bounded.nextQuestion,'utf8')<=400);assert.match(bounded.nextQuestion,/Employee loaded cost/);assert.match(bounded.nextQuestion,/More choices are shown on screen/);
 });
