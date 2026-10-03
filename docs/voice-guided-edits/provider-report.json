@@ -45,8 +45,8 @@
       "confirmationRepeatedAfterPrompt": false,
       "persistedEmployeeLoadedCost": 101640000,
       "persistedAnnualCost": 105000000,
-      "spokenOutcomeMatches": true,
-      "onlyKnownCostFieldOptions": true
+      "onlyKnownCostFieldOptions": true,
+      "spokenStepRelated": true
     },
     {
       "index": 1,
@@ -78,7 +78,7 @@
       "confirmationRepeatedAfterPrompt": false,
       "persistedEmployeeLoadedCost": 101640000,
       "persistedAnnualCost": 105000000,
-      "spokenOutcomeMatches": true
+      "spokenStepRelated": true
     },
     {
       "index": 2,
@@ -99,8 +99,8 @@
       "confirmationRepeatedAfterPrompt": false,
       "persistedEmployeeLoadedCost": 101640000,
       "persistedAnnualCost": 105000000,
-      "spokenOutcomeMatches": true,
-      "rationaleMatchesRecognizedUserSpeech": true
+      "rationaleMatchesRecognizedUserSpeech": true,
+      "spokenStepRelated": true
     },
     {
       "index": 3,
@@ -121,7 +121,8 @@
       "confirmationRepeatedAfterPrompt": false,
       "persistedEmployeeLoadedCost": 102656400,
       "persistedAnnualCost": 106016400,
-      "spokenOutcomeMatches": true
+      "spokenStepRelated": true,
+      "spokenCompletionExplicit": true
     },
     {
       "index": 4,
@@ -142,7 +143,8 @@
       "confirmationRepeatedAfterPrompt": false,
       "persistedEmployeeLoadedCost": 101640000,
       "persistedAnnualCost": 105000000,
-      "spokenOutcomeMatches": true
+      "spokenStepRelated": true,
+      "spokenCompletionExplicit": false
     }
   ],
   "browserErrors": [],
@@ -179,7 +181,8 @@
   "limitations": [
     "Generated audio drives a genuine WebRTC connection; physical devices and permission prompts are not tested.",
     "Incoming decoded audio RMS proves received audio, not sound from a physical speaker.",
-    "Commentary acknowledgement proves provider context acceptance, not word-perfect spoken playback."
+    "Commentary acknowledgement proves provider context acceptance, not word-perfect spoken playback.",
+    "The final undo restored source values and was confirmed by HTTP, UI and audit. Its voice paraphrase said \"undoing it now\" rather than explicitly announcing completed restoration; perfect completion wording is not claimed."
   ],
   "expected": {
     "month": "2026-09",
@@ -331,5 +334,19 @@
     ],
     "rationaleResultAfterInputFinishedMs": 72992,
     "lastObservedUsageSeconds": 271
+  },
+  "completionCriteria": "All five source steps, received provider audio, exact persisted Apply/Undo and final transport cleanup succeeded. Spoken completion wording is assessed separately below.",
+  "voiceFidelity": {
+    "fieldChoicesExactlyFromReturnedGuide": true,
+    "reasonPromptMatchesCurrentStep": true,
+    "rationaleMatchesRecognizedUserWords": true,
+    "proposalWasExplicitlyUnapplied": true,
+    "saveCompletionExplicit": true,
+    "undoCompletionExplicit": false
+  },
+  "acceptance": {
+    "sourceWorkflowPassed": true,
+    "audioTransportPassed": true,
+    "allCompletionWordingExplicit": false
   }
 }
