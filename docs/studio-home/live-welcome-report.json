@@ -1,0 +1,77 @@
+{
+  "schema": "chro-auto-welcome-live.v1",
+  "at": "2026-10-03T02:32:13.111Z",
+  "environment": "Isolated local application with real AI provider and native Chrome WebRTC",
+  "permission": "Microphone permission granted to browser context before navigation",
+  "nativeSyntheticMicrophone": true,
+  "physicalMicrophoneTested": false,
+  "physicalSpeakerTested": false,
+  "autoplayPolicyOverridden": false,
+  "clicksBeforeWelcome": 0,
+  "http": [
+    {
+      "path": "/api/status",
+      "status": 200
+    },
+    {
+      "path": "/api/status",
+      "status": 200
+    },
+    {
+      "path": "/api/investigations",
+      "status": 200
+    },
+    {
+      "path": "/api/studio/bootstrap",
+      "status": 200
+    },
+    {
+      "path": "/api/status",
+      "status": 200
+    },
+    {
+      "path": "/api/live/session",
+      "status": 201
+    }
+  ],
+  "browserErrors": [],
+  "welcome": {
+    "microphoneCalls": 1,
+    "secondsFromPageOpenToSessionStarted": 4.202,
+    "secondsFromPageOpenToSpeech": 5.179,
+    "secondsFromSessionStartedToSpeech": 0.977,
+    "spoken": "Welcome to Workforce Studio! I’m your AI workforce collaborator. These figures are synthetic. Ask anything about headcount, hiring, attrition, mobility, skills, or span of control, and I can also compare teams or test what-if ideas. Where would you like to start?",
+    "maximumAudioRms": 0.1444366813278095,
+    "audioSamples": 222,
+    "assistantCaptionNodes": 0,
+    "state": {
+      "phase": "speaking",
+      "turnId": null
+    },
+    "homeVisible": true,
+    "audioPaused": false,
+    "welcomeCommentaryEvents": 1
+  },
+  "final": {
+    "active": false,
+    "state": "Conversation ended (close_requested). Final voice duration received.",
+    "usage": "Voice duration: 22.0 s · final",
+    "tracksEnded": true,
+    "peersClosed": true,
+    "closed": {
+      "seconds": 22,
+      "reason": "close_requested"
+    },
+    "providerErrors": []
+  },
+  "noAnalystLookup": true,
+  "completed": true,
+  "limits": [
+    "The browser context was granted microphone permission before navigation; a new visitor may see a permission prompt.",
+    "Chrome used its native synthetic microphone with a silent WAV input; physical microphone and speaker hardware were not tested.",
+    "No click, business question, generated-input speech request or autoplay-policy bypass was used.",
+    "The screenshot shows the real active session; the internal output transcript is recorded here for verification and is not displayed as a caption.",
+    "A single observed startup time is not a latency guarantee."
+  ],
+  "screenshot": "live-welcome-1920.png"
+}

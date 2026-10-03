@@ -227,26 +227,28 @@ test('startup cancelled after response closes the orphan session',async () => {
 });
 
 const source=readFileSync(new URL('../public/live.js',import.meta.url),'utf8');
-function browser({permissionPending=false,playBlocked=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null,multiBeat=false,statusCode=200,attachedImage=null,selectedAudience='chro',delegateStatus=200}={}) {
+function browser({permissionPending=false,permissionDenied=false,playBlocked=false,playPending=false,remotePending=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null,multiBeat=false,statusCode=200,attachedImage=null,selectedAudience='chro',delegateStatus=200,home=true,hidden=false,search=''}={}) {
  class Element {
   constructor(){this.listeners=new Map();this.attrs={};this.textContent='';this.disabled=false;this.classList={toggle(){}};this.srcObject=null;this.paused=true;}
   addEventListener(type,fn){this.listeners.set(type,fn);} fire(type,value={}){return this.listeners.get(type)?.(value);} setAttribute(k,v){this.attrs[k]=v;} focus(){this.focused=true;}
   querySelector(selector){return nodes.get(selector)||nodes.set(selector,new Element()).get(selector);}
   appendChild(child){this.child=child;} click(){downloads.push({href:this.href,download:this.download});} remove(){this.removed=true;}
-  pause(){this.paused=true;} async play(){if(playBlocked)throw Error('autoplay');this.paused=false;}
+  pause(){this.paused=true;} async play(){if(playPending)await playback.promise;if(playBlocked)throw Error('autoplay');this.paused=false;}
  }
- const nodes=new Map(),host=new Element(),requests=[],peers=[],shown=[],timers=new Map(),listeners=new Map(),streams=[],downloads=[],blobs=[],emitted=[],permission=deferred(),delegation=deferred(),render=deferred(); let timerId=0;
+ const nodes=new Map(),host=new Element(),requests=[],peers=[],shown=[],timers=new Map(),listeners=new Map(),streams=[],downloads=[],blobs=[],emitted=[],permission=deferred(),delegation=deferred(),render=deferred(),playback=deferred(),remote=deferred(); let timerId=0;
  const connectionReport={schema:'workforce-connection-report.v1',appVersion:'2.0.1',recentErrors:[],lastConnectionCheck:{status:'metadata_reachable',message:'Metadata endpoint reached. Voice still needs a session test.'}};
  const anchor={before(button){this.inserted=button;}},root={querySelector:selector=>selector==='#wi-present'?anchor:null};
  const stream=()=>{const track={enabled:true,readyState:'live',addEventListener(){},stop(){this.readyState='ended';}};const s={getTracks:()=>[track],getAudioTracks:()=>[track]};streams.push(s);return s;};
  class Peer {
   constructor(){peers.push(this);this.connectionState='new';this.iceGatheringState='complete';}
   createDataChannel(label){assert.equal(label,'oai-events');this.channel={readyState:'open',sent:[],send(text){this.sent.push(JSON.parse(text));},close(){this.readyState='closed';}};return this.channel;}
-  addTrack(){} async createOffer(){return {type:'offer',sdp:SDP};} async setLocalDescription(value){this.localDescription=value;} async setRemoteDescription(value){this.remoteDescription=value;}
+  addTrack(){} async createOffer(){return {type:'offer',sdp:SDP};} async setLocalDescription(value){this.localDescription=value;} async setRemoteDescription(value){if(remotePending)await remote.promise;this.remoteDescription=value;}
   close(){this.connectionState='closed';} addEventListener(){} removeEventListener(){}
  }
  const scope={function:'all',region:'all',period:'quarter'};
- const window={RTCPeerConnection:Peer,addEventListener:(type,fn)=>listeners.set(type,fn),dispatchEvent:e=>{emitted.push(e);return listeners.get(e.type)?.(e);},WI_STUDIO:{getImage:()=>attachedImage,getAudience:()=>selectedAudience},WI_CONVERSATION:{cancel(){},getScope:()=>scope,getContext:()=>({}),getHistory:()=>[],async showResponse(data,options){if(renderPending)await render.promise;if(options?.isCurrent&&!options.isCurrent())return false;shown.push(data);return true;}}};
+ const window={location:{search},RTCPeerConnection:Peer,addEventListener:(type,fn)=>listeners.set(type,fn),dispatchEvent:e=>{emitted.push(e);return listeners.get(e.type)?.(e);},WI_STUDIO:{isHome:()=>home,getImage:()=>attachedImage,getAudience:()=>selectedAudience},WI_CONVERSATION:{cancel(){},getScope:()=>scope,getContext:()=>({}),getHistory:()=>[],async showResponse(data,options){if(renderPending)await render.promise;if(options?.isCurrent&&!options.isCurrent())return false;shown.push(data);return true;}}};
+ const documentListeners=new Map();
+ const document={visibilityState:hidden?'hidden':'visible',addEventListener:(type,fn)=>documentListeners.set(type,fn),getElementById:id=>id==='wi-live'?host:id==='wi-app'&&toolbar?root:null,createElement:()=>new Element(),body:new Element()};
  const fetch=async(url,init)=>{
   requests.push({url,init}); if(url==='/api/status')return {ok:statusCode===200,status:statusCode,json:async()=>({version:'2.0.1',live:{available:true}})};
   if(url==='/api/diagnostics'||url==='/api/diagnostics/connection')return {ok:true,json:async()=>structuredClone(connectionReport)};
@@ -262,10 +264,10 @@ function browser({permissionPending=false,playBlocked=false,delegatePending=fals
   }
   throw Error('Unexpected URL '+url);
  };
- vm.runInNewContext(source,{window,document:{getElementById:id=>id==='wi-live'?host:id==='wi-app'&&toolbar?root:null,createElement:()=>new Element(),body:new Element()},navigator:{mediaDevices:{getUserMedia:()=>permissionPending?permission.promise:Promise.resolve(stream())},sendBeacon:(url,body)=>{requests.push({url,body,beacon:true});return true;}},RTCPeerConnection:Peer,MediaStream:class{},Event:class{constructor(type){this.type=type;}},CustomEvent:class{constructor(type,{detail}){this.type=type;this.detail=detail;}},TextEncoder,fetch,Blob,URL:{createObjectURL:blob=>{blobs.push(blob);return 'blob:report-'+blobs.length;},revokeObjectURL(){}},AbortController,AbortSignal,structuredClone,crypto:webcrypto,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)});
+ vm.runInNewContext(source,{window,document,navigator:{mediaDevices:{getUserMedia:()=>permissionDenied?Promise.reject(Object.assign(Error('Permission denied'),{name:'NotAllowedError'})):permissionPending?permission.promise:Promise.resolve(stream())},sendBeacon:(url,body)=>{requests.push({url,body,beacon:true});return true;}},RTCPeerConnection:Peer,MediaStream:class{},Event:class{constructor(type){this.type=type;}},CustomEvent:class{constructor(type,{detail}){this.type=type;this.detail=detail;}},TextEncoder,fetch,Blob,URL:{createObjectURL:blob=>{blobs.push(blob);return 'blob:report-'+blobs.length;},revokeObjectURL(){}},AbortController,AbortSignal,structuredClone,crypto:webcrypto,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)});
  const event=value=>peers.at(-1).channel.onmessage?.({data:JSON.stringify(value)});
  const fireTimers=async ms=>{for(const [id,t]of [...timers])if(t.ms===ms){timers.delete(id);await t.fn();}await tick();};
- return {window,scope,requests,peers,shown,timers,streams,host,downloads,blobs,emitted,toolbar:anchor.inserted,node:s=>host.querySelector(s),event,fireTimers,setStatus:value=>{statusCode=value;},setImage:value=>{attachedImage=value;},setAudience:value=>{selectedAudience=value;},setSessionFailure:value=>{sessionFailure=value;},resolvePermission:()=>permission.resolve(stream()),resolveDelegate:()=>delegation.resolve(),resolveRender:()=>render.resolve(),async start(){await tick();window.WI_LIVE.open();await host.querySelector('#wl-start').fire('click');event({type:'session.started',session:{id:'live_browser'}});await tick();}};
+ return {window,scope,requests,peers,shown,timers,streams,host,downloads,blobs,emitted,toolbar:anchor.inserted,node:s=>host.querySelector(s),event,fireTimers,setStatus:value=>{statusCode=value;},setImage:value=>{attachedImage=value;},setAudience:value=>{selectedAudience=value;},setSessionFailure:value=>{sessionFailure=value;},setPlayBlocked:value=>{playBlocked=value;},setPermissionDenied:value=>{permissionDenied=value;},setHome:value=>{home=value;},setHidden:value=>{document.visibilityState=value?'hidden':'visible';documentListeners.get('visibilitychange')?.();},resolvePermission:()=>permission.resolve(stream()),resolveDelegate:()=>delegation.resolve(),resolveRender:()=>render.resolve(),resolveRemote:()=>remote.resolve(),resolvePlayback:()=>{playPending=false;playback.resolve();},async start(){await tick();window.WI_LIVE.open();await host.querySelector('#wl-start').fire('click');await peers.at(-1).ontrack({track:{stop(){}},streams:[{}]});event({type:'session.started',session:{id:'live_browser'}});await tick();}};
 }
 test('voice startup failure releases media, exposes connection help, exports safe context and permits a retry',async()=>{
  const failure={error:'The server could not verify the API certificate.',code:'TLS_TRUST',diagnosticId:'22222222-2222-4222-8222-222222222222'};
@@ -304,10 +306,110 @@ test('late permission after Stop is released without creating a session',async()
 });
 test('WebRTC starts via HTTP and waits for session.started; blocked autoplay is explicit',async()=>{
  const h=browser({playBlocked:true});await h.start();const pc=h.peers[0];
- assert.equal(pc.remoteDescription.type,'answer');assert.equal(pc.channel.sent.some(x=>x.type==='session.start'),false);assert.equal(pc.channel.sent[0].type,'session.instructions.append');
- await pc.ontrack({track:{stop(){}},streams:[{}]});assert.match(h.node('#wl-playback').textContent,/Press Play/);assert.match(h.node('#wl-mic').textContent,/active/);
+ assert.equal(pc.remoteDescription.type,'answer');assert.equal(pc.channel.sent.some(x=>x.type==='session.start'),false);assert.equal(pc.channel.sent.some(x=>x.event_id?.startsWith('welcome_')),false);
+ assert.match(h.node('#wl-playback').textContent,/Press Play/);assert.match(h.node('#wl-mic').textContent,/muted/);assert.equal(h.window.WI_LIVE.getState().action,'enable-audio');
+ h.setPlayBlocked(false);await h.window.WI_LIVE.enableAudio();await h.fireTimers(100);assert.equal(h.streams[0].getTracks()[0].enabled,true);assert.equal(pc.channel.sent.filter(x=>x.event_id?.startsWith('welcome_')).length,1);
  h.node('#wl-mute').fire('click');assert.equal(h.streams[0].getTracks()[0].enabled,false);assert.match(h.node('#wl-state').textContent,/billed/);
  h.event({type:'session.closed',reason:'close_requested',usage:{seconds:3.5}});assert.equal(h.streams[0].getTracks()[0].readyState,'ended');assert.match(h.node('#wl-usage').textContent,/3.5 s · final/);assert.equal(h.timers.size,0);
+});
+
+test('Studio automatic welcome queues availability, authenticates first and starts only once without a click',async()=>{
+ const h=browser();h.window.WI_LIVE.autostart();assert.equal(h.streams.length,0);await tick();await tick();
+ assert.equal(h.streams.length,1);assert.equal(h.requests.filter(r=>r.url==='/api/status').length,2);
+ const pc=h.peers[0];assert.ok(pc.remoteDescription);assert.equal(pc.channel.sent.length,0);
+ h.event({type:'session.started',session:{id:'live_browser'}});await h.fireTimers(100);assert.equal(pc.channel.sent.some(e=>e.event_id?.startsWith('welcome_')),false);
+ await pc.ontrack({track:{stop(){}},streams:[{}]});
+ h.event({type:'session.started',session:{id:'live_browser'}});await pc.ontrack({track:{stop(){}},streams:[{}]});await h.window.WI_LIVE.autostart();
+ await h.fireTimers(100);const greetings=pc.channel.sent.filter(e=>e.event_id?.startsWith('welcome_'));assert.equal(greetings.length,1);assert.match(greetings[0].content,/Welcome to Workforce Studio/);assert.match(greetings[0].content,/synthetic data/);assert.equal(greetings[0].delegation_id,null);assert.equal(greetings[0].type,'session.commentary.append');
+ assert.equal(h.requests.filter(r=>r.url==='/api/live/session').length,1);assert.equal(h.requests.some(r=>r.url==='/api/live/delegate'),false);
+ h.window.WI_LIVE.stop();h.event({type:'session.closed',usage:{seconds:2}});await h.window.WI_LIVE.autostart();assert.equal(h.peers.length,1);
+});
+
+test('automatic permission denial offers one manual retry without allocating a paid session',async()=>{
+ const h=browser({permissionDenied:true});h.window.WI_LIVE.autostart();await tick();
+ assert.equal(h.window.WI_LIVE.isActive(),false);assert.equal(h.peers.length,0);assert.equal(h.requests.some(r=>r.url==='/api/live/session'),false);
+ assert.equal(h.window.WI_LIVE.getState().phase,'idle');assert.equal(h.window.WI_LIVE.getState().action,'start');assert.match(h.window.WI_LIVE.getState().message,/Allow this site/);
+ const requests=h.requests.length;await h.window.WI_LIVE.autostart();await tick();assert.equal(h.requests.length,requests);
+ h.setPermissionDenied(false);await h.start();assert.equal(h.peers.length,1);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('automatic startup refuses expired sign-in, a departed home, background tab or manual-only URL',async()=>{
+ for(const options of [{statusCode:401},{home:false},{hidden:true},{search:'?voice=manual'}]){
+  const h=browser(options);h.window.WI_LIVE.autostart();await tick();assert.equal(h.streams.length,0);assert.equal(h.peers.length,0);assert.equal(h.requests.some(r=>r.url==='/api/live/session'),false);
+ }
+});
+
+test('Stop or navigation during queued or permission-pending automatic startup prevents later allocation',async()=>{
+ for(const waiting of ['availability','permission'])for(const action of ['stop','navigation']){
+  const h=browser({permissionPending:true});h.window.WI_LIVE.autostart();if(waiting==='permission')await tick();
+  if(action==='stop')h.window.WI_LIVE.stop();else{h.setHome(false);h.window.dispatchEvent({type:'wi-context-changed'});}
+  h.resolvePermission();await tick();await h.window.WI_LIVE.autostart();await tick();
+  assert.equal(h.requests.some(r=>r.url==='/api/live/session'),false,waiting+' '+action);assert.equal(h.window.WI_LIVE.isActive(),false);
+  if(waiting==='permission')assert.equal(h.streams[0].getTracks()[0].readyState,'ended');
+ }
+});
+
+test('an unheard automatic welcome remains recoverable before session.started, then closes if audio stays blocked',async()=>{
+ const h=browser({playBlocked:true});h.window.WI_LIVE.autostart();await tick();const pc=h.peers[0];
+ await pc.ontrack({track:{stop(){}},streams:[{}]});h.event({type:'session.started',session:{id:'live_browser'}});
+ await h.fireTimers(100);assert.equal(h.window.WI_LIVE.getState().action,'enable-audio');assert.equal(h.streams[0].getTracks()[0].enabled,false);assert.equal(pc.channel.sent.some(e=>e.event_id?.startsWith('welcome_')),false);
+ await h.fireTimers(15000);assert.equal(h.window.WI_LIVE.isActive(),false);assert.equal(h.streams[0].getTracks()[0].readyState,'ended');assert.equal(pc.connectionState,'closed');assert.equal(h.requests.some(r=>r.url==='/api/live/close'),true);assert.match(h.node('#wl-state').textContent,/Final session usage is unconfirmed/);assert.equal(h.timers.size,0);
+ await h.window.WI_LIVE.autostart();assert.equal(h.peers.length,1);
+});
+
+test('hiding a connected tab immediately releases capture and requests close without reconnecting on return',async()=>{
+ const h=browser();await h.start();h.setHidden(true);await tick();
+ assert.equal(h.window.WI_LIVE.isActive(),false);assert.equal(h.streams[0].getTracks()[0].readyState,'ended');assert.equal(h.peers[0].connectionState,'closed');assert.equal(h.requests.some(r=>r.url==='/api/live/close'),true);assert.equal(h.timers.size,0);
+ assert.match(h.window.WI_LIVE.getState().message,/tab is hidden/);h.setHidden(false);await h.window.WI_LIVE.autostart();assert.equal(h.peers.length,1);
+});
+
+test('a caller question before playback is ready suppresses the welcome instead of interrupting the question',async()=>{
+ const h=browser();await tick();await h.window.WI_LIVE.start();h.event({type:'session.started',session:{id:'live_browser'}});
+ h.event({type:'session.input_transcript.delta',delta:'Compare teams',start_ms:10,end_ms:100});await h.peers[0].ontrack({track:{stop(){}},streams:[{}]});
+ await h.fireTimers(100);assert.equal(h.peers[0].channel.sent.some(e=>e.event_id?.startsWith('welcome_')),false);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('a late audio promise or playing event from a closed run cannot enable the next session welcome',async()=>{
+ const h=browser({playPending:true});await tick();await h.window.WI_LIVE.start();h.event({type:'session.started',session:{id:'live_browser'}});
+ const firstPlay=h.peers[0].ontrack({track:{stop(){}},streams:[{}]});h.event({type:'session.closed',usage:{seconds:1}});
+ await h.window.WI_LIVE.start();h.event({type:'session.started',session:{id:'live_browser'}});const next=h.peers[1];
+ h.node('#wl-audio').fire('playing');h.resolvePlayback();await firstPlay;h.node('#wl-audio').fire('playing');
+ await h.fireTimers(100);assert.equal(next.channel.sent.some(e=>e.event_id?.startsWith('welcome_')),false);assert.equal(h.node('#wl-audio').srcObject,null);
+ await next.ontrack({track:{stop(){}},streams:[{}]});await h.fireTimers(100);assert.equal(next.channel.sent.filter(e=>e.event_id?.startsWith('welcome_')).length,1);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('pausing ready audio before session.started defers the welcome until playback actually resumes',async()=>{
+ const h=browser();await tick();await h.window.WI_LIVE.start();await h.peers[0].ontrack({track:{stop(){}},streams:[{}]});
+ h.node('#wl-audio').pause();h.node('#wl-audio').fire('pause');h.event({type:'session.started',session:{id:'live_browser'}});
+ await h.fireTimers(100);assert.equal(h.peers[0].channel.sent.some(e=>e.event_id?.startsWith('welcome_')),false);
+ await h.window.WI_LIVE.enableAudio();await h.fireTimers(100);assert.equal(h.peers[0].channel.sent.filter(e=>e.event_id?.startsWith('welcome_')).length,1);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('welcome can start real speech when play waits for the first remote audio packets',async()=>{
+ const h=browser({playPending:true});await tick();await h.window.WI_LIVE.start();h.event({type:'session.started',session:{id:'live_browser'}});
+ const playing=h.peers[0].ontrack({track:{stop(){}},streams:[{}]});await h.fireTimers(100);
+ const welcomes=h.peers[0].channel.sent.filter(e=>e.event_id?.startsWith('welcome_'));assert.equal(welcomes.length,1);assert.equal(welcomes[0].delegation_id,null);assert.equal(welcomes[0].type,'session.commentary.append');assert.notEqual(h.node('#wl-playback').textContent,'AI voice playback active');
+ h.resolvePlayback();await playing;await h.fireTimers(100);assert.equal(h.peers[0].channel.sent.filter(e=>e.event_id?.startsWith('welcome_')).length,1);assert.equal(h.node('#wl-playback').textContent,'AI voice playback active');h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('a late playback rejection permits one explicit replay of the unheard welcome without an automatic loop',async()=>{
+ const h=browser({playPending:true});await tick();await h.window.WI_LIVE.start();h.event({type:'session.started',session:{id:'live_browser'}});
+ const playing=h.peers[0].ontrack({track:{stop(){}},streams:[{}]});await h.fireTimers(100);const count=()=>h.peers[0].channel.sent.filter(e=>e.event_id?.startsWith('welcome_')).length;assert.equal(count(),1);
+ h.setPlayBlocked(true);h.resolvePlayback();await playing;await h.fireTimers(100);assert.equal(count(),1);assert.equal(h.window.WI_LIVE.getState().action,'enable-audio');assert.equal(h.streams[0].getTracks()[0].enabled,false);
+ h.setPlayBlocked(false);await h.window.WI_LIVE.enableAudio();await h.fireTimers(100);assert.equal(count(),2);
+ h.node('#wl-audio').fire('playing');await h.window.WI_LIVE.enableAudio();await h.fireTimers(100);assert.equal(count(),2);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('a late remote track after Stop stays stopped while the close acknowledgement is pending',async()=>{
+ const h=browser();await h.start();h.window.WI_LIVE.stop();let stopped=false;
+ await h.peers[0].ontrack({track:{stop(){stopped=true;}},streams:[{}]});assert.equal(stopped,true);assert.equal(h.node('#wl-audio').paused,true);
+ h.event({type:'session.closed',usage:{seconds:1}});assert.equal(h.timers.size,0);
+});
+
+test('closing while the remote answer is being applied cannot install a session timer after release',async()=>{
+ const h=browser({remotePending:true});await tick();const starting=h.window.WI_LIVE.start();await tick();await tick();
+ h.event({type:'session.started',session:{id:'live_browser'}});h.window.WI_LIVE.stop();h.event({type:'session.closed',usage:{seconds:1}});h.resolveRemote();await starting;
+ assert.equal(h.window.WI_LIVE.isActive(),false);assert.equal(h.timers.size,0);assert.equal(h.peers[0].connectionState,'closed');
 });
 test('browser assembles delegation question from transcript and displays only correlated evidence',async()=>{
  const h=browser();await h.start();h.event({type:'session.input_transcript.delta',event_id:'input1',delta:'What is first-year retention?',start_ms:100,end_ms:800});h.event({type:'session.delegation.created',offset_ms:900,delegation:{id:'item_voice',target:'client'}});

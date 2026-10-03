@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-02T17:58:57.455Z",
+  "checkedAt": "2026-10-03T02:13:52.136Z",
   "browser": "154.0.8037.95",
   "checks": [
     "Interrupted lookup recovers the complete question without provider redelegation; late duplicate delegation preserves accepted narration",

@@ -137,3 +137,69 @@ body.studio-active #wi-live{position:fixed!important;top:90px;right:24px;z-index
 @media(min-width:1101px){#studio .st-stage:has(.st-scene-heading){padding-top:24px}#studio .st-scene-heading{margin-top:0}#studio .st-scene-heading h1{font-size:44px}#studio .st-canvas .studio-chart svg{max-height:280px}#studio .st-canvas{padding:22px}#studio .st-fact{padding:12px}#studio .st-fact strong{font-size:38px}}
 
 #studio .st-history button{flex:0 0 auto}#studio .st-mark{flex-shrink:0}#studio .st-workspace{white-space:nowrap}@media(max-width:760px){#studio .st-header{gap:10px}#studio .st-brand{gap:8px;font-size:14px}#studio .st-brand small{letter-spacing:1.2px}#studio .st-mark{width:30px;height:30px;font-size:22px}#studio .st-workspace{padding:8px}}
+
+/* On arrival, the conversation is the main stage. The same controls return to
+   the floating dock once an evidence scene is open; no duplicated form state. */
+#studio.st-home-active{background:radial-gradient(ellipse at 78% 25%,#b6a4ff13,transparent 43%),radial-gradient(ellipse at 10% 50%,#b3f0d007,transparent 44%),var(--st-bg)}
+#studio.st-home-active .st-stage{padding-top:38px;padding-bottom:48px;min-height:calc(100vh - 155px)}
+#studio.st-home-active .st-home{display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);gap:64px;padding-top:12px;align-items:center}
+#studio.st-home-active .st-home h1{font-size:clamp(48px,4.3vw,77px);letter-spacing:-3.8px;margin:24px 0;line-height:1.08}
+#studio.st-home-active .st-home-copy>p{max-width:500px;font-size:17px;line-height:1.8;color:#b1bac9}
+#studio.st-home-active .st-home-note{max-width:430px;justify-content:space-between;margin-top:34px}
+#studio .st-conversation-stage{position:relative;isolation:isolate;min-width:0;padding:36px;border:1px solid #626773;border-radius:28px;background:linear-gradient(145deg,#2b3040d9,#1c252dd9 70%);box-shadow:0 24px 80px #0003,inset 0 1px 0 #e6fff014}
+#studio .st-conversation-stage:before{content:"";position:absolute;inset:-1px;border-radius:inherit;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 85% 0,#a7f1c611,transparent 65%)}
+#studio .st-presence{display:flex;align-items:center;gap:24px;margin-bottom:28px}
+#studio .st-orb{width:106px;height:106px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;position:relative;background:radial-gradient(circle at 32% 28%,#d9ffeab3,#87b9b552 30%,#9681d15c 65%,#222a394d);box-shadow:inset 0 0 18px #d7fff326,inset -10px -10px 26px #101822a6,0 0 42px #a1f4d00c;border:1px solid #bfded357}
+#studio .st-orb:before{content:"";position:absolute;inset:8px;border:1px solid #d4eee51f;border-radius:50%;transform:rotate(-25deg);box-shadow:inset 0 1px 10px #fff1}
+#studio .st-orb-wave{display:flex;gap:4px;height:33px;align-items:center;color:#e3fff2}
+#studio .st-orb-wave i{display:block;width:3px;height:9px;background:currentColor;border-radius:3px;box-shadow:0 0 9px #dbffe852}
+#studio .st-orb-wave i:nth-child(2),#studio .st-orb-wave i:nth-child(6){height:18px}
+#studio .st-orb-wave i:nth-child(3),#studio .st-orb-wave i:nth-child(5){height:25px}
+#studio .st-orb-wave i:nth-child(4){height:33px}
+#studio[data-voice-phase=listening] .st-orb,#studio[data-voice-phase=speaking] .st-orb{border-color:#b3f0d0;box-shadow:inset 0 0 18px #d7fff326,0 0 48px #b3f0d01f}
+#studio[data-voice-phase=listening] .st-orb-wave i,#studio[data-voice-phase=speaking] .st-orb-wave i{animation:st-voice-pulse .85s ease-in-out infinite alternate}
+#studio[data-voice-phase=listening] .st-orb-wave i:nth-child(2n),#studio[data-voice-phase=speaking] .st-orb-wave i:nth-child(2n){animation-delay:-.4s}
+#studio[data-voice-phase=connecting] .st-orb,#studio[data-voice-phase=thinking] .st-orb{animation:st-voice-wait 1.7s ease-in-out infinite alternate}
+#studio[data-voice-phase=error] .st-orb{border-color:#c88d81}
+@keyframes st-voice-pulse{from{transform:scaleY(.45)}to{transform:scaleY(1)}}
+@keyframes st-voice-wait{from{opacity:.65}to{opacity:1}}
+#studio .st-conversation-intro{min-width:0}
+#studio .st-conversation-intro .st-eyebrow{font-size:9px;letter-spacing:1.6px;color:#b8cbbf}
+#studio .st-conversation-intro h2{font-size:clamp(26px,2.05vw,38px);font-weight:450;letter-spacing:-1.3px;margin:9px 0 7px;line-height:1.2}
+#studio .st-conversation-intro p{font-size:12px;line-height:1.7;color:#aebaca;max-width:330px}
+#studio .st-home-voice-actions{display:flex;gap:10px}
+#studio .st-home-voice-actions .st-voice{justify-content:center;flex:1;min-height:52px;border-radius:13px;background:var(--st-green);color:#18392b;font-size:15px;font-weight:600;box-shadow:0 4px 24px #b3f0d00d;transition:background .2s,box-shadow .2s}
+#studio .st-home-voice-actions .st-voice:hover{background:#cbf9df;box-shadow:0 4px 28px #b3f0d024}
+#studio .st-home-voice-actions .st-voice[aria-pressed=true]{background:#304d40;border:1px solid #75a389;color:#d6f7e4}
+#studio .st-home-voice-actions .st-enable-audio{border-radius:13px;white-space:normal}
+#studio .st-enable-audio[hidden]{display:none!important}
+#studio .st-conversation-divider{display:flex;align-items:center;gap:15px;color:#9eaabb;font-size:10px;margin:20px 0;white-space:nowrap;letter-spacing:.03em}
+#studio .st-conversation-divider:before,#studio .st-conversation-divider:after{content:"";height:1px;background:#485161;flex:1}
+#studio.st-home-active .st-dock{position:static;z-index:auto;padding:0;background:none;pointer-events:auto}
+#studio.st-home-active .st-status{font-size:11px;min-height:0;margin:0 0 12px;line-height:1.7}
+#studio.st-home-active .st-status:empty{display:none}
+#studio.st-home-active .st-composer{background:#111823b0;border:1px solid #687383;border-radius:16px;padding:12px 14px 14px;box-shadow:0 8px 25px #0001}
+#studio.st-home-active .st-inputrow{align-items:flex-start;gap:8px}
+#studio.st-home-active .st-composer textarea{height:76px;max-height:120px;font-size:16px;line-height:1.6;padding:7px 0}
+#studio.st-home-active .st-attach{margin-top:3px}
+#studio.st-home-active .st-send{margin-top:3px;width:37px;height:37px;font-size:23px}
+#studio.st-home-active .st-composer-foot{border-top:1px solid #ffffff0c;padding-top:12px}
+#studio.st-home-active .st-scope{gap:7px}
+#studio.st-home-active .st-scope select{font-size:10px;background:#ffffff07;max-width:180px;padding:6px 10px}
+#studio.st-home-active .st-dock-note{font-size:9px;color:#99a7b8;margin-top:15px;line-height:1.6}
+#studio .st-signals-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:42px;margin-bottom:14px}
+#studio .st-signals-heading>span:last-child{font-size:10px;color:var(--st-muted)}
+#studio.st-home-active .st-signals{grid-template-columns:repeat(3,minmax(0,1fr));padding:0;gap:16px}
+#studio.st-home-active .st-signals:before{display:none}
+#studio.st-home-active .st-signal:nth-child(n){margin:0;background:linear-gradient(115deg,#23293690,#191e2880);padding:22px 24px;gap:7px 15px;border-color:#3d4551;border-radius:14px}
+#studio.st-home-active .st-signal:hover{transform:translateY(-3px);border-color:#90b49f}
+#studio.st-home-active .st-signal strong{font-size:34px;letter-spacing:-1.5px}
+#studio.st-home-active .st-signal-label{font-size:12px}
+#studio.st-home-active .st-signal small{font-size:10px;line-height:1.7}
+#studio.st-home-active .st-starters{margin-top:16px;gap:16px}
+#studio.st-home-active .st-starter{padding:16px 20px;background:transparent}
+#studio.st-home-active .st-starter b{font-size:13px}
+#studio.st-home-active .st-starter small{font-size:10px}
+@media(max-width:1200px){#studio.st-home-active .st-home{gap:35px;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr)}#studio .st-conversation-stage{padding:28px}#studio .st-presence{gap:18px}#studio .st-orb{width:84px;height:84px}#studio .st-conversation-intro h2{font-size:28px}#studio.st-home-active .st-home h1{font-size:56px;letter-spacing:-2.9px}#studio.st-home-active .st-signal:nth-child(n){padding:20px 18px}#studio.st-home-active .st-signal strong{font-size:29px}}
+@media(max-width:960px){#studio.st-home-active .st-home{gap:26px;grid-template-columns:1fr}#studio.st-home-active .st-home-copy{max-width:700px}#studio.st-home-active .st-home h1{font-size:52px;margin:17px 0}#studio.st-home-active .st-home h1 br{display:none}#studio.st-home-active .st-home-copy>p{max-width:650px;font-size:15px;line-height:1.7}#studio.st-home-active .st-home-note{display:none}#studio .st-conversation-stage{padding:30px}#studio .st-presence{margin-bottom:20px}#studio .st-conversation-intro h2{font-size:32px}#studio.st-home-active .st-signal:nth-child(n){display:flex;align-items:flex-start;flex-direction:column;gap:7px}#studio.st-home-active .st-signal strong{order:1}#studio.st-home-active .st-signal small{order:2}#studio.st-home-active .st-starters{grid-template-columns:1fr;gap:8px}#studio.st-home-active .st-starter{padding:15px 18px}}
+@media(max-width:600px){#studio.st-home-active .st-stage{padding:20px 20px 36px}#studio.st-home-active .st-home{padding-top:0;gap:24px}#studio.st-home-active .st-home h1{font-size:40px;line-height:1.1;letter-spacing:-2px;margin:15px 0}#studio.st-home-active .st-home-copy>.st-eyebrow{font-size:8px;letter-spacing:1.3px}#studio.st-home-active .st-home-copy>p{font-size:13px;line-height:1.75}#studio .st-conversation-stage{padding:22px 18px;border-radius:22px}#studio .st-presence{gap:15px;margin-bottom:20px}#studio .st-orb{width:62px;height:62px}#studio .st-orb-wave{transform:scale(.72)}#studio .st-conversation-intro .st-eyebrow{font-size:7px;letter-spacing:1px}#studio .st-conversation-intro h2{font-size:24px;letter-spacing:-.8px;margin:7px 0}#studio .st-conversation-intro p{font-size:10px;line-height:1.6}#studio .st-home-voice-actions .st-voice{font-size:13px;min-height:48px}#studio .st-conversation-divider{margin:16px 0;font-size:9px;gap:10px}#studio.st-home-active .st-composer{padding:9px 10px 12px}#studio.st-home-active .st-composer textarea{font-size:13px;height:72px}#studio.st-home-active .st-send{width:30px;height:30px;font-size:20px}#studio.st-home-active .st-scope{gap:4px}#studio.st-home-active .st-scope select{max-width:100%;font-size:8px;padding:6px}#studio.st-home-active .st-composer-foot{padding-top:10px}#studio.st-home-active .st-dock-note{font-size:8px;margin-top:11px}#studio .st-signals-heading{align-items:flex-start;flex-direction:column;gap:6px;margin-top:30px}#studio .st-signals-heading .st-eyebrow{font-size:9px}#studio.st-home-active .st-signals{grid-template-columns:1fr;gap:9px}#studio.st-home-active .st-signal:nth-child(n){display:grid;grid-template-columns:1fr auto;padding:18px}#studio.st-home-active .st-signal strong{font-size:30px}#studio.st-home-active .st-signal small{font-size:10px}#studio.st-home-active .st-starters{margin-top:14px}}

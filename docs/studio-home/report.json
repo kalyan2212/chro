@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-03T02:28:10.791Z",
+  "checks": [
+    "Conversation is the visible right-hand centerpiece at 1920×1080, with one working form and no classic panel interruption",
+    "Visible home connects without a click and welcomes once after media/session readiness, without an analytical request or spoken transcript",
+    "Stop releases the microphone and returning home does not silently reconnect",
+    "Conversation remains in the home layout at laptop, tablet and phone widths without horizontal overflow",
+    "Typing still opens calculated evidence, and Home restores the centerpiece without duplicating the composer",
+    "Denied microphone access creates no paid session and leaves a visible home retry action",
+    "Blocked playback visibly offers Enable audio, mutes capture until recovery, and resumes the same session",
+    "The welcome starts while playback awaits first media, avoiding a circular wait for audio",
+    "Leaving Studio cancels an unanswered permission request and releases a late microphone result",
+    "A hidden page immediately releases media and does not silently reconnect on return",
+    "The explicit voice=manual link keeps the microphone off until the user starts it",
+    "No browser errors or external provider calls"
+  ],
+  "browserErrors": [],
+  "externalProviderCalls": 0,
+  "media": "Simulated permissions, WebRTC and playback; physical hardware not tested"
+}

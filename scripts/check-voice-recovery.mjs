@@ -44,9 +44,9 @@ async function fixture(){
   Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>{const track={enabled:true,readyState:'live',addEventListener(){},stop(){this.readyState='ended';}};h.tracks.push(track);return {getTracks:()=>[track],getAudioTracks:()=>[track]};}});
   class Peer{constructor(){h.peers.push(this);this.connectionState='new';this.iceGatheringState='complete';}createDataChannel(){return this.channel={readyState:'open',sent:[],send(value){this.sent.push(JSON.parse(value));},close(){this.readyState='closed';}};}addTrack(){}async createOffer(){return {type:'offer',sdp};}async setLocalDescription(value){this.localDescription=value;}async setRemoteDescription(value){this.remoteDescription=value;}close(){this.connectionState='closed';}addEventListener(){}removeEventListener(){}}
   Object.defineProperty(window,'RTCPeerConnection',{configurable:true,value:Peer});
-  h.emit=event=>h.peers.at(-1)?.channel.onmessage?.({data:JSON.stringify(event)});h.commentary=()=>h.peers.at(-1)?.channel.sent.filter(e=>e.type==='session.commentary.append')||[];
+  h.emit=event=>h.peers.at(-1)?.channel.onmessage?.({data:JSON.stringify(event)});h.commentary=()=>h.peers.at(-1)?.channel.sent.filter(e=>e.type==='session.commentary.append'&&!e.event_id?.startsWith('welcome_'))||[];
  },{sdp});
- await page.goto(base);await page.waitForFunction(()=>window.WI_STUDIO&&window.WI_LIVE&&!document.querySelector('#wl-start').disabled);
+ await page.goto(base+'/?voice=manual');await page.waitForFunction(()=>window.WI_STUDIO&&window.WI_LIVE&&!document.querySelector('#wl-start').disabled);
  const allocated=page.waitForResponse(r=>r.url().endsWith('/api/live/session'));await page.evaluate(()=>window.WI_LIVE.start());const data=await (await allocated).json();assert.ok(data.session?.id);
  await page.waitForFunction(()=>window.__recovery.peers.at(-1)?.remoteDescription);await page.evaluate(id=>window.__recovery.emit({type:'session.started',session:{id}}),data.session.id);
  const id=++fixtureSequence,first=`Explain first-year retention for recovery case ${id}.`,continuation=' Compare Engineering and Sales.',whole=first+continuation;

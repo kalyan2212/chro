@@ -28,7 +28,8 @@
   if (result.events == null) return true; // A previously deployed server may return only event.
   return Array.isArray(result.events) && result.events.length > 0 && result.events.length <= 8 && result.events.every(event => valid(event) && bytes(event.content) <= 450) && new Set(result.events.map(event => event.event_id)).size === result.events.length && result.events[0].event_id === result.event.event_id && result.events[0].content === result.event.content;
  }
- // Pure helpers also used by the protocol tests; no transport starts on page load.
+ // Pure helpers also used by the protocol tests. Studio explicitly requests its
+ // one automatic welcome; the classic workspace remains opt-in.
  window.WI_LIVE_PROTOCOL = Object.freeze({ timeline, matches, snapshot });
  const host = document.getElementById('wi-live');
  if (!host) return;
@@ -45,7 +46,8 @@
   <p id="wl-result" class="wl-result" aria-live="polite">Ask about a metric or a scenario. Validated answers also update the visual briefing.</p>
  </section>`;
  const $ = selector => host.querySelector(selector);
- let available = false, serial = 0, active = null, closing = false, panelOpen = false, checking = false, lastClientFailure = null;
+ let available = false, availabilityChecked = false, autoRequested = false, autoConsumed = false;
+ let serial = 0, active = null, closing = false, panelOpen = false, checking = false, lastClientFailure = null, lastState = { phase: 'idle', turnId: null };
  let toggle = null;
  if (document.createElement) {
   toggle = document.createElement('button'); toggle.id = 'wl-toggle'; toggle.type = 'button'; toggle.className = 'wi-btn wl-toggle';
@@ -66,7 +68,8 @@
  function phase(run, value, detail = {}) {
   if (run && run.phase === value && !Object.keys(detail).length) return;
   if (run) run.phase = value;
-  notify('wi-voice-state', { phase: value, turnId: run?.turnId || null, ...detail });
+  lastState = { phase: value, turnId: run?.turnId || null, ...detail };
+  notify('wi-voice-state', lastState);
  }
  function clearBeats(run) { clearTimeout(run.beatTimer); run.beatTimer = null; run.beats = null; }
  function clearRecovery(run) { clearTimeout(run.recoveryTimer); run.recoveryTimer = null; run.recoveryNeeded = false; }
@@ -118,7 +121,7 @@
   window.WI_VOICE_GUIDE?.stop();
   clearBeats(run);
   clearRecovery(run);
-  clearTimeout(run.startTimer); clearTimeout(run.closeTimer); clearTimeout(run.maxTimer); clearTimeout(run.disconnectTimer); clearTimeout(run.delegationTimer);
+  clearTimeout(run.startTimer); clearTimeout(run.closeTimer); clearTimeout(run.maxTimer); clearTimeout(run.disconnectTimer); clearTimeout(run.delegationTimer); clearTimeout(run.playbackTimer); clearTimeout(run.welcomeTimer);
   run.pending?.abort(); run.startControl?.abort(); run.stream?.getTracks().forEach(track => track.stop());
   if (run.channel) { run.channel.onmessage = run.channel.onclose = run.channel.onerror = null; try { run.channel.close(); } catch {} }
   if (run.pc) { run.pc.ontrack = run.pc.onconnectionstatechange = null; try { run.pc.close(); } catch {} }
@@ -173,6 +176,7 @@
   finally { $('#wl-report').disabled = false; }
  }
  function stop(reason = 'Finishing conversation…') {
+  autoRequested = false; autoConsumed = true;
   window.WI_VOICE_GUIDE?.stop();
   const run = active; if (!run || closing) return;
   clearBeats(run); phase(run, 'stopped');
@@ -212,6 +216,10 @@
   }, 900);
  }
  function syncContext(event) {
+  if (event?.type === 'wi-context-changed' || event?.force === true) {
+   autoRequested = false; autoConsumed = true;
+   if (active?.automatic && !active.ready) { stop('Automatic voice setup cancelled because the page changed.'); return; }
+  }
   const run = active; if (!run?.ready || closing) return;
   const selected = context(), values = { scope: scope(), metric: selected.metricId || null, scenario: selected.caseId || null, audience:audience() };
   const key = JSON.stringify(values);
@@ -292,9 +300,10 @@
   if (!current(run)) return;
   if (event.type === 'session.started') {
    if (run.sessionId && event.session?.id && event.session.id !== run.sessionId) { failed(run, 'Session identity mismatch.'); return; }
+   if (run.ready || closing) return;
    run.ready = true; run.stage = 'voice.conversation'; clearTimeout(run.startTimer); controls(); state('Connected. You can speak and interrupt naturally.');
-   command(run, 'session.instructions.append', { delegation_id: null, content: 'Greet the caller now in English. Introduce yourself briefly as their AI workforce collaborator using synthetic data. Offer to find a priority, compare teams, or model a decision; then listen. Delegate all business facts and follow-ups.' });
-   syncContext(); phase(run, 'listening');
+   scheduleWelcome(run); syncContext();
+   if (run.playbackBlocked) playbackBlocked(run); else phase(run, 'listening');
   } else if (event.type === 'session.closed') {
    if (Number.isFinite(event.usage?.seconds) && event.usage.seconds >= 0) run.seconds = event.usage.seconds;
    reportUsage(run, Number.isFinite(event.usage?.seconds));
@@ -333,11 +342,73 @@
    pc.addEventListener('icegatheringstatechange',check); signal.addEventListener('abort',abort,{once:true}); if (signal.aborted) abort(); else check();
   });
  }
- async function start() {
-  if (active || !available || closing) return;
-  if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) { state('Continuous voice needs a WebRTC browser with microphone access on localhost or HTTPS.'); return; }
+ function welcome(run) {
+  if (!current(run) || closing || !run.ready || !run.remoteStream || !run.playbackAttempted || run.playbackBlocked || run.playbackPaused || run.welcomed) return;
+  run.welcomed = true;
+  if (run.inputRevision) return; // A caller's question takes priority over an intro.
+  run.welcomeAttempts = (run.welcomeAttempts || 0) + 1;
+  send(run, { type: 'session.commentary.append', event_id: `welcome_${crypto.randomUUID()}`, delegation_id: null, content: 'Welcome to Workforce Studio. I’m your AI workforce collaborator. This page uses synthetic data. Speak or type to explore workforce signals, compare teams, and test decisions. I’ll bring the evidence into view as we talk. What would you like to explore?' });
+ }
+ function scheduleWelcome(run) {
+  if (!current(run) || closing || run.welcomed || run.welcomeTimer) return;
+  // A remote play() can wait for first RTP. Waiting for its fulfillment before
+  // requesting the first speech would deadlock. Let immediate policy rejection
+  // settle first, then inject the app-owned introduction on the real session.
+  run.welcomeTimer = setTimeout(() => { run.welcomeTimer = null; welcome(run); }, 100);
+ }
+ function finishLocally(run, message) {
+  if (!current(run)) return;
+  autoRequested = false; autoConsumed = true;
+  try { command(run, 'session.close'); } catch {}
+  void serverClose(run.sessionId);
+  reportUsage(run); release(run); state(message + ' Microphone released. Final session usage is unconfirmed.');
+  phase(null, 'stopped', { message });
+ }
+ function playbackBlocked(run) {
+  if (!current(run) || closing) return;
+  if (run.welcomed && !run.playbackReady && !run.inputRevision && run.welcomeAttempts < 2) run.welcomeNeedsReplay = true;
+  if (!run.playbackBlocked) run.autoMuted = !run.muted;
+  run.playbackBlocked = true; run.playbackReady = false; run.muted = true;
+  run.stream?.getTracks().forEach(track => { track.enabled = false; }); micStatus(run);
+  const message = 'Your browser paused voice playback. Select Enable audio to hear the welcome. The microphone is muted; Stop ends the session.';
+  $('#wl-playback').textContent = 'Press Play or Enable audio to hear the AI voice'; state(message);
+  phase(run, 'listening', { reason: 'playback-blocked', action: 'enable-audio', message });
+  if (!run.playbackTimer) run.playbackTimer = setTimeout(() => finishLocally(run, 'Voice stopped because audio playback was not enabled. Select Talk to reconnect.'), 15000);
+ }
+ function playbackReady(run) {
+  const audio = $('#wl-audio');
+  if (!current(run) || closing) { if (run.remoteStream && audio.srcObject === run.remoteStream) audio.pause(); return; }
+  if (!run.remoteStream || audio.srcObject !== run.remoteStream || audio.paused) return;
+  const wasBlocked = run.playbackBlocked;
+  clearTimeout(run.playbackTimer); run.playbackTimer = null; run.playbackBlocked = false; run.playbackReady = true;
+  if (run.autoMuted) { run.autoMuted = false; run.muted = false; run.stream?.getTracks().forEach(track => { track.enabled = true; }); micStatus(run); }
+  $('#wl-playback').textContent = 'AI voice playback active';
+  if (run.welcomeNeedsReplay) { run.welcomeNeedsReplay = false; run.welcomed = false; }
+  scheduleWelcome(run);
+  if (wasBlocked && run.ready) { state('Connected. You can speak and interrupt naturally.'); phase(run, 'listening', { action: null }); }
+ }
+ async function enableAudio() {
+  const run = active; if (!run?.remoteStream || closing) return;
+  run.playbackPaused = false; run.playbackAttempted = true;
+  const playing = $('#wl-audio').play(); scheduleWelcome(run);
+  try { await playing; playbackReady(run); } catch { playbackBlocked(run); }
+ }
+ async function tryAutostart() {
+  if (!autoRequested || autoConsumed || !availabilityChecked) return;
+  autoRequested = false; autoConsumed = true;
+  if (document.visibilityState === 'hidden' || /(?:^\?|&)voice=manual(?:&|$)/.test(window.location?.search || '') || window.WI_STUDIO?.isHome?.() !== true) return;
+  if (!available) { phase(null, 'idle', { reason: 'unavailable', message: $('#wl-state').textContent }); return; }
+  return start({ automatic: true });
+ }
+ function autostart() { if (autoConsumed) return; autoRequested = true; return tryAutostart(); }
+ async function start(options = {}) {
+  if (active || !available || closing || document.visibilityState === 'hidden') return;
+  if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
+   const message = 'Continuous voice needs a WebRTC browser with microphone access on localhost or HTTPS. You can still type a question.';
+   state(message); phase(null, 'idle', { reason: 'unsupported-browser', message }); return;
+  }
   window.dispatchEvent(new Event('wi-stop-media')); api()?.cancel?.();
-  const run = { serial: ++serial, stage:'workspace.authentication', sessionRequested:false, pc: null, stream: null, channel: null, ready: false, muted: false, sessionId: null, pending: null, startControl: new AbortController(), seconds: null, transcript: timeline(), inputRevision: 0, delegationOrder: 0, answeredOffset: -1, seenDelegations: new Set(), turnId: null, beats: null, recoveryNeeded: false, recoveryAttempts: 0, recoveryTimer: null, delegationTimer: null };
+  const run = { serial: ++serial, automatic: options.automatic === true, stage:'workspace.authentication', sessionRequested:false, pc: null, stream: null, channel: null, ready: false, muted: false, welcomed: false, playbackReady: false, playbackBlocked: false, sessionId: null, pending: null, startControl: new AbortController(), seconds: null, transcript: timeline(), inputRevision: 0, delegationOrder: 0, answeredOffset: -1, seenDelegations: new Set(), turnId: null, beats: null, recoveryNeeded: false, recoveryAttempts: 0, recoveryTimer: null, delegationTimer: null };
   lastClientFailure = null;
   active = run; controls(); state('Checking workspace sign-in…'); phase(run, 'connecting'); $('#wl-signin').hidden = true; $('#wl-result').textContent = 'Waiting for your question.';
   $('#wl-user-caption').textContent = 'Your speech will appear here.'; reportUsage(run);
@@ -346,7 +417,8 @@
    const authenticated = await fetch('/api/status', { signal: run.startControl.signal, cache: 'no-store' });
    if (!authenticated.ok) { run.failureCode = `HTTP_${authenticated.status}`; throw Error(authenticated.status === 401 ? 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.' : 'Could not verify workspace access. Refresh this page and try again.'); }
    if (!current(run) || closing) return;
-   run.stage = 'browser.microphone'; state('Requesting microphone access…');
+   run.stage = 'browser.microphone'; state('Allow microphone access to hear your welcome. You can cancel with Stop.');
+   phase(run, 'connecting', { reason: 'microphone-permission', message: $('#wl-state').textContent });
    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
    if (!current(run) || closing) { stream.getTracks().forEach(track => track.stop()); return; }
    run.stream = stream; micStatus(run); stream.getAudioTracks().forEach(track => track.addEventListener('ended', () => { if (current(run) && !closing) failed(run,'Microphone disconnected.'); },{once:true}));
@@ -360,10 +432,12 @@
     else if (pc.connectionState === 'connected' && run.ready && !closing) state('Connected. You can speak and interrupt naturally.');
    };
    pc.ontrack = async event => {
-    if (!current(run)) { event.track.stop(); return; }
-    const audio = $('#wl-audio'); audio.srcObject = event.streams[0] || new MediaStream([event.track]);
-    try { await audio.play(); if (current(run)) $('#wl-playback').textContent = 'AI voice playback active'; }
-    catch { if (current(run)) $('#wl-playback').textContent = 'Press Play in the audio controls to hear the AI voice'; }
+    if (!current(run) || closing) { event.track.stop(); return; }
+    const audio = $('#wl-audio'); run.remoteStream = event.streams[0] || new MediaStream([event.track]); audio.srcObject = run.remoteStream;
+    run.playbackAttempted = true; run.playbackPaused = false;
+    const playing = audio.play(); scheduleWelcome(run);
+    try { await playing; playbackReady(run); }
+    catch { playbackBlocked(run); }
    };
    stream.getTracks().forEach(track => pc.addTrack(track,stream));
    const channel = pc.createDataChannel('oai-events'); run.channel = channel;
@@ -386,10 +460,17 @@
    if (!current(run) || closing) { void serverClose(run.sessionId); return; }
    run.stage = 'browser.webrtc_answer';
    await pc.setRemoteDescription({type:'answer',sdp:data.transport.sdp});
+   if (!current(run) || closing) return;
    run.stage = 'voice.awaiting_start';
    run.maxTimer = setTimeout(() => { if (current(run)) stop('The 15-minute session limit was reached. Finishing conversation…'); }, Math.min(data.maxSessionMs || 900000,900000) - 15000);
    // HTTP already started this session. session.start must not be sent here.
-  } catch (error) { if (current(run)) failed(run,error.name === 'NotAllowedError' ? 'Microphone permission was denied.' : error.message || 'Could not start continuous voice.'); }
+  } catch (error) {
+   if (!current(run)) return;
+   if (run.automatic && error.name === 'NotAllowedError' && !run.sessionRequested) {
+    const message = 'Microphone access was not allowed. Allow this site’s microphone in your browser, then select Talk to try again. You can also type a question.';
+    release(run); state(message); phase(null, 'idle', { reason: 'permission-required', action: 'start', message });
+   } else failed(run,error.name === 'NotAllowedError' ? 'Microphone permission was denied.' : error.message || 'Could not start continuous voice.');
+  }
  }
  $('#wl-start').addEventListener('click',start); $('#wl-stop').addEventListener('click',() => stop());
  $('#wl-check').addEventListener('click',checkConnection); $('#wl-report').addEventListener('click',downloadReport);
@@ -399,22 +480,29 @@
  $('#wl-mute').addEventListener('click',() => {
   const run = active; if (!run?.ready || closing) return;
   run.muted = !run.muted; run.stream?.getAudioTracks().forEach(track => { track.enabled = !run.muted; }); micStatus(run);
+  run.autoMuted = false;
   // Local track state is authoritative for this UI. No claim of server mute acknowledgment.
   state(run.muted ? 'Microphone muted locally. Voice session remains active and billed.' : 'Microphone active. You can speak.');
   phase(run, run.muted ? 'muted' : 'listening');
  });
- $('#wl-audio').addEventListener('playing',() => { if (active) $('#wl-playback').textContent = 'AI voice playback active'; });
- $('#wl-audio').addEventListener('pause',() => { if (active) $('#wl-playback').textContent = 'AI voice playback paused'; });
+ $('#wl-audio').addEventListener('playing',() => { if (active) playbackReady(active); });
+ $('#wl-audio').addEventListener('pause',() => { if (active && $('#wl-audio').paused) { if (!closing) { active.playbackReady = false; active.playbackPaused = true; } $('#wl-playback').textContent = 'AI voice playback paused'; } });
  window.addEventListener('wi-stop-media',() => stop('Switching conversation mode. Finishing continuous voice…'));
  window.addEventListener('wi-source-updated',() => stop('Source data refreshed. Finishing this conversation; start again using the new evidence.'));
  window.addEventListener('wi-context-changed',syncContext);
  document.getElementById('wi-app')?.addEventListener?.('change',syncContext);
  window.addEventListener('offline',() => { if (active) failed(active,'Browser network connection is offline.'); });
+ document.addEventListener?.('visibilitychange',() => {
+  if (document.visibilityState !== 'hidden') return;
+  autoRequested = false; autoConsumed = true;
+  if (active) finishLocally(active, 'Voice stopped because this tab is hidden. Select Talk when you return to reconnect.');
+ });
  window.addEventListener('pagehide',() => { const run = active; if (!run) return; try { command(run,'session.close'); } catch {} void serverClose(run.sessionId,true); phase(run, 'stopped'); release(run); });
- window.WI_LIVE = Object.freeze({ open: openPanel, close: closePanel, start, stop, syncContext, isActive: () => !!active });
+ window.WI_LIVE = Object.freeze({ open: openPanel, close: closePanel, start, stop, autostart, enableAudio, syncContext, getState: () => snapshot(lastState), isActive: () => !!active });
  fetch('/api/status').then(res => { if (!res.ok) throw Object.assign(Error(),{status:res.status}); return res.json(); }).then(data => {
   available = data.live?.available === true || data.continuousVoice === true;
+  availabilityChecked = true;
   $('#wl-version').textContent = typeof data.version === 'string' ? '· App ' + data.version : '';
-  state(available ? 'Ready. Start a conversation to enable your microphone.' : 'Continuous voice is unavailable. Configure the server API key and GPT-Live access; typed questions remain available.'); controls();
- }).catch(error => { available = false; $('#wl-signin').hidden = error.status !== 401; state(error.status === 401 ? 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.' : 'Could not check continuous voice availability.'); controls(); });
+  state(available ? 'Ready. Start a conversation to enable your microphone.' : 'Continuous voice is unavailable. Configure the server API key and GPT-Live access; typed questions remain available.'); controls(); void tryAutostart();
+ }).catch(error => { available = false; availabilityChecked = true; $('#wl-signin').hidden = error.status !== 401; state(error.status === 401 ? 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.' : 'Could not check continuous voice availability.'); controls(); void tryAutostart(); });
 })();

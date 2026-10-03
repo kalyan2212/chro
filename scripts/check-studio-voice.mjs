@@ -50,7 +50,7 @@ async function fixture({ denied = false, studio = false } = {}) {
   }
   Object.defineProperty(window, 'RTCPeerConnection', { configurable: true, value: Peer });
   harness.emit = event => harness.peers.at(-1)?.channel.onmessage?.({ data: JSON.stringify(event) });
-  harness.commentary = () => harness.peers.at(-1)?.channel.sent.filter(event => event.type === 'session.commentary.append') || [];
+  harness.commentary = () => harness.peers.at(-1)?.channel.sent.filter(event => event.type === 'session.commentary.append' && !event.event_id?.startsWith('welcome_')) || [];
  }, { denied, sdp });
  await page.route('**/api/status', async route => {
   if (expired) { await route.fulfill({ status: 401, json: { error: 'Sign in to the workspace first.' } }); return; }
@@ -74,7 +74,7 @@ async function fixture({ denied = false, studio = false } = {}) {
   const events = content.map((text, index) => ({ type: 'session.commentary.append', event_id: `browser_beat_${delegateCalls}_${index}`, delegation_id: request.delegationId, content: text }));
   await route.fulfill({ json: { sessionId: request.sessionId, delegationId: request.delegationId, response, event: events[0], events, narration: { mode: 'verified-beats', count: events.length, synchronization: 'transcript-estimate' } } });
  });
- await page.goto(base + (studio ? '/' : '/?workspace=1'));
+ await page.goto(base + (studio ? '/?voice=manual' : '/?workspace=1&voice=manual'));
  await page.waitForFunction(() => window.WI_LIVE && window.WI_CONVERSATION && !document.querySelector('#wl-start').disabled);
  await page.evaluate(() => window.WI_LIVE.open());
  return {

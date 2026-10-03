@@ -29,6 +29,7 @@ jobs:
           node scripts/check-voice-guide.mjs
           node scripts/check-studio.mjs
           node scripts/check-studio-voice.mjs
+          node scripts/check-studio-home.mjs
           node scripts/check-analysis.mjs
           node scripts/check-voice-recovery.mjs
   deploy:

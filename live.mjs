@@ -185,7 +185,7 @@ export function createLiveService({ apiKey = '', fetchImpl = globalThis.fetch, a
     try {
       const response = await fetchImpl(API, {
         method: 'POST', redirect: 'error', headers: headers(), signal: combined,
-        body: JSON.stringify({ session: { model: 'gpt-live-1', instructions, store: false, delegation: { type: 'client' }, input: seed.history.map(item => ({ type: 'message', role: item.role, content: [{ type: item.role === 'assistant' ? 'output_text' : 'input_text', text: item.text }] })) }, transport: { type: 'webrtc', sdp } })
+        body: JSON.stringify({ session: { model: 'gpt-live-1', instructions: instructions + ' Wait for the application to send the initial welcome commentary before speaking an introduction. A static introduction to the app needs no analytical delegation; actual business questions still do.', store: false, delegation: { type: 'client' }, input: seed.history.map(item => ({ type: 'message', role: item.role, content: [{ type: item.role === 'assistant' ? 'output_text' : 'input_text', text: item.text }] })) }, transport: { type: 'webrtc', sdp } })
       });
       stage = 'live.session.response';
       if (!response.ok) throw await apiResponseError(response, stage);
