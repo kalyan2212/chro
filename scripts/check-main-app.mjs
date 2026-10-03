@@ -4,7 +4,7 @@ import {writeFile} from 'node:fs/promises';
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1920,height:1080},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:8787');
+ await page.goto('http://127.0.0.1:8787/?workspace&voice=manual');
  const password=page.locator('input[type=password]');
  if(await password.count()){assert.ok(process.env.APP_PASSWORD,'Configured sign-in required');await password.fill(process.env.APP_PASSWORD);await page.locator('button[type=submit]').click();}
  await page.waitForFunction(()=>window.WI_EXPERIENCE&&window.WI_INVESTIGATIONS);

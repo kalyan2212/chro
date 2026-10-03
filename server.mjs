@@ -11,6 +11,7 @@ import { pathToFileURL } from 'node:url';
 import { resolve, join } from 'node:path';
 import { answer, backAnswer, navigation, retentionExample, demoPlan, modelPlan, routingInstructions, routingSchema, validateRequest, exportDataset, hydrateDataset, effectiveAssumptions, scenario, descriptor, metricIds, scopeOf } from './engine.mjs';
 import { createWorkday } from './workday.mjs';
+import {sourceCatalog,inspectSourceData} from './source-edits.mjs';
 import { createLiveService } from './live.mjs';
 import { createReviewService } from './review.mjs';
 import { createJournal } from './storage.mjs';
@@ -19,9 +20,14 @@ import { createDiagnostics, assertAPIKey, connectionError, applicationError, api
 
 const VERSION = '2.0.1';
 const FILES = new Map([['/', ['index.html', 'text/html; charset=utf-8']], ['/index.html', ['index.html', 'text/html; charset=utf-8']]]);
-for (const name of ['conversation','live','operations','workspace','investigations','experience','focus','voice-guide','studio','studio-charts','analysis']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
+for (const name of ['conversation','live','operations','workspace','investigations','experience','focus','voice-guide','studio','studio-charts','analysis','assistant-actions']) for (const extension of ['js','css']) FILES.set(`/${name}.${extension}`, [`${name}.${extension}`, extension==='js'?'text/javascript; charset=utf-8':'text/css; charset=utf-8']);
+FILES.set('/chart-types.css',['chart-types.css','text/css; charset=utf-8']);
 const AUDIO = new Map([['audio/webm', 'webm'], ['audio/mp4', 'mp4'], ['audio/wav', 'wav'], ['audio/mpeg', 'mp3']]);
 const fail = (status, message) => Object.assign(new Error(message), { status });
+// This app has one shared-password workspace editor role, not persistent named
+// accounts. Keep source undo valid after that editor signs in again.
+const sourceOwner = identity => typeof identity==='string' ? 'authenticated-workspace-editor' : undefined;
+function sourceBody(input,keys){if(Object.keys(input).some(key=>!keys.includes(key))||typeof input.expectedSourceVersion!=='string'||!input.expectedSourceVersion)throw fail(400,'Source changes require an expected source revision and only the supported fields.');return input;}
 function json(res, status, value) { res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value)); }
 async function body(req, max) {
   if (Number(req.headers['content-length']) > max) { req.resume(); throw fail(413, 'Request body is too large'); }
@@ -70,7 +76,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       return await boundedResponse(response, max);
     } catch (error) { throw connectionError(error, stage, signal); }
   }
-  async function ask(input, signal, onProgress=()=>{}) {
+  async function ask(input, signal, onProgress=()=>{},owner) {
     let request; try { request = validateRequest(input); } catch (e) { throw fail(400, e.message); }
     const image=validateImage(input.image);
     if(!['board','ceo','chro',undefined].includes(input.audience))throw fail(400,'Choose Board, CEO or CHRO perspective.');
@@ -79,6 +85,8 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
     const snapshot = workday.snapshot();
     if (input.sourceVersion && input.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'The source data changed. Refresh the dataset and ask again.');
     if (request.context?.sourceVersion && request.context.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'Conversation evidence belongs to an earlier source revision. Refresh and ask again.');
+    if (request.viewContext && request.viewContext.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'The selected chart belongs to an earlier source revision. Refresh and ask again.');
+    if (request.reportContext && request.reportContext.sourceVersion !== snapshot.sourceVersion) throw fail(409, 'The selected report belongs to an earlier source revision. Refresh and ask again.');
     hydrateDataset(snapshot);
     const nav = navigation(request.question);
     if (nav && !nav.target) {
@@ -88,7 +96,15 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
     }
     const routed = nav ? { ...request, question: nav.target } : request;
     if(mode==='api' && input.operation!=='calculate') {
-      const result=await analyze({request:routed,snapshot,investigations:journal.investigations(),decisions:journal.decisions(),image,signal,onProgress,upstream:async(payload,analysisSignal)=>JSON.parse(await upstream('responses',JSON.stringify(payload),'application/json',analysisSignal,1500000))});
+      const sourceService={catalog:sourceCatalog(snapshot),inspect:args=>inspectSourceData(snapshot,args),propose:async args=>{
+        if(!owner)throw fail(403,'An authenticated workspace session is required to propose source changes.');
+        if(signal?.aborted)throw fail(499,'Question cancelled');
+        if(typeof workday.proposeEdit!=='function')throw fail(503,'Source updates are not available.');
+        const proposal=await workday.proposeEdit({expectedSourceVersion:snapshot.sourceVersion,...args,owner});
+        await journal.log('source.edit.proposed',{proposalId:proposal.id,sourceVersion:proposal.sourceVersion,changeCount:proposal.changes.length});
+        return proposal;
+      }};
+      const result=await analyze({request:routed,snapshot,investigations:journal.investigations(),decisions:journal.decisions(),image,signal,onProgress,sourceService,upstream:async(payload,analysisSignal)=>JSON.parse(await upstream('responses',JSON.stringify(payload),'application/json',analysisSignal,1500000))});
       if(signal?.aborted)throw fail(499,'Question cancelled');
       if(workday.snapshot().sourceVersion!==snapshot.sourceVersion)throw fail(409,'Source data changed during analysis. Ask again using the refreshed data.');
       await journal.log('question.answered',{mode,action:result.action.type,sourceVersion:snapshot.sourceVersion,analysis:true});
@@ -128,7 +144,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
     await journal.log('question.answered', { mode, action: result.action.type, metricId: result.action.metricId, caseId: result.action.caseId, sourceVersion: snapshot.sourceVersion });
     return result;
   }
-  const live = createLiveService({ apiKey, fetchImpl, ask });
+  const live = createLiveService({ apiKey, fetchImpl, ask:(input,signal,context)=>ask(input,signal,undefined,sourceOwner(owners.get(context?.sessionId))) });
   const server = http.createServer(async (req, res) => {
     res.setHeader('cache-control', 'no-store'); res.setHeader('x-content-type-options', 'nosniff');
     res.setHeader('referrer-policy', 'no-referrer'); res.setHeader('x-frame-options', 'DENY');
@@ -147,7 +163,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       const entryNavigation = req.method === 'GET' && ['/', '/index.html'].includes(path) && req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document';
       if (req.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(req.headers['sec-fetch-site']) && !entryNavigation) throw fail(403, 'Cross-site requests are not allowed');
       if (!path || path.includes('%') || path.includes('\\') || path.includes('..')) throw fail(404, 'Not found');
-      if (FILES.has(path) || /^\/api\/(?:login|logout|status|ask|transcribe|speech|audit|decisions|investigations|review|live\/(?:session|delegate|close)|diagnostics(?:\/connection)?|workday\/(?:sync|status|report)|data\/snapshot|studio\/bootstrap|analysis\/progress)$/.test(path)) requestPath = FILES.has(path) ? 'static.asset' : path;
+      if (FILES.has(path) || /^\/api\/(?:login|logout|status|ask|transcribe|speech|audit|decisions|investigations|review|live\/(?:session|delegate|close)|diagnostics(?:\/connection)?|workday\/(?:sync|status|report)|source\/(?:catalog|data|history|propose|apply|undo)|data\/snapshot|studio\/bootstrap|analysis\/progress)$/.test(path)) requestPath = FILES.has(path) ? 'static.asset' : path;
       if (path === '/health' && req.method === 'GET') { await ready; return json(res, 200, { ok: true, synthetic: true, version: VERSION }); }
       if (path === '/api/login' && req.method === 'POST') {
         const value = await readJSON(req, 3000);
@@ -187,6 +203,13 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
       }
       if (req.method === 'GET' && path === '/api/workday/status') return json(res, 200, workday.status());
       if (req.method === 'GET' && path === '/api/data/snapshot') return json(res, 200, workday.snapshot());
+      if (req.method === 'GET' && path === '/api/source/catalog') return json(res,200,sourceCatalog(workday.snapshot()));
+      if (req.method === 'GET' && path === '/api/source/data') {
+        const params=new URL(req.url,'http://localhost').searchParams;
+        if([...params.keys()].some(key=>!['month','function','region','category'].includes(key)))throw fail(400,'Unsupported source data filter.');
+        return json(res,200,inspectSourceData(workday.snapshot(),Object.fromEntries(params)));
+      }
+      if (req.method === 'GET' && path === '/api/source/history') return json(res,200,typeof workday.editHistory==='function'?workday.editHistory({owner:sourceOwner(identity)}):{edits:[],proposals:[]});
       if (req.method === 'GET' && path === '/api/workday/report') {
         const query = new URL(req.url, 'http://localhost').searchParams;
         try { return json(res, 200, await workday.report({ name: query.get('name') || 'CoreHCM', cursor: query.get('cursor') || undefined, limit: query.has('limit') ? Number(query.get('limit')) : undefined, batch: query.get('batch') || 'baseline' })); }
@@ -204,7 +227,7 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
         }
         res.writeHead(200, { 'content-type': type, 'content-length': bytes.length }); return res.end(req.method === 'HEAD' ? undefined : bytes);
       }
-      if (!['/api/ask','/api/transcribe','/api/speech','/api/workday/sync','/api/live/session','/api/live/delegate','/api/live/close','/api/decisions','/api/investigations','/api/review','/api/diagnostics/connection'].includes(path)) throw fail(404, 'Not found');
+      if (!['/api/ask','/api/transcribe','/api/speech','/api/workday/sync','/api/live/session','/api/live/delegate','/api/live/close','/api/decisions','/api/investigations','/api/review','/api/diagnostics/connection','/api/source/propose','/api/source/apply','/api/source/undo'].includes(path)) throw fail(404, 'Not found');
       if (req.method !== 'POST') throw fail(405, 'Method not allowed');
       if (active >= 4) throw fail(429, 'Too many active requests; try again shortly');
       active++; acquired = true; timer = setTimeout(() => controller.abort(new DOMException('Request timeout','TimeoutError')), timeoutMs); timer.unref();
@@ -221,8 +244,23 @@ export function createServer({ apiKey = process.env.OPENAI_API_KEY || '', fetchI
           if(progress.size>=100)progress.delete(progress.keys().next().value);
           entry={owner:identity,events:[],done:false,at:Date.now()};progress.set(input.requestId,entry);
         }
-        try{return json(res,200,await ask(input,controller.signal,event=>{if(entry&&entry.events.length<40)entry.events.push(event);}));}
+        try{return json(res,200,await ask(input,controller.signal,event=>{if(entry&&entry.events.length<40)entry.events.push(event);},sourceOwner(identity)));}
         finally{if(entry)entry.done=true;}
+      }
+      if(path==='/api/source/propose'){
+        const input=sourceBody(await readJSON(req,24000),['expectedSourceVersion','changes','reason']);
+        const proposal=await workday.proposeEdit({...input,owner:sourceOwner(identity)});
+        await journal.log('source.edit.proposed',{proposalId:proposal.id,sourceVersion:proposal.sourceVersion,changeCount:proposal.changes.length});
+        return json(res,201,proposal);
+      }
+      if(path==='/api/source/apply'||path==='/api/source/undo'){
+        const applying=path.endsWith('/apply'),key=applying?'proposalId':'editId';
+        const input=sourceBody(await readJSON(req,3000),[key,'expectedSourceVersion']);
+        if(typeof input[key]!=='string'||!input[key])throw fail(400,'A confirmed source operation identity is required.');
+        const result=await workday[applying?'applyEdit':'undoEdit']({...input,owner:sourceOwner(identity)});
+        hydrateDataset(result.snapshot);
+        await journal.log(applying?'source.edit.applied':'source.edit.undone',{editId:result.edit.id,proposalId:result.edit.proposalId||null,sourceVersion:result.snapshot.sourceVersion});
+        return json(res,200,result);
       }
       if (path === '/api/workday/sync') {
         const input = await readJSON(req, 2000);

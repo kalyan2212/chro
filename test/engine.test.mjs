@@ -126,6 +126,23 @@ test('unhandled numeric requests fail clearly even without scenario trigger word
   assert.equal(demoPlan(request('Show first-year retention')).metricId, 'C01');
 });
 
+test('spoken calendar years resolve without rewriting the original voice request or accepting unsupported dates', () => {
+  for (const wording of ['September twenty twenty six', 'September two thousand twenty six', 'September two thousand and twenty-six']) {
+    const question = `Inspect ${wording} Engineering EMEA contractor cost. Propose two point two million dollars.`;
+    const req = request(question);
+    assert.deepEqual(req.scope, { function:'Engineering', region:'EMEA', period:'2026-09' });
+    assert.equal(req.question, question);
+  }
+  for (const wording of ['October twenty twenty five', 'October two thousand twenty five']) assert.equal(request(`Show cost in ${wording}`).scope.period, '2025-10');
+  assert.equal(request('Show cost in third quarter of twenty twenty six').scope.period, 'quarter');
+  const transcript = 'Inspect the September twenty twenty six annualengineering EMEA external contractor cost. Propose changing that exact source value to two point two million dollars';
+  assert.equal(request(transcript).scope.period, '2026-09');
+  assert.equal(request(transcript).scope.region, 'EMEA');
+  assert.equal(request(transcript).question, transcript);
+  for (const wording of ['September twenty twenty seven', 'September two thousand twenty seven', 'September twenty twenty five', 'Q3 twenty twenty seven', 'Q3 two thousand twenty five', 'September']) assert.throws(() => request(`Show cost in ${wording}`), undefined, wording);
+  assert.throws(() => request('Compare cost in August twenty twenty six and September twenty twenty six'), /one month/);
+});
+
 test('navigation requests are recognised before routing; ordinary questions are not', () => {
   for (const q of ['Go back', 'go back.', 'Okay, go back please', 'back', 'previous screen', 'Show me the previous view', 'Can you go back to the last screen?', 'take me back one step']) assert.deepEqual(navigation(q), { type: 'back', target: null }, q);
   assert.deepEqual(navigation('Take me back to the overview'), { type: 'back', target: 'overview' });

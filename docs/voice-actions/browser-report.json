@@ -1,0 +1,19 @@
+{
+  "checkedAt": "2026-10-03T10:57:36.870Z",
+  "checks": [
+    "Spoken bar-to-line and make-it-pie commands update the actual chart without analytical calls or changed evidence",
+    "The real renderer refuses a misleading scenario pie and voice reports its actual refusal",
+    "Spoken source inspection displays the real flat source records and exact current values without changing the scene or stored data",
+    "A spoken source-edit request displays exact before/after rows and leaves persisted data unchanged before confirmation",
+    "Explicit spoken confirmation persists the identified proposal, recalculates costs and keeps its own Live session connected",
+    "Explicit spoken undo restores exact values through the real endpoint and records both source operations",
+    "Final close releases simulated media; no JavaScript errors, physical microphone or external provider calls"
+  ],
+  "errors": [],
+  "providerCalls": 0,
+  "delegateCalls": 2,
+  "applyCalls": 1,
+  "undoCalls": 1,
+  "storage": "Isolated temporary directory; existing .state and .env untouched",
+  "transport": "Simulated recognition and Live protocol; real renderer and HTTP source persistence"
+}

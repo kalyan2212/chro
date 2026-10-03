@@ -33,6 +33,9 @@ jobs:
           node scripts/check-analysis.mjs
           node scripts/check-discovery.mjs
           node scripts/check-voice-recovery.mjs
+          node scripts/check-chart-types.mjs
+          node scripts/check-assistant-actions.mjs
+          node scripts/check-voice-actions.mjs
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: test

@@ -1,0 +1,590 @@
+{
+  "at": "2026-10-03T10:24:52.541Z",
+  "kind": "Actual Astra acceptance against an isolated local HTTP application; synthetic source values only",
+  "model": "gpt-6-astra",
+  "reasoning": "medium",
+  "storage": "Disposable temporary directory; project .state untouched",
+  "cases": [
+    {
+      "name": "inspect-and-propose",
+      "question": "Show September 2026 Engineering EMEA cost records and change contractor annual cost to $2,200,000. Show exact before/after.",
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "elapsedMs": 3841,
+          "status": "completed",
+          "tools": [
+            "inspect_source_data"
+          ],
+          "usage": {
+            "input_tokens": 12879,
+            "input_tokens_details": {
+              "cache_write_tokens": 12876,
+              "cached_tokens": 0
+            },
+            "output_tokens": 35,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 12914
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "elapsedMs": 3651,
+          "status": "completed",
+          "tools": [
+            "propose_source_changes"
+          ],
+          "usage": {
+            "input_tokens": 13866,
+            "input_tokens_details": {
+              "cache_write_tokens": 987,
+              "cached_tokens": 12876
+            },
+            "output_tokens": 85,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 13951
+          }
+        },
+        {
+          "number": 3,
+          "http": 200,
+          "elapsedMs": 10218,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 14404,
+            "input_tokens_details": {
+              "cache_write_tokens": 538,
+              "cached_tokens": 13863
+            },
+            "output_tokens": 568,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 14972
+          }
+        },
+        {
+          "number": 4,
+          "http": 200,
+          "elapsedMs": 8978,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 15637,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 14329
+            },
+            "output_tokens": 480,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 16117
+          }
+        }
+      ],
+      "elapsedMs": 27030,
+      "analysis": {
+        "summary": "The current cost records are below. A validated, unapplied proposal would set annual contractor cost to $2,200,000 and reconcile annual workforce cost to $105,100,000. No source change has been confirmed.",
+        "sections": [
+          {
+            "kind": "finding",
+            "title": "Current September 2026 source records",
+            "text": "Engineering / EMEA, USD:\n• Employee loaded cost: $101,640,000\n• Overtime: $1,260,000\n• External contractors: $2,100,000\n• Annual workforce budget: $102,000,000\n• Annual revenue run-rate: $186,000,000\n• Annual on-target earnings: $88,426,800\n• Recognition rewards: $10,200\n• Annual workforce cost: $105,000,000\n\nAll eight matching rows were retrieved without truncation.",
+            "evidenceRefs": [
+              "E1"
+            ]
+          },
+          {
+            "kind": "recommendation",
+            "title": "Exact before → proposed after",
+            "text": "September 2026 / Engineering / EMEA:\n\nExternal contractor cost — stock.costBreakdown.contractors:\n$2,100,000 → $2,200,000\n\nAnnual workforce cost — stock.annualCostRunRate:\n$105,000,000 → $105,100,000\n\nThe server validated the proposal and automatically reconciled the total from the three cost components. No other fields are proposed to change.",
+            "evidenceRefs": [
+              "E2"
+            ]
+          },
+          {
+            "kind": "limitation",
+            "title": "Pending application; annual run rates",
+            "text": "The proposal has not been applied. You can apply the displayed proposal to commit the change. These are synthetic aggregate source records: cost components and total workforce cost are annual run rates, not September expenses or year-to-date actuals. Recognition rewards are a monthly flow value.",
+            "evidenceRefs": [
+              "E1",
+              "E2"
+            ]
+          }
+        ],
+        "unknowns": [],
+        "followups": []
+      },
+      "viewActions": [],
+      "presentationOnly": false,
+      "sourceOnly": true,
+      "sourceData": {
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "filters": {
+          "month": "2026-09",
+          "function": "Engineering",
+          "region": "EMEA",
+          "category": "cost"
+        },
+        "rows": [
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "value": 101640000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "value": 1260000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "value": 2100000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "value": 102000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "value": 186000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "value": 88426800,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "value": 10200,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "value": 105000000,
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ],
+        "totalRows": 8,
+        "truncated": false,
+        "limits": {
+          "maxRows": 300,
+          "totalRows": 8,
+          "truncated": false
+        }
+      },
+      "sourceEditProposal": {
+        "id": "c73fc5f0-0660-45d5-9bb2-c24c40b52af4",
+        "status": "proposed",
+        "sourceVersion": "18fd7eb545b704d5bc944b4019b9c5ca170e52016300376f332a16f330a601e0",
+        "reason": "User requested setting September 2026 Engineering EMEA contractor annual cost to $2,200,000 and showing exact before/after.",
+        "changes": [
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "unit": "usd",
+            "operation": "set",
+            "value": 2200000,
+            "before": 2100000,
+            "after": 2200000,
+            "derived": false
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "unit": "usd",
+            "before": 105000000,
+            "after": 105100000,
+            "derived": true
+          }
+        ],
+        "createdAt": "2026-10-03T10:25:00.456Z"
+      },
+      "panelTitles": [],
+      "verdict": "passed"
+    },
+    {
+      "name": "verify-applied-source",
+      "question": "The displayed proposal has now been applied. Inspect the actual September 2026 Engineering EMEA contractor source value again and tell me its current value, with the source evidence.",
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "elapsedMs": 2632,
+          "status": "completed",
+          "tools": [
+            "inspect_source_data"
+          ],
+          "usage": {
+            "input_tokens": 12947,
+            "input_tokens_details": {
+              "cache_write_tokens": 12944,
+              "cached_tokens": 0
+            },
+            "output_tokens": 35,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 12982
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "elapsedMs": 6156,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 13934,
+            "input_tokens_details": {
+              "cache_write_tokens": 987,
+              "cached_tokens": 12944
+            },
+            "output_tokens": 178,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 14112
+          }
+        },
+        {
+          "number": 3,
+          "http": 200,
+          "elapsedMs": 4154,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 14621,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 13931
+            },
+            "output_tokens": 154,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 14775
+          }
+        }
+      ],
+      "elapsedMs": 13188,
+      "analysis": {
+        "summary": "A fresh source inspection confirms the September 2026 value is $2,200,000—not merely a proposed value.",
+        "sections": [
+          {
+            "kind": "finding",
+            "title": "Verified current source value",
+            "text": "September 2026 / Engineering / EMEA: External contractor cost is $2,200,000 USD at `stock.costBreakdown.contractors`. Evidence E1 reports this as an actual current source aggregate in the synthetic workspace. It is an annual run-rate amount, not September expenditure or year-to-date actual spend.",
+            "evidenceRefs": [
+              "E1"
+            ]
+          }
+        ],
+        "unknowns": [],
+        "followups": []
+      },
+      "viewActions": [],
+      "presentationOnly": false,
+      "sourceOnly": true,
+      "sourceData": {
+        "sourceVersion": "6c89ceb1f4845b122cd928bd460b9de76f7419ec76f46f94cda38123d10fc799",
+        "filters": {
+          "month": "2026-09",
+          "function": "Engineering",
+          "region": "EMEA",
+          "category": "cost"
+        },
+        "rows": [
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.employeeLoaded",
+            "label": "Employee loaded cost",
+            "value": 101640000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.overtime",
+            "label": "Overtime cost",
+            "value": 1260000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.costBreakdown.contractors",
+            "label": "External contractor cost",
+            "value": 2200000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualBudgetRunRate",
+            "label": "Annual workforce budget",
+            "value": 102000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualRevenueRunRate",
+            "label": "Annual revenue run-rate",
+            "value": 186000000,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualOTE",
+            "label": "Annual on-target earnings",
+            "value": 88426800,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "flow.rewardsUSD",
+            "label": "Recognition rewards",
+            "value": 10200,
+            "unit": "usd",
+            "editable": true
+          },
+          {
+            "month": "2026-09",
+            "function": "Engineering",
+            "region": "EMEA",
+            "path": "stock.annualCostRunRate",
+            "label": "Annual workforce cost",
+            "value": 105100000,
+            "unit": "usd",
+            "editable": false,
+            "reason": "Calculated from the three cost components. Edit a component to reconcile this total."
+          }
+        ],
+        "totalRows": 8,
+        "truncated": false,
+        "limits": {
+          "maxRows": 300,
+          "totalRows": 8,
+          "truncated": false
+        }
+      },
+      "sourceEditProposal": null,
+      "panelTitles": [],
+      "verdict": "passed"
+    },
+    {
+      "name": "chart-and-report-pending-actions",
+      "question": "For the current cost distribution, a pie would communicate the relative shares better; please use that, and reorganize the current report into an executive briefing.",
+      "rounds": [
+        {
+          "number": 1,
+          "http": 200,
+          "elapsedMs": 8475,
+          "status": "completed",
+          "tools": [
+            "change_chart",
+            "change_report_view"
+          ],
+          "usage": {
+            "input_tokens": 13040,
+            "input_tokens_details": {
+              "cache_write_tokens": 13037,
+              "cached_tokens": 0
+            },
+            "output_tokens": 50,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 13090
+          }
+        },
+        {
+          "number": 2,
+          "http": 200,
+          "elapsedMs": 7653,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 13556,
+            "input_tokens_details": {
+              "cache_write_tokens": 516,
+              "cached_tokens": 13037
+            },
+            "output_tokens": 78,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 13634
+          }
+        },
+        {
+          "number": 3,
+          "http": 200,
+          "elapsedMs": 6887,
+          "status": "completed",
+          "tools": [],
+          "usage": {
+            "input_tokens": 13948,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 13553
+            },
+            "output_tokens": 132,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 14080
+          }
+        }
+      ],
+      "elapsedMs": 23268,
+      "analysis": {
+        "summary": "Both presentation changes have been requested and await browser application. The underlying data, calculations and scope are unchanged.",
+        "sections": [
+          {
+            "kind": "finding",
+            "title": "Presentation requests pending",
+            "text": "Requested a pie presentation for the selected cost chart and an executive layout for the current report. The browser must verify and apply both requests before either change can be confirmed. These are presentation-only changes; existing facts, calculations, scope and source data remain unchanged.",
+            "evidenceRefs": [
+              "E1",
+              "E2"
+            ]
+          }
+        ],
+        "unknowns": [],
+        "followups": []
+      },
+      "viewActions": [
+        {
+          "type": "change_chart",
+          "chartId": "acceptance_cost_chart",
+          "chartType": "pie",
+          "fromType": "bar",
+          "sourceVersion": "c8b448dd5a75afb4c46622367bc67048c625269e4cb6211ae21b8f7f8c0dffbf"
+        },
+        {
+          "type": "change_report_view",
+          "reportId": "acceptance_cost_report",
+          "layout": "executive",
+          "sourceVersion": "c8b448dd5a75afb4c46622367bc67048c625269e4cb6211ae21b8f7f8c0dffbf"
+        }
+      ],
+      "presentationOnly": true,
+      "sourceOnly": false,
+      "sourceData": null,
+      "sourceEditProposal": null,
+      "panelTitles": [],
+      "verdict": "passed"
+    }
+  ],
+  "operations": [
+    {
+      "operation": "apply",
+      "verdict": "passed",
+      "editId": "9a541337-00c0-4b76-afea-231d7e5d7efd",
+      "sourceVersion": "6c89ceb1f4845b122cd928bd460b9de76f7419ec76f46f94cda38123d10fc799",
+      "before": 2100000,
+      "after": 2200000,
+      "derivedChanges": [
+        {
+          "month": "2026-09",
+          "function": "Engineering",
+          "region": "EMEA",
+          "path": "stock.annualCostRunRate",
+          "label": "Annual workforce cost",
+          "unit": "usd",
+          "before": 105000000,
+          "after": 105100000,
+          "derived": true
+        }
+      ]
+    },
+    {
+      "operation": "undo",
+      "verdict": "passed",
+      "editId": "7c57bae0-4fc2-4732-92c0-021a88fad23e",
+      "sourceVersion": "c8b448dd5a75afb4c46622367bc67048c625269e4cb6211ae21b8f7f8c0dffbf",
+      "restoredValue": 2100000
+    }
+  ],
+  "limitations": [
+    "One actual provider sample per question; timings are observations, not a latency guarantee.",
+    "Chart and report actions are pending until the browser applies and verifies them; this report validates the server action contract."
+  ],
+  "verdict": "passed"
+}

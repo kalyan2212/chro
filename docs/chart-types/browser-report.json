@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-03T10:40:41.521Z",
+  "checks": [
+    "Cost components switch from bar to categorical line with exact values and an explicit non-trend caption",
+    "Cost pie uses the same three additive components, leaves the response immutable and makes no analytical request",
+    "Narration fact highlighting survives chart-type changes and clears correctly",
+    "Chart choice survives rerender of identical evidence; a stale chart identifier cannot change another visible chart",
+    "Disjoint headcount and cost segments support pie within their original scope and period",
+    "Rates, repeated periods, suppression, signed economics and overlapping scenario measures refuse misleading pies without changing the chart",
+    "Zero-total pies are refused and scope/source revisions produce distinct chart identities",
+    "Phone line and pie layouts retain all exact values without horizontal page overflow",
+    "A hidden Studio chart cannot be changed through the renderer API",
+    "No browser errors, provider calls or workforce-data mutations"
+  ],
+  "refused": [
+    {
+      "name": "rate",
+      "reason": "Rates have separate denominators; they are not slices of one total."
+    },
+    {
+      "name": "time",
+      "reason": "These are repeated periods, not parts of one total. Use bar or line."
+    },
+    {
+      "name": "suppressed",
+      "reason": "Pie is unavailable while any value is suppressed or missing."
+    },
+    {
+      "name": "retention",
+      "reason": "Pie cannot represent negative values. Bar and line preserve their signs."
+    },
+    {
+      "name": "skills",
+      "reason": "These measures are not verified parts of a single total. Use bar or line to keep their meaning."
+    }
+  ],
+  "errors": [],
+  "externalProviderCalls": 0
+}

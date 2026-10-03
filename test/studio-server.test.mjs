@@ -68,3 +68,18 @@ test('Studio bootstrap remains behind the workspace password',async t=>{
   assert.equal((await fetch(url+'/api/studio/bootstrap')).status,401);
   assert.equal((await post('/api/studio/bootstrap',{})).status,401);
 });
+
+test('chart context rejects stale lineage and arbitrary renderer arguments before any model request',async t=>{
+  const {url,post,calls}=await setup(t);
+  const snapshot=await (await fetch(url+'/api/data/snapshot')).json();
+  const viewContext={chartId:'chart_test',title:'Annual cost',currentType:'bar',availableTypes:['bar','line'],sourceVersion:snapshot.sourceVersion};
+  const invalid=await post('/api/ask',{question:'Change this chart to a line',viewContext:{...viewContext,selector:'#anything'}});
+  assert.equal(invalid.status,400);
+  const stale=await post('/api/ask',{question:'Change this chart to a line',viewContext:{...viewContext,sourceVersion:'old-revision'}});
+  assert.equal(stale.status,409);assert.match((await stale.json()).error,/selected chart.*earlier source revision/);
+  const reportContext={reportId:'report_test',title:'Cost investigation',currentLayout:'full',availableLayouts:['full','executive','evidence'],sourceVersion:snapshot.sourceVersion};
+  assert.equal((await post('/api/ask',{question:'Show the full report',reportContext:{...reportContext,html:'replace findings'}})).status,400);
+  const staleReport=await post('/api/ask',{question:'Show the full report',reportContext:{...reportContext,sourceVersion:'old-revision'}});
+  assert.equal(staleReport.status,409);assert.match((await staleReport.json()).error,/selected report.*earlier source revision/);
+  assert.equal(calls.length,0);
+});

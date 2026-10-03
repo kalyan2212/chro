@@ -61,6 +61,27 @@
   const business=/\b(?:workforce|costs?|categories|category|data|dashboard|metrics?|evidence|headcount|hiring|retention|onboarding|attrition|compensation|pay|skills?|capability|learning|service|cases|relations|experience|surveys?|recognition|diversity|representation|leadership|continuity|delivery|automation|people|employees?|organization|organisation|capacity|mobility|talent|economics|overtime|contractors?)\b/.test(value);
   return ask&&breadth&&(business||/\b(?:show|list|display|browse)\b[\s\S]{0,80}\beverything\b|\bwhat\s+(?:else\s+)?(?:do|can)\s+you\s+(?:have|show)\b/.test(value));
  }
+ function chartRequest(text) {
+  // Only a complete presentation command can bypass analytical delegation.
+  // Named metrics, comparisons, explanations and compound requests stay there.
+  let value=String(text||'').trim().toLowerCase().replace(/[.!?]+$/,'').replace(/\s+/g,' ');
+  if(value.length>180)return null;
+  value=value.replace(/^(?:okay[, ]+|ok[, ]+|now[, ]+)/,'').replace(/^(?:can|could|would|will) you /,'').replace(/^please /,'').replace(/(?:,? please| now| instead)$/,'');
+  const target='(bar|line|pie)(?: chart| graph| view)?',article='(?:(?:a|an|the) )?',subject='(?:(?:(?:(?:the )?(?:current|selected|existing)|the|this) )?(?:(?:bar|line|pie)(?: chart| graph)?|chart|graph|view)|it|this)';
+  for(const pattern of [
+   `^(?:change|switch|convert|turn) (?:${subject} )?(?:to|into) ${article}${target}$`,
+   `^make ${subject} (?:(?:into|as) )?${article}${target}$`,
+   `^(?:show|display|render|draw) (?:me )?(?:${subject} (?:as|in) )?${article}${target}$`,
+   `^(?:i want|i would like|i'd like) (?:${subject} (?:as|in|to be) )?${article}${target}$`
+  ]){const match=value.match(new RegExp(pattern));if(match)return {type:match[1]};}
+  return null;
+ }
+ function sourceEditCommand(text) {
+  const value=String(text||'').trim().toLowerCase().replace(/[.!?]+$/,'').replace(/\s+/g,' ').replace(/^(?:can|could|would|will) you /,'').replace(/^please /,'').replace(/,? please$/,'');
+  if(/^(?:apply (?:(?:the )?(?:these|those)|the proposed|the source) (?:changes|update)|confirm (?:this |the |the source )?update|save (?:these|the proposed) changes)$/.test(value))return 'apply';
+  if(/^(?:undo|revert) (?:that|this|the last|the) source (?:change|update|edit)$/.test(value))return 'undo';
+  return null;
+ }
  function matches(result, sessionId, delegationId, recovery = false) {
   if ((result?.recovery === true) !== recovery) return false;
   const valid = event => event?.type === 'session.commentary.append' && event.delegation_id === (recovery ? null : delegationId) && typeof event.content === 'string' && event.content.length > 0 && event.content.length < 2000 && validId(event.event_id);
@@ -70,7 +91,7 @@
  }
  // Pure helpers also used by the protocol tests. Studio explicitly requests its
  // one automatic welcome; the classic workspace remains opt-in.
- window.WI_LIVE_PROTOCOL = Object.freeze({ timeline, matches, snapshot, speechRequest, discoveryRequest });
+ window.WI_LIVE_PROTOCOL = Object.freeze({ timeline, matches, snapshot, speechRequest, discoveryRequest, chartRequest, chartCommand:text=>chartRequest(text)?.type||null, sourceEditCommand });
  const host = document.getElementById('wi-live');
  if (!host) return;
  host.hidden = true;
@@ -102,6 +123,12 @@
  const context = () => api()?.getContext?.() || {};
  const attachedImage = () => window.WI_STUDIO?.getImage?.() || null;
  const audience = () => window.WI_STUDIO?.getAudience?.() || 'chro';
+ const viewContext = () => window.WI_STUDIO?.getViewContext?.() || null;
+ const reportContext = () => window.WI_STUDIO?.getReportContext?.() || null;
+ const presentationPreferences = () => window.WI_STUDIO?.getPresentationPreferences?.() || null;
+ const pendingEdit = () => window.WI_STUDIO?.getPendingEdit?.() || null;
+ const lastSourceEdit = () => window.WI_STUDIO?.getLastSourceEdit?.() || null;
+ const selection = () => ({ scope:scope(),metric:context().metricId||null,scenario:context().caseId||null,audience:audience(),viewContext:viewContext(),reportContext:reportContext(),presentationPreferences:presentationPreferences() });
  const history = () => (api()?.getHistory?.() || []).slice(-24).map(x => ({ role: x.role, text: String(x.text || '').slice(0,2000) }));
  const current = run => active === run && run.serial === serial;
  function notify(type, detail) { window.dispatchEvent(new CustomEvent(type, { detail: snapshot(detail) })); }
@@ -113,6 +140,95 @@
  }
  function clearBeats(run) { clearTimeout(run.beatTimer); run.beatTimer = null; run.beats = null; }
  function clearRecovery(run) { clearTimeout(run.recoveryTimer); run.recoveryTimer = null; run.recoveryNeeded = false; }
+ function clearChart(run) { clearTimeout(run.chartTimer); run.chartTimer = null; }
+ function chartFeedback(result) {
+  const fallback=result?.ok?'The selected view has changed. The displayed evidence values and scope are unchanged.':'I could not change that view. Select a chart or report and use one of its available views.';
+  const message=typeof result?.message==='string'&&result.message.trim()?result.message.trim():fallback;
+  if(bytes(message)<=450)return message;
+  let content='';for(const item of new Intl.Segmenter('en',{granularity:'sentence'}).segment(message)){const next=(content+' '+item.segment.trim()).trim();if(bytes(next)>450)break;content=next;}return content||fallback;
+ }
+ function applyChart(run,action,{through,providerId=null,isCurrent=()=>true,announce=true,question}={}) {
+  if(!current(run)||closing||!isCurrent())return null;
+  let result;
+  try { result=window.WI_STUDIO?.applyViewAction?.(action,{origin:'voice',isCurrent:()=>current(run)&&!closing&&isCurrent()}); }
+  catch { result={ok:false,message:'The view could not be changed. The current evidence remains on screen; try its display controls.'}; }
+  // The controller is synchronous: confirmation follows an actual DOM update.
+  if(!result||typeof result.ok!=='boolean')result={ok:false,message:'Select a chart or report first, then ask for one of its available views.'};
+  if(!current(run)||closing||!isCurrent())return null;
+  if(Number.isFinite(through))run.answeredOffset=through;
+  run.recoveryAttempts=0;run.recoveryRetryAfter=null;run.contextKey=JSON.stringify(selection());
+  const message=chartFeedback(result);$('#wl-result').textContent=message;
+  const kind=action.type==='change_report_view'?'report':'chart';phase(run,'listening',{reason:kind+(result.ok?'-changed':'-unavailable'),message});
+  if(announce)command(run,'session.commentary.append',{delegation_id:providerId,content:message});
+  if(question)window.WI_STUDIO?.recordAction?.(question,message);
+  notify('wi-voice-view-action',{action,result,turnId:run.turnId});
+  return result;
+ }
+ function applyViewActions(run,actions,options={}) {
+  if(!Array.isArray(actions)||!actions.length||actions.length>4||actions.some(action=>!['change_chart','change_report_view'].includes(action?.type)))throw Error('The requested view change was not valid. The current evidence remains on screen.');
+  const results=[];for(const action of actions){const result=applyChart(run,action,{...options,announce:false});if(!result)return null;results.push(result);}return results;
+ }
+ const viewEvents=(results,providerId)=>results.map(result=>({type:'session.commentary.append',event_id:`view_${crypto.randomUUID()}`,delegation_id:providerId,content:chartFeedback(result)}));
+ function displaySource(run,response,isCurrent) {
+  if(!current(run)||closing||!isCurrent())return null;
+  const results=[];
+  if(response.sourceData){if(!window.WI_STUDIO?.renderSourceRows?.(response.sourceData,{origin:'voice',isCurrent}))throw Error('The source records could not be displayed.');results.push({ok:true,message:'Current source records are on screen. Displaying them has not changed the stored source.'});}
+  if(response.sourceEditProposal){
+   const proposal=response.sourceEditProposal,reviewed=window.WI_STUDIO?.showSourceEditProposal?.(proposal,{origin:'voice',isCurrent});
+   if(!reviewed?.ok||pendingEdit()?.id!==proposal.id)throw Error('The source proposal could not be displayed for review. No source change has been confirmed.');
+   results.push({ok:true,message:'The proposed source update is ready for review. It has not been applied. Check the before and after values, then say "apply these changes" to save this exact proposal.'});
+  }
+  if(results.length){const message=results.at(-1).message;$('#wl-result').textContent=message;phase(run,'listening',{reason:response.sourceEditProposal?'source-edit-proposed':'source-records-displayed',message});}
+  return results;
+ }
+ function localChart(run,assembled,providerId=null) {
+  const request=chartRequest(assembled.question);if(!request)return false;
+  const selected=viewContext();
+  run.pending?.abort();run.pending=null;clearChart(run);clearRecovery(run);clearBeats(run);clearTimeout(run.delegationTimer);run.delegationTimer=null;
+  run.turnId=providerId||`chart_${crypto.randomUUID()}`;
+  applyChart(run,{type:'change_chart',chartId:selected?.chartId||null,chartType:request.type,sourceVersion:selected?.sourceVersion||null},{through:assembled.through,providerId,question:assembled.question});
+  return true;
+ }
+ function scheduleChart(run) {
+  clearChart(run);if(!current(run)||closing||!run.ready)return;
+  const assembled=speechRequest(run.transcript.entries(),run.answeredOffset),source=sourceEditCommand(assembled.question);if(!chartRequest(assembled.question)&&!source)return;
+  const revision=run.inputRevision,order=run.delegationOrder,key=JSON.stringify(selection()),image=attachedImage()?.dataUrl,editKey=source?JSON.stringify(source==='apply'?pendingEdit():lastSourceEdit()):null;
+  run.chartTimer=setTimeout(()=>{run.chartTimer=null;if(!current(run)||closing||revision!==run.inputRevision||order!==run.delegationOrder||key!==JSON.stringify(selection())||image!==attachedImage()?.dataUrl||(source&&editKey!==JSON.stringify(source==='apply'?pendingEdit():lastSourceEdit())))return;if(!localSourceEdit(run,assembled))localChart(run,assembled);},650);
+ }
+ function localSourceEdit(run,assembled,providerId=null) {
+  const commandType=sourceEditCommand(assembled.question);if(!commandType)return false;
+  const edit=commandType==='apply'?pendingEdit():lastSourceEdit(),method=commandType==='apply'?'applyPendingEdit':'undoSourceEdit';
+  run.pending?.abort();run.pending=null;clearTimeout(run.sourceTimer);clearChart(run);clearRecovery(run);clearBeats(run);clearTimeout(run.delegationTimer);run.delegationTimer=null;
+  // Consume the confirmation when accepted, so a late duplicate delegation
+  // cannot submit the same write twice while its first response is pending.
+  run.answeredOffset=assembled.through;run.turnId=providerId||`source_${crypto.randomUUID()}`;
+  if(!edit?.id||!edit.sourceVersion||typeof window.WI_STUDIO?.[method]!=='function'){
+   const message=commandType==='apply'?'There is no source update awaiting confirmation. Ask for a specific source change first so you can review its before and after values.':'There is no identified source edit available to undo. Review the current source revision before requesting another change.';
+   $('#wl-result').textContent=message;phase(run,'listening',{reason:'source-edit-unavailable',message});command(run,'session.commentary.append',{delegation_id:providerId,content:message});return true;
+  }
+  const ctrl=new AbortController(),revision=run.inputRevision,order=++run.delegationOrder,operationId=`source_${crypto.randomUUID()}`;
+  run.pending=ctrl;run.sourceOperation={operationId,ctrl,refreshed:false};
+  const isCurrent=()=>current(run)&&!closing&&!ctrl.signal.aborted&&revision===run.inputRevision&&order===run.delegationOrder;
+  const message=commandType==='apply'?'Applying the reviewed source update…':'Undoing the identified source update…';$('#wl-result').textContent=message;phase(run,'thinking',{reason:'source-edit-pending',message});
+  command(run,'session.thinking.append',{delegation_id:providerId,content:'The user confirmed the identified source operation. The application is waiting for persistence. Do not say it is saved or undone until the application confirms the result.'});
+  const timer=setTimeout(()=>{ctrl.abort();if(!current(run)||closing||revision!==run.inputRevision||order!==run.delegationOrder)return;const feedback='The source operation timed out before confirmation. Review its status before retrying; it may already have reached the server.';$('#wl-result').textContent=feedback;phase(run,'listening',{reason:'source-edit-unconfirmed',message:feedback});command(run,'session.commentary.append',{delegation_id:providerId,content:feedback});},60000);run.sourceTimer=timer;
+  void (async()=>{
+   try {
+    const result=await window.WI_STUDIO[method]({origin:'voice',operationId,...(commandType==='apply'?{proposalId:edit.id}:{editId:edit.id}),expectedSourceVersion:edit.sourceVersion,signal:ctrl.signal,isCurrent});
+    if(!isCurrent())return;
+    const feedback=result?.ok===true?chartFeedback(result):chartFeedback({ok:false,message:result?.message||'The source operation was not confirmed. Review the source update status before trying again.'});
+    if(result?.ok===true){run.contextKey=JSON.stringify(selection());command(run,'session.instructions.append',{delegation_id:null,content:'The application confirmed a persisted source revision change. Earlier-source observations are superseded. Use the current dashboard selection and delegate every new business fact to the backend; do not reuse old figures as current data.'});}
+    const targets=edit.changes?.filter(change=>!change.derived).slice(0,6).map(change=>[change.month,change.function,change.region,change.path].join(' / ')).join('; ');
+    window.WI_STUDIO?.recordAction?.(assembled.question,feedback+(targets?' Source targets: '+targets+'.':''));
+    $('#wl-result').textContent=feedback;phase(run,'listening',{reason:result?.ok?'source-edit-complete':'source-edit-unconfirmed',message:feedback});command(run,'session.commentary.append',{delegation_id:providerId,content:feedback});
+   }catch(error){
+    if(!current(run)||closing||revision!==run.inputRevision||order!==run.delegationOrder)return;
+    const feedback='The source operation could not be confirmed. Check its status before trying again; the request may already have reached the server.';
+    $('#wl-result').textContent=feedback;phase(run,'listening',{reason:'source-edit-unconfirmed',message:feedback});command(run,'session.commentary.append',{delegation_id:providerId,content:feedback});
+   }finally{clearTimeout(timer);if(run.sourceTimer===timer)run.sourceTimer=null;if(run.pending===ctrl)run.pending=null;if(run.sourceOperation?.operationId===operationId)run.sourceOperation=null;}
+  })();
+  return true;
+ }
  function sendBeat(run) {
   const queue = run.beats;
   if (!queue || !current(run) || closing || queue.revision !== run.inputRevision || queue.scope !== JSON.stringify(scope())) { clearBeats(run); return; }
@@ -161,7 +277,8 @@
   window.WI_VOICE_GUIDE?.stop();
   clearBeats(run);
   clearRecovery(run);
-  clearTimeout(run.startTimer); clearTimeout(run.closeTimer); clearTimeout(run.maxTimer); clearTimeout(run.disconnectTimer); clearTimeout(run.delegationTimer); clearTimeout(run.playbackTimer); clearTimeout(run.welcomeTimer);
+  clearChart(run);
+  clearTimeout(run.startTimer); clearTimeout(run.closeTimer); clearTimeout(run.maxTimer); clearTimeout(run.disconnectTimer); clearTimeout(run.delegationTimer); clearTimeout(run.playbackTimer); clearTimeout(run.welcomeTimer); clearTimeout(run.sourceTimer);
   run.pending?.abort(); run.startControl?.abort(); run.stream?.getTracks().forEach(track => track.stop());
   if (run.channel) { run.channel.onmessage = run.channel.onclose = run.channel.onerror = null; try { run.channel.close(); } catch {} }
   if (run.pc) { run.pc.ontrack = run.pc.onconnectionstatechange = null; try { run.pc.close(); } catch {} }
@@ -219,8 +336,8 @@
   autoRequested = false; autoConsumed = true;
   window.WI_VOICE_GUIDE?.stop();
   const run = active; if (!run || closing) return;
-  clearBeats(run); phase(run, 'stopped');
-  closing = true; run.pending?.abort(); clearTimeout(run.delegationTimer); run.delegationTimer = null; clearRecovery(run);
+  clearBeats(run); clearChart(run); phase(run, 'stopped');
+  closing = true; run.pending?.abort(); clearTimeout(run.sourceTimer); clearTimeout(run.delegationTimer); run.delegationTimer = null; clearRecovery(run);
   $('#wl-audio').pause();
   run.stream?.getTracks().forEach(track => { track.enabled = false; }); run.muted = true; micStatus(run); controls();
   if (run.ready && run.channel?.readyState === 'open') {
@@ -230,7 +347,7 @@
  }
  function cancelPending(run) {
   if (!run.pending) return;
-  run.pending.abort(); run.pending = null;
+  run.pending.abort(); run.pending = null; clearTimeout(run.sourceTimer);
   run.recoveryNeeded = true;
   $('#wl-result').textContent = 'Listening to your continued question. The earlier result will not replace the current view.';
   command(run, 'session.thinking.append', { delegation_id: null, content: 'The user continued speaking. The application will discard the earlier result and investigate the complete updated question after speech settles. No new result is verified yet.' });
@@ -262,7 +379,7 @@
    if (active?.automatic && !active.ready) { stop('Automatic voice setup cancelled because the page changed.'); return; }
   }
   const run = active; if (!run?.ready || closing) return;
-  const selected = context(), values = { scope: scope(), metric: selected.metricId || null, scenario: selected.caseId || null, audience:audience() };
+  const values = selection();
   const key = JSON.stringify(values);
   // An explicit application navigation/question event invalidates pending work
   // even when it keeps the same filters (for example Home or a typed follow-up).
@@ -270,7 +387,7 @@
   if (key === run.contextKey && !forced) return;
   const changed = !!run.contextKey || forced; run.contextKey = key;
   if (changed) {
-   run.pending?.abort(); run.pending = null; ++run.delegationOrder; clearTimeout(run.delegationTimer); run.delegationTimer = null; clearRecovery(run); clearBeats(run); window.WI_VOICE_GUIDE?.stop();
+   run.pending?.abort(); run.pending = null; clearTimeout(run.sourceTimer); ++run.delegationOrder; clearTimeout(run.delegationTimer); run.delegationTimer = null; clearRecovery(run); clearChart(run); clearBeats(run); window.WI_VOICE_GUIDE?.stop();
    run.answeredOffset = run.transcript.entries().filter(entry => entry.role === 'user').reduce((end, entry) => Math.max(end, entry.end), run.answeredOffset);
    run.delegationOffset = null; run.recoveryAttempts = 0; run.recoveryRetryAfter = null; run.recoveryTurnId = null;
    command(run, 'session.instructions.append', { delegation_id: null, content: 'The user changed the question or dashboard selection. Stop the previous explanation and use the latest selection for the next question. Earlier pending results have been discarded.' });
@@ -278,13 +395,15 @@
   }
   const content = 'Current synthetic dashboard selection: ' + key + '. Use this to understand references; delegate all requested facts and calculations.';
   if (bytes(content) <= 450) command(run, 'session.thinking.append', { delegation_id: null, content });
+  const view=viewContext();if(view){const cue='Selected chart metadata: '+JSON.stringify({chartId:view.chartId,currentType:view.currentType,availableTypes:view.availableTypes})+'. Delegate chart changes; wait for renderer feedback.';if(bytes(cue)<=450)command(run,'session.thinking.append',{delegation_id:null,content:cue});}
  }
  async function delegated(run, event, recovery = false) {
   const delegationId = event.delegation?.id;
   if (!current(run) || closing || !validId(delegationId) || event.delegation?.target !== 'client' || run.seenDelegations.has(delegationId)) return;
   if (!Number.isFinite(event.offset_ms) || event.offset_ms < 0) return;
   if (event.offset_ms <= run.answeredOffset) return;
-  run.seenDelegations.add(delegationId); run.pending?.abort(); clearTimeout(run.delegationTimer); run.delegationTimer = null; clearRecovery(run); clearBeats(run); run.delegationOffset = event.offset_ms;
+  if(run.sourceOperation&&!speechRequest(run.transcript.entries(),run.answeredOffset,event.offset_ms).question)return;
+  run.seenDelegations.add(delegationId); run.pending?.abort(); clearTimeout(run.delegationTimer); run.delegationTimer = null; clearRecovery(run); clearChart(run); clearBeats(run); run.delegationOffset = event.offset_ms;
   if (!recovery) { run.recoveryAttempts = 0; run.recoveryRetryAfter = null; run.recoveryTurnId = null; }
   run.turnId = delegationId; phase(run, 'thinking');
   const order = ++run.delegationOrder;
@@ -300,6 +419,8 @@
     const questionThrough = assembled.through;
    if (!question && !assembled.tooLong && run.answeredOffset >= 0) { phase(run, 'listening'); return; }
    const providerId = recovery ? null : delegationId;
+   if(question&&localSourceEdit(run,assembled,providerId))return;
+   if(question&&localChart(run,assembled,providerId))return;
    if (!question || assembled.tooLong) {
     if (assembled.tooLong) run.answeredOffset = questionThrough;
     const message=assembled.tooLong?'That last spoken request was too long to preserve safely. Please repeat your latest request briefly; a business topic is enough, and I can discover the available evidence.':'I could not assemble your speech yet. Please repeat your request; you can name a business topic and I can discover the available evidence.';
@@ -307,34 +428,56 @@
     $('#wl-result').textContent = message; phase(run,'listening',{reason:'transcript-incomplete',message}); return;
    }
    const revision = run.inputRevision, ctrl = new AbortController(); run.pending = ctrl;
-   const scopeAtStart = JSON.stringify(scope()), contextAtStart = JSON.stringify(context()), imageAtStart=attachedImage(), audienceAtStart=audience();
+   const scopeAtStart = JSON.stringify(scope()), contextAtStart = JSON.stringify(context()), imageAtStart=attachedImage(), audienceAtStart=audience(),viewAtStart=viewContext(),viewKey=JSON.stringify(viewAtStart),reportAtStart=reportContext(),reportKey=JSON.stringify(reportAtStart),preferencesAtStart=presentationPreferences(),preferencesKey=JSON.stringify(preferencesAtStart);
    $('#wl-result').textContent = 'Investigating your question across the available evidence…';
    phase(run,'thinking',{message:assembled.compacted?'Using your recent question with limited earlier conversation context. Investigating the available evidence.':'Investigating your question across the available evidence. You can interrupt to change direction.'});
    command(run,'session.thinking.append',{delegation_id:providerId,content:'The backend analyst is investigating the question. No result is verified yet. Briefly acknowledge the lookup if useful, then wait for the verified explanation; do not invent progress or findings.'});
    try {
-    const res = await fetch('/api/live/delegate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(110000)]), body: JSON.stringify({ sessionId: run.sessionId, delegationId, ...(recovery ? { recovery: true, ...(run.recoveryTurnId?{recoveryTurnId:run.recoveryTurnId}:{}) } : {}), question, scope: scope(), context: context(), history: [...history(),...assembled.history].slice(-24), audience:audienceAtStart, sourceVersion:window.WI_DATA?.sourceVersion, ...(imageAtStart?{image:imageAtStart}:{}) }) });
-    if (!res.ok) { let error; try { error = (await res.json()).error; } catch {} if (res.status === 401) { run.failureCode = 'HTTP_401'; failed(run, 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.'); return; } throw Error(error || `Evidence lookup failed (${res.status}).`); }
+    const res = await fetch('/api/live/delegate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(110000)]), body: JSON.stringify({ sessionId: run.sessionId, delegationId, ...(recovery ? { recovery: true, ...(run.recoveryTurnId?{recoveryTurnId:run.recoveryTurnId}:{}) } : {}), question, scope: scope(), context: context(), history: [...history(),...assembled.history].slice(-24), audience:audienceAtStart, viewContext:viewAtStart, reportContext:reportAtStart, presentationPreferences:preferencesAtStart, sourceVersion:window.WI_DATA?.sourceVersion, ...(imageAtStart?{image:imageAtStart}:{}) }) });
+    if (!res.ok) { let error; try { error = (await res.json()).error; } catch {} if (res.status === 401) { run.failureCode = 'HTTP_401'; failed(run, 'Your workspace sign-in expired. Reload this page and sign in again to continue voice.'); return; } throw Object.assign(Error(error || `Evidence lookup failed (${res.status}).`),{status:res.status}); }
     const value = await res.json();
-    if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder || scopeAtStart !== JSON.stringify(scope()) || contextAtStart !== JSON.stringify(context()) || imageAtStart?.dataUrl !== attachedImage()?.dataUrl || audienceAtStart!==audience()) return;
+    if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder || scopeAtStart !== JSON.stringify(scope()) || contextAtStart !== JSON.stringify(context()) || imageAtStart?.dataUrl !== attachedImage()?.dataUrl || audienceAtStart!==audience() || viewKey!==JSON.stringify(viewContext()) || reportKey!==JSON.stringify(reportContext()) || preferencesKey!==JSON.stringify(presentationPreferences())) return;
     if (!matches(value, run.sessionId, delegationId, recovery)) throw Error('The evidence response did not match this conversation.');
     const result = snapshot(value);
+    if(result.response.sourceOnly===true||((result.response.sourceData||result.response.sourceEditProposal)&&!result.response.panels?.length)){
+     const isCurrent=()=>current(run)&&!closing&&!ctrl.signal.aborted&&revision===run.inputRevision&&order===run.delegationOrder;
+     const displayed=displaySource(run,result.response,isCurrent);if(!displayed)return;
+     if(result.response.viewActions?.length){const applied=applyViewActions(run,result.response.viewActions,{isCurrent});if(!applied)return;displayed.push(...applied);}
+     if(!displayed.length)throw Error('The source response contained no displayable result.');
+     run.answeredOffset=questionThrough;run.recoveryAttempts=0;run.recoveryRetryAfter=null;run.contextKey=JSON.stringify(selection());
+     window.WI_STUDIO?.recordAction?.(question,displayed.map(item=>item.message).join(' '));
+     run.beats={events:viewEvents(displayed,providerId),cues:[],index:0,revision,scope:JSON.stringify(scope())};sendBeat(run);return;
+    }
+    if(result.response.presentationOnly===true){
+     const applied=applyViewActions(run,result.response.viewActions,{through:questionThrough,isCurrent:()=>!ctrl.signal.aborted&&revision===run.inputRevision&&order===run.delegationOrder});if(!applied)return;
+     window.WI_STUDIO?.recordAction?.(question,applied.map(item=>item.message).join(' '));
+     run.beats={events:viewEvents(applied,providerId),cues:[],index:0,revision,scope:JSON.stringify(scope())};sendBeat(run);return;
+    }
     if (!api()?.showResponse) throw Error('The visual briefing is unavailable.');
-    const shown = await api().showResponse(result.response, { origin: 'voice', isCurrent: () => current(run) && !closing && !ctrl.signal.aborted && revision === run.inputRevision && order === run.delegationOrder && scopeAtStart === JSON.stringify(scope()) && imageAtStart?.dataUrl === attachedImage()?.dataUrl && audienceAtStart===audience() });
+    const shown = await api().showResponse(result.response, { origin: 'voice', isCurrent: () => current(run) && !closing && !ctrl.signal.aborted && revision === run.inputRevision && order === run.delegationOrder && scopeAtStart === JSON.stringify(scope()) && imageAtStart?.dataUrl === attachedImage()?.dataUrl && audienceAtStart===audience() && viewKey===JSON.stringify(viewContext()) && reportKey===JSON.stringify(reportContext()) && preferencesKey===JSON.stringify(presentationPreferences()) });
     if (!current(run) || closing || ctrl.signal.aborted || revision !== run.inputRevision || order !== run.delegationOrder) return;
     if (shown === false) throw Error('The data changed during this lookup. Ask again to use the latest evidence.');
      run.answeredOffset = questionThrough;
     run.recoveryAttempts = 0; run.recoveryRetryAfter = null;
     $('#wl-result').textContent = 'Validated visual briefing: ' + result.response.title + '. Exact figures and scenario assumptions appear in the evidence card.';
     window.WI_VOICE_GUIDE?.prepare(result.response);
-    run.contextKey = JSON.stringify({ scope: scope(), metric: context().metricId || null, scenario: context().caseId || null, audience:audience() });
+    run.contextKey = JSON.stringify(selection());
     notify('wi-voice-answer', { response: result.response, turnId: delegationId, beatCount: result.events?.length || 1, narration:result.narration || null });
-    run.beats = { events: result.events || [result.event], cues:result.narration?.beats, index: 0, revision, scope: JSON.stringify(scope()) };
+    let events=result.events||[result.event];
+    if(result.response.sourceData||result.response.sourceEditProposal){const displayed=displaySource(run,result.response,()=>!ctrl.signal.aborted&&revision===run.inputRevision&&order===run.delegationOrder);if(!displayed)return;events=[...events,...viewEvents(displayed,providerId)];}
+    if(Array.isArray(result.response.viewActions)&&result.response.viewActions.length){
+     const applied=applyViewActions(run,result.response.viewActions,{isCurrent:()=>!ctrl.signal.aborted&&revision===run.inputRevision&&order===run.delegationOrder});
+     if(!applied)return;
+     events=[...events,...viewEvents(applied,providerId)];
+    }
+    run.beats = { events, cues:result.narration?.beats, index: 0, revision, scope: JSON.stringify(scope()) };
     sendBeat(run);
    } catch (error) {
     if (!current(run) || closing || ctrl.signal.aborted || order !== run.delegationOrder) return;
     $('#wl-result').textContent = error.message || 'Evidence lookup failed. Please try again.';
     phase(run, 'listening', { reason: 'evidence-error', message: $('#wl-result').textContent });
-    command(run, 'session.commentary.append', { delegation_id: providerId, content: 'The evidence lookup did not complete. No new result is verified. Please ask again.' });
+    const feedback=[400,409].includes(error.status)?chartFeedback({ok:false,message:error.message}):'The evidence lookup did not complete. No new result is verified. Please ask again.';
+    command(run, 'session.commentary.append', { delegation_id: providerId, content: feedback });
    } finally { if (run.pending === ctrl) run.pending = null; }
   };
   if (recovery) void execute(); else run.delegationTimer = setTimeout(execute, 300);
@@ -362,7 +505,7 @@
   } else if (event.type === 'session.input_transcript.delta' || event.type === 'session.output_transcript.delta') {
    if (!run.transcript.add(event)) return;
    if (event.type === 'session.input_transcript.delta') {
-    window.WI_VOICE_GUIDE?.stop(); run.inputRevision++; clearBeats(run); cancelPending(run);
+    window.WI_VOICE_GUIDE?.stop(); run.inputRevision++; clearBeats(run); clearChart(run); cancelPending(run);
     // A fresh utterance may arrive in the short transcript-drain window, before
     // there is an HTTP request to abort. Do not start that outdated lookup.
     if (Number.isFinite(run.delegationOffset) && event.start_ms > run.delegationOffset) { if (run.delegationTimer != null) run.recoveryNeeded = true; clearTimeout(run.delegationTimer); run.delegationTimer = null; ++run.delegationOrder; }
@@ -371,6 +514,7 @@
     }
     if (!run.pending && discoveryRequest(speechRequest(run.transcript.entries(),run.answeredOffset).question)) run.recoveryNeeded = true;
     scheduleRecovery(run);
+    scheduleChart(run);
     phase(run, 'listening', { reason: 'input-transcript' });
    }
    else { window.WI_VOICE_GUIDE?.speak(event.delta); phase(run, 'speaking'); }
@@ -494,7 +638,7 @@
    const offer = await pc.createOffer(); if (!current(run)) return; await pc.setLocalDescription(offer); await waitICE(pc,run.startControl.signal);
    if (!current(run) || closing) return;
    run.stage = 'server.live_session'; run.sessionRequested = true;
-   const res = await fetch('/api/live/session',{method:'POST',headers:{'Content-Type':'application/json'},signal:run.startControl.signal,body:JSON.stringify({sdp:pc.localDescription.sdp,scope:scope(),context:context(),history:history()})});
+   const res = await fetch('/api/live/session',{method:'POST',headers:{'Content-Type':'application/json'},signal:run.startControl.signal,body:JSON.stringify({sdp:pc.localDescription.sdp,scope:scope(),context:context(),history:history(),viewContext:viewContext(),reportContext:reportContext(),presentationPreferences:presentationPreferences()})});
    if (!res.ok) {
     let detail; try { detail = await res.json(); } catch {}
     run.failureCode = typeof detail?.code === 'string' && /^[A-Z_]{1,60}$/.test(detail.code) ? detail.code : `HTTP_${res.status}`;
@@ -535,8 +679,14 @@
  $('#wl-audio').addEventListener('playing',() => { if (active) playbackReady(active); });
  $('#wl-audio').addEventListener('pause',() => { if (active && $('#wl-audio').paused) { if (!closing) { active.playbackReady = false; active.playbackPaused = true; } $('#wl-playback').textContent = 'AI voice playback paused'; } });
  window.addEventListener('wi-stop-media',() => stop('Switching conversation mode. Finishing continuous voice…'));
- window.addEventListener('wi-source-updated',() => stop('Source data refreshed. Finishing this conversation; start again using the new evidence.'));
+ window.addEventListener('wi-source-updated',event => {
+  const operation=active?.sourceOperation;
+  if(operation&&event?.detail?.origin==='voice'&&event.detail.operationId===operation.operationId&&!operation.ctrl.signal.aborted){operation.refreshed=true;clearBeats(active);clearRecovery(active);clearChart(active);window.WI_VOICE_GUIDE?.stop();return;}
+  stop('Source data refreshed. Finishing this conversation; start again using the new evidence.');
+ });
  window.addEventListener('wi-context-changed',syncContext);
+ window.addEventListener('wi-chart-type-changed',event=>{if(!['voice','preference'].includes(event?.detail?.origin||window.WI_ASSISTANT_ACTIONS?.actionOrigin?.()))syncContext({force:true});});
+ window.addEventListener('wi-report-view-changed',event=>{if(event?.detail?.origin!=='voice')syncContext({force:true});});
  document.getElementById('wi-app')?.addEventListener?.('change',syncContext);
  window.addEventListener('offline',() => { if (active) failed(active,'Browser network connection is offline.'); });
  document.addEventListener?.('visibilitychange',() => {

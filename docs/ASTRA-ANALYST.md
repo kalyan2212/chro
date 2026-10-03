@@ -1,6 +1,6 @@
 # Astra analytical workspace
 
-The configured Studio now asks Astra to investigate and explain a question using governed, read-only tools. It can retrieve several measures, compare functions or regions, inspect trends, test a scenario, consult workspace definitions, and compose a briefing that separates evidence, hypotheses, proposed actions and unknowns. The no-key demo retains its deterministic question routes. Neither mode connects to real employee records or approves an employment action.
+The configured Studio asks Astra to investigate and explain a question using fixed, governed tools. It can retrieve several measures, compare functions or regions, inspect trends, test a scenario, consult workspace definitions, and compose a briefing that separates evidence, hypotheses, proposed actions and unknowns. It can also request a display change or prepare an exact synthetic-source proposal for user confirmation; it cannot apply source changes through a model tool. The no-key demo retains its deterministic question routes. Neither mode connects to real employee records or approves an employment action.
 
 ## Use the experience
 
@@ -24,7 +24,7 @@ Typed questions, navigation, changed scope or image, source refresh, Stop and re
 
 `analyst.mjs` runs a bounded Responses tool loop. It supplies the workspace catalogue, selected scope, current context, up to 24 recent messages, and any attachment as user context. The model may call several tools and request more evidence after inspecting an earlier result. Current limits are four investigation/synthesis rounds, an optional fifth verification-only repair with no additional tools, sixteen tool calls per question, and six rendered evidence panels. These are execution limits, not a fixed vocabulary of supported strategic questions.
 
-`evidence-tools.mjs` provides six fixed functions:
+`evidence-tools.mjs` provides fixed analytical functions and bounded application actions:
 
 | Tool | Available evidence |
 | --- | --- |
@@ -34,6 +34,12 @@ Typed questions, navigation, changed scope or image, source refresh, Stop and re
 | `calculate_scenario` | One of six local calculators with validated, typed assumptions and explicit hypothetical populations. |
 | `search_workspace` | Bounded keyword search over metric definitions, 38 view descriptions, scenario methods, shipped reference explanations and allowlisted saved investigation/decision fields. |
 | `get_scenario_catalog` | Scenario methods, default inputs, input bounds and calculation limits. |
+| `change_chart` | Pending request for an available chart type on the current chart identity and source revision; the browser must apply it before success is confirmed. |
+| `change_report_view` | Pending executive/evidence/full layout request for the current analytical report. |
+| `inspect_source_data` | Bounded current aggregate source rows from a curated catalogue, when the source service is available. |
+| `propose_source_changes` | Persist an exact before/after proposal without changing source values. Actual application requires a separate user confirmation and application-owned endpoint. |
+
+Source-edit authorization, immutable proposals, confirmed writes, undo and browser-only display preferences are described in [ASSISTANT-ACTIONS.md](ASSISTANT-ACTIONS.md). The shared workspace has one editor role; these controls are not individual approval permissions.
 
 Each retrieved item receives an immutable request-local identifier such as `E1`, a source version and a scope where applicable. Computed evidence retains the full trusted engine response. The engine restores the question's snapshot immediately before each synchronous calculation. Model arguments never become executable code, SQL or arbitrary filesystem paths. Search reads only fixed, size-bounded shipped files and explicitly supplied saved records; it does not read `.env`, arbitrary `.state` files or the local filesystem on demand.
 
@@ -55,7 +61,7 @@ The previous metric-only catalogue omitted the existing component chart. A real-
 
 ## HTTP and lifecycle
 
-`POST /api/ask` accepts the existing question, scope, context and source revision, plus optional `audience`, `image`, `requestId` and `operation`. With an API key, ordinary questions use the analyst. `operation:"calculate"` requires an explicit scenario and assumptions and runs the deterministic calculator. A no-key request with an image fails clearly instead of claiming visual understanding.
+`POST /api/ask` accepts the existing question, scope, context and source revision, plus optional `audience`, `image`, `requestId`, `operation`, `viewContext`, `reportContext` and `presentationPreferences`. With an API key, ordinary questions use the analyst. `operation:"calculate"` requires an explicit scenario and assumptions and runs the deterministic calculator. A no-key request with an image fails clearly instead of claiming visual understanding.
 
 `GET /api/analysis/progress?id=…` returns bounded in-process phase metadata only to the identity that created the question. It carries no image, transcript or analytical document and does not refresh Cloud Storage on each poll. It is temporary progress feedback, not durable job state or a cross-instance queue. A stale source revision, including stale conversational context, returns HTTP 409; the server also checks for source changes before accepting completed analysis.
 
@@ -63,7 +69,7 @@ The ask and voice-delegation endpoints allow JSON bodies up to 8,200,000 bytes. 
 
 Images and conversation history are submitted to the configured provider as necessary for the request; the Responses request sets `store:false`. That parameter does not establish an organization-specific retention or compliance policy. The application does not persist attachment bytes or full conversations in its workspace journal. Progress is process-local. Existing journal persistence retains source revisions, explicitly saved evidence/notes, decisions and bounded audit metadata.
 
-Investigations and decision drafts still require the user's Save action. The server validates the active revision and reconstitutes calculated evidence. Pins retain each panel's scope; breakdowns also preserve displayed segment observations within the 50-pin bound. Downloaded briefs map evidence reference IDs to their scope, revision, facts and definitions. Saved records are immutable, deduplicated snapshots; decisions remain `draft-unapproved`. The analyst has no email, write, approval or deployment tool and cannot silently execute a recommendation. Saved notes and document excerpts are treated as untrusted content, not instructions that override the tool boundary.
+Investigations and decision drafts still require the user's Save action. The server validates the active revision and reconstitutes calculated evidence. Pins retain each panel's scope; breakdowns also preserve displayed segment observations within the 50-pin bound. Downloaded briefs map evidence reference IDs to their scope, revision, facts and definitions. Saved records are immutable, deduplicated snapshots; decisions remain `draft-unapproved`. The analyst has no email, source-apply, source-undo, approval or deployment tool and cannot silently execute a recommendation. Its source-proposal tool persists proposed changes for review without applying them. Saved notes and document excerpts are treated as untrusted content, not instructions that override the tool boundary.
 
 ## Validation boundary
 

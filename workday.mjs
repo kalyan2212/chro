@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile, unlink } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, writeFile, unlink, rmdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { prepareSourceChanges, applySourceChanges, sourceError } from './source-edits.mjs';
 
 // A synthetic custom-report adapter. These names and response envelopes are an
 // illustrative RaaS-shaped contract, not assertions about Workday's public API.
@@ -76,6 +77,7 @@ function validate(dataset, baseline) {
     same(f.beginningHeadcount + f.hires - f.voluntaryExits - f.involuntaryExits, s.headcount, `${id} headcount`);
     same(s.fte, s.headcount, `${id} FTE`);
     same(s.annualCostRunRate, sum(s.costBreakdown), `${id} cost components`);
+    same(s.costBreakdown.employeeLoaded, sum(s.loadedPayByLevel), `${id} employee pay-level allocation`);
     same(q.beginningBacklog + q.inflow - q.resolved, q.backlog, `${id} service queue`);
     same(q.resolution.closed, q.resolved, `${id} closed cases`);
     same(f.externalHires, f.hires, `${id} external hires`);
@@ -183,28 +185,178 @@ export function createWorkday({ baseline, storageDir, fetchReport, objectStore }
       validate(stored.snapshot, original);
       state = stored;
     } else {
+      let release;
+      if (!objectStore) {
+        release = await acquireLocalLock();
+        // Another process may have completed initialization or a confirmed edit
+        // since our first read. Re-read under ownership; never publish a stale
+        // baseline over its now-existing snapshot or audit.
+        try {
+          let existing;
+          try { existing = JSON.parse(await readFile(file, 'utf8')); }
+          catch (error) { if (error.code !== 'ENOENT') throw error; }
+          if (existing) {
+            if (existing.schema !== 1 || !existing.snapshot || !Array.isArray(existing.history) || existing.version !== hash({ sourceRevision: existing.sourceRevision, cells: existing.snapshot.cells, cohorts: existing.snapshot.cohorts })) throw new Error('Corrupt or incompatible synthetic Workday state');
+            validate(existing.snapshot, original); state = existing;
+            await release(); return status();
+          }
+        } catch (error) { await release(); throw error; }
+      }
+      try {
       const snapshot = clone(original), coverage = validate(snapshot, original);
       const sourceRevision = 'synthetic:baseline:v1';
       const version = hash({ sourceRevision, cells: snapshot.cells, cohorts: snapshot.cohorts });
       snapshot.sourceVersion = version;
       try { await persist({ schema: 1, sourceRevision, version, snapshot, coverage, lastAttempt: null, lastSuccess: null, history: [] }); }
       catch(error){if(!objectStore||error.status!==409)throw error;await loadCurrent();}
+      } finally { if (release) await release(); }
     }
     return status();
   }
   async function loadCurrent(){
-    if(!objectStore)return;
-    const current=await objectStore.read('workday-synthetic-state.json'), saved=current.data;
+    const current=objectStore ? await objectStore.read('workday-synthetic-state.json') : { data: JSON.parse(await readFile(file, 'utf8')), generation };
+    const saved=current.data;
     if(!saved||saved.schema!==1||!saved.snapshot||!Array.isArray(saved.history)||saved.version!==hash({sourceRevision:saved.sourceRevision,cells:saved.snapshot.cells,cohorts:saved.snapshot.cohorts}))throw Error('Cloud synthetic source is missing or invalid. Restore its previous object version.');
     validate(saved.snapshot,original);state=saved;generation=current.generation;
   }
-  async function refresh(){await queue;await loadCurrent();}
+  function refresh(){
+    // A refresh also mutates in-memory state/generation, so it must join the
+    // operation queue rather than merely wait for an earlier queue snapshot.
+    const next = queue.then(() => loadCurrent()); queue = next.catch(() => {}); return next;
+  }
   function snapshot() { ensureInit(); return clone(state.snapshot); }
   function status() {
     ensureInit();
     return clone({ synthetic: true, connected: false, system: 'Synthetic custom Workday-style reports plus separately labeled supplements',
       sourceVersion: state.version, sourceRevision: state.sourceRevision, lastAttempt: state.lastAttempt,
-      lastSuccess: state.lastSuccess, coverage: state.coverage, history: state.history });
+      lastSuccess: state.lastSuccess, coverage: state.coverage, history: state.history,
+      sourceEdits: { activeCount: (state.activeEditIds || []).length, latestUndoableEditId: state.activeEditIds?.at(-1) || null,
+        syncBlocked: !!state.activeEditIds?.length } });
+  }
+  const publicEntry = entry => { const { owner, ...safe } = entry; return clone(safe); };
+  function editHistory() {
+    ensureInit();
+    return { sourceVersion: state.version, edits: (state.sourceEditHistory || []).slice(-100).map(publicEntry),
+      proposals: (state.sourceEditProposals || []).filter(item => item.status === 'proposed' && item.sourceVersion === state.version).map(publicEntry),
+      latestUndoableEditId: state.activeEditIds?.at(-1) || null, activeCount: (state.activeEditIds || []).length };
+  }
+  function sourceVersionGuard(expectedSourceVersion) {
+    if (typeof expectedSourceVersion !== 'string' || expectedSourceVersion !== state.version)
+      throw sourceError('The source changed. Refresh the source data and create or confirm a fresh proposal.', 409);
+  }
+  function editOwner(owner = 'local') {
+    if (typeof owner !== 'string' || !owner.length || owner.length > 128) throw sourceError('A valid source edit owner is required.', 403);
+    return owner;
+  }
+  function checkOwner(entry, owner) {
+    if (entry.owner !== editOwner(owner)) throw sourceError('This source proposal belongs to another workspace session.', 403);
+  }
+  function checkedCoverage(candidate) {
+    try { return validate(candidate, original); }
+    catch (error) { throw sourceError(`Source change rejected: ${error.message}`); }
+  }
+  async function acquireLocalLock() {
+    const lock = `${file}.lock`, token = randomUUID(), marker = `owner-${process.pid}-${token}`;
+    const staging = `${lock}.${process.pid}.${token}.tmp`;
+    const busy = () => sourceError('Another local source operation is in progress. Refresh and retry.', 409);
+    await mkdir(staging);
+    try {
+      await writeFile(join(staging, marker), '', { flag: 'wx', mode: 0o600 });
+      // Rename publishes a nonempty directory atomically: there is no interval in
+      // which a new lock exists without an identifiable owner, even after a crash.
+      try { await rename(staging, lock); }
+      catch (error) {
+        let entries;
+        try { entries = await readdir(lock); } catch { throw error; }
+        const match = entries.length === 1 && entries[0].match(/^owner-([1-9]\d*)-([0-9a-f-]{36})$/);
+        if (!match) throw sourceError('The local source lock has no valid owner. Verify that no source write is running before repairing this lock.', 409);
+        const pid = Number(match[1]); let alive = true;
+        try { process.kill(pid, 0); }
+        catch (probe) { if (probe.code === 'ESRCH') alive = false; }
+        if (alive) throw busy();
+        // Only the contender that removes this exact dead-owner marker may clear
+        // the directory. A competitor seeing ENOENT must stop, never delete a
+        // newly acquired lock. rmdir also refuses a replacement nonempty lock.
+        try { await unlink(join(lock, entries[0])); await rmdir(lock); }
+        catch { throw busy(); }
+        try { await rename(staging, lock); } catch { throw busy(); }
+      }
+      return async () => {
+        try { await unlink(join(lock, marker)); } catch { return; }
+        await rmdir(lock).catch(() => {});
+      };
+    } finally {
+      await unlink(join(staging, marker)).catch(() => {});
+      await rmdir(staging).catch(() => {});
+    }
+  }
+  function serialize(action) {
+    const next = queue.then(async () => {
+      if (objectStore) return action();
+      // One process already serializes with queue; the directory lock also keeps
+      // two local app processes from overwriting each other's proposal/audit state.
+      const release = await acquireLocalLock();
+      try { return await action(); }
+      finally { await release(); }
+    });
+    queue = next.catch(() => {}); return next;
+  }
+  function proposeEdit({ expectedSourceVersion, changes, reason = '', owner } = {}) {
+    return serialize(async () => {
+      ensureInit(); await loadCurrent(); sourceVersionGuard(expectedSourceVersion);
+      const actor = editOwner(owner);
+      if (typeof reason !== 'string' || reason.length > 1000) throw sourceError('A source change reason must be at most 1,000 characters.');
+      const prepared = prepareSourceChanges(state.snapshot, changes);
+      checkedCoverage(prepared.candidate);
+      const proposal = { id: randomUUID(), status: 'proposed', sourceVersion: state.version, reason: reason.trim(),
+        changes: prepared.changes, createdAt: new Date().toISOString(), owner: actor };
+      const pending = (state.sourceEditProposals || []).filter(item => item.status === 'proposed' && item.sourceVersion === state.version);
+      await persist({ ...state, sourceEditProposals: [...pending.slice(-99), proposal] }, generation);
+      return publicEntry(proposal);
+    });
+  }
+  function applyEdit({ proposalId, expectedSourceVersion, owner } = {}) {
+    return serialize(async () => {
+      ensureInit(); await loadCurrent(); sourceVersionGuard(expectedSourceVersion);
+      const proposal = (state.sourceEditProposals || []).find(item => item.id === proposalId);
+      if (!proposal || proposal.status !== 'proposed') throw sourceError('This source proposal is missing or has already been applied.', 409);
+      checkOwner(proposal, owner);
+      if (proposal.sourceVersion !== state.version) throw sourceError('This proposal uses an older source revision. Create a fresh proposal.', 409);
+      if ((state.activeEditIds || []).length >= 100) throw sourceError('Undo existing source edits before applying more than 100 active changes.', 409);
+      const candidate = applySourceChanges(state.snapshot, proposal.changes), coverage = checkedCoverage(candidate);
+      const id = randomUUID(), sourceRevision = `synthetic:edit:${id}`;
+      const version = hash({ sourceRevision, cells: candidate.cells, cohorts: candidate.cohorts });
+      candidate.sourceVersion = version;
+      const edit = { id, proposalId, kind: 'apply', reason: proposal.reason, changes: proposal.changes,
+        beforeSourceVersion: state.version, sourceVersion: version, at: new Date().toISOString(), owner: proposal.owner };
+      const outcome = { at: edit.at, batch: 'source-edit', result: 'applied', editId: id, sourceRevision, sourceVersion: version };
+      await persist({ ...state, snapshot: candidate, coverage, version, sourceRevision,
+        sourceEditProposals: (state.sourceEditProposals || []).map(item => item.id === proposal.id ? { ...item, status: 'applied', editId: id } : item),
+        sourceEditHistory: [...(state.sourceEditHistory || []), edit], activeEditIds: [...(state.activeEditIds || []), id],
+        history: [...state.history, outcome] }, generation);
+      return { changed: true, edit: publicEntry(edit), status: status(), snapshot: snapshot() };
+    });
+  }
+  function undoEdit({ editId, expectedSourceVersion, owner } = {}) {
+    return serialize(async () => {
+      ensureInit(); await loadCurrent(); sourceVersionGuard(expectedSourceVersion);
+      if (!editId || state.activeEditIds?.at(-1) !== editId) throw sourceError('Only the latest active source edit can be undone.', 409);
+      const applied = (state.sourceEditHistory || []).find(item => item.id === editId && item.kind === 'apply');
+      if (!applied) throw sourceError('The source edit audit record is missing.', 409);
+      checkOwner(applied, owner);
+      const candidate = applySourceChanges(state.snapshot, applied.changes, true), coverage = checkedCoverage(candidate);
+      const id = randomUUID(), sourceRevision = `synthetic:undo:${id}`;
+      const version = hash({ sourceRevision, cells: candidate.cells, cohorts: candidate.cohorts });
+      candidate.sourceVersion = version;
+      const edit = { id, kind: 'undo', undoOf: editId, proposalId: applied.proposalId, reason: `Undo source edit ${editId}`,
+        changes: applied.changes.map(change => ({ ...change, before: change.after, after: change.before })),
+        beforeSourceVersion: state.version, sourceVersion: version, at: new Date().toISOString(), owner: applied.owner };
+      const outcome = { at: edit.at, batch: 'source-edit', result: 'undone', editId: id, undoOf: editId, sourceRevision, sourceVersion: version };
+      await persist({ ...state, snapshot: candidate, coverage, version, sourceRevision,
+        sourceEditHistory: [...(state.sourceEditHistory || []), edit], activeEditIds: state.activeEditIds.slice(0, -1),
+        history: [...state.history, outcome] }, generation);
+      return { changed: true, edit: publicEntry(edit), status: status(), snapshot: snapshot() };
+    });
   }
   async function report({ name, cursor = '0', limit = 50, batch = 'baseline' } = {}) {
     if (!REPORTS.includes(name)) throw new Error('Unknown synthetic report');
@@ -222,6 +374,7 @@ export function createWorkday({ baseline, storageDir, fetchReport, objectStore }
     ensureInit();
     await loadCurrent();
     const baseState=state, expected=generation;
+    if (baseState.activeEditIds?.length) throw sourceError('Demo sync is blocked while source edits are active. Undo those edits before replacing the corrected source.', 409);
     if (!['baseline', 'correction', 'invalid'].includes(batch)) throw new Error('Unknown synthetic batch');
     const attemptedAt = new Date().toISOString();
     try {
@@ -264,9 +417,7 @@ export function createWorkday({ baseline, storageDir, fetchReport, objectStore }
     }
   }
   function sync({ batch = 'baseline' } = {}) {
-    const next = queue.then(() => performSync(batch));
-    queue = next.catch(() => {});
-    return next;
+    return serialize(() => performSync(batch));
   }
-  return { init, refresh, snapshot, status, sync, report };
+  return { init, refresh, snapshot, status, sync, report, proposeEdit, applyEdit, undoEdit, editHistory };
 }

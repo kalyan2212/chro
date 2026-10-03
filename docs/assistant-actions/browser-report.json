@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-03T10:57:35.241Z",
+  "checks": [
+    "Typed chart commands change the selected chart immediately, without a model call or changing evidence",
+    "A manual chart change cancels pending analysis so an obsolete response cannot replace it",
+    "Report commands and controls switch executive, evidence and full layouts while retaining all sections",
+    "Repeated explicit report choices persist in this browser and can be inspected and reset",
+    "Exact source proposal shows current and proposed amounts, including derived changes, without mutating the source",
+    "Hidden Studio proposals cannot be confirmed from Workspace voice",
+    "Typed confirmation persists the requested source amount, reconciles its total and hydrates the dashboard revision",
+    "Source changes clear old charts and persistent undo is restored after reload",
+    "Typed undo restores prior values under a new audited source revision",
+    "Mobile source review fits the viewport and discarding removes the executable proposal",
+    "Source browser displays exact flat records and its field editor creates a reviewed proposal without a model call",
+    "Persistent history shows applied and undone source values",
+    "No browser JavaScript errors; all mutations stayed in isolated temporary source data"
+  ],
+  "errors": [],
+  "provider": "No external provider. UI uses local calculated evidence and a recorded analytical fixture."
+}

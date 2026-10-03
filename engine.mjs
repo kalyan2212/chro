@@ -42,6 +42,11 @@ export function scopeOf(scope = {}) {
 const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 const monthPattern = monthNames.map(x => `${x}|${x.slice(0, 3)}`).join('|');
 function periodFromQuestion(text) {
+  // Transcription may spell a calendar year out. Normalize only the parsing copy
+  // after a named calendar period; retain the original question for the analyst.
+  // Normalize adjacent unsupported years too so they hit the existing window guard.
+  const yearDigits = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9 };
+  text = text.replace(new RegExp(`\\b(${monthPattern}|q[1-4]|(?:first|second|third|fourth) quarter)(\\s+(?:of\\s+)?)(?:twenty[\\s-]+twenty|two[\\s-]+thousand(?:[\\s-]+and)?[\\s-]+twenty)[\\s-]+(zero|one|two|three|four|five|six|seven|eight|nine)\\b`, 'g'), (_, period, separator, digit) => `${period}${separator}202${yearDigits[digit]}`);
   if (/\b(?:q[124]|quarter\s*[124]|(?:first|second|fourth) quarter|(?:last|next|previous|this|current)\s+(?:quarter|month|year)|(?:last|past|next)\s+\d+\s+(?:days|months|years)|ytd|year.to.date|20\d{2}-\d{2}-\d{2})\b/.test(text)) throw new Error('Unsupported verbal period. Choose Q3 2026, trailing 12 months, or a month from Oct 2025 through Sep 2026.');
   const candidates = [...text.matchAll(/\b(20\d{2}-\d{2})\b/g)].map(m => m[1]);
   const written = [...text.matchAll(new RegExp(`\\b(${monthPattern})\\s*(20\\d{2})\\b`, 'g'))];
@@ -64,6 +69,30 @@ const windowPattern = /\b(?:last|past|previous)\s+(\d{1,2}|two|three|four|five|s
 export const dimensions = { function: D.functions, region: D.regions, month: D.months };
 export const insightIds = ['costVariance', 'onboardingExits'];
 const noBreakdown = { P09: 'no validated DEI composite exists to split', P12: 'race and ethnicity is shown only as the protected US subset by job level' };
+export function validateViewContext(value) {
+  if (value == null) return undefined;
+  const types = ['bar', 'line', 'pie'];
+  if (!value || typeof value !== 'object' || Array.isArray(value) || ![null, Object.prototype].includes(Object.getPrototypeOf(value)) || Object.keys(value).sort().join(',') !== 'availableTypes,chartId,currentType,sourceVersion,title' || typeof value.chartId !== 'string' || !/^[a-zA-Z0-9:_-]{1,160}$/.test(value.chartId) || typeof value.title !== 'string' || !value.title.trim() || value.title.length > 160 || typeof value.sourceVersion !== 'string' || !/^[a-zA-Z0-9:_-]{1,160}$/.test(value.sourceVersion) || !types.includes(value.currentType) || !Array.isArray(value.availableTypes) || !value.availableTypes.length || value.availableTypes.length > types.length || new Set(value.availableTypes).size !== value.availableTypes.length || value.availableTypes.some(type => !types.includes(type)) || !value.availableTypes.includes(value.currentType)) throw Object.assign(new Error('Invalid selected chart context'), {status:400});
+  return { chartId:value.chartId, title:value.title.trim(), currentType:value.currentType, availableTypes:[...value.availableTypes], sourceVersion:value.sourceVersion };
+}
+export function validateReportContext(value) {
+  if (value == null) return undefined;
+  const layouts = ['executive', 'evidence', 'full'];
+  if (!value || typeof value !== 'object' || Array.isArray(value) || ![null, Object.prototype].includes(Object.getPrototypeOf(value)) || Object.keys(value).sort().join(',') !== 'availableLayouts,currentLayout,reportId,sourceVersion,title' || typeof value.reportId !== 'string' || !/^[a-zA-Z0-9:_-]{1,160}$/.test(value.reportId) || typeof value.title !== 'string' || !value.title.trim() || value.title.length > 160 || typeof value.sourceVersion !== 'string' || !/^[a-zA-Z0-9:_-]{1,160}$/.test(value.sourceVersion) || !layouts.includes(value.currentLayout) || !Array.isArray(value.availableLayouts) || !value.availableLayouts.length || value.availableLayouts.length > layouts.length || new Set(value.availableLayouts).size !== value.availableLayouts.length || value.availableLayouts.some(layout => !layouts.includes(layout)) || !value.availableLayouts.includes(value.currentLayout)) throw Object.assign(new Error('Invalid selected report context'), {status:400});
+  return { reportId:value.reportId, title:value.title.trim(), currentLayout:value.currentLayout, availableLayouts:[...value.availableLayouts], sourceVersion:value.sourceVersion };
+}
+export function validatePresentationPreferences(value) {
+  if (value == null) return undefined;
+  const invalid = () => { throw Object.assign(new Error('Invalid presentation preferences'), {status:400}); };
+  if (!value || typeof value !== 'object' || Array.isArray(value) || ![null, Object.prototype].includes(Object.getPrototypeOf(value)) || Object.keys(value).some(key => !['charts','reportLayout'].includes(key))) invalid();
+  const result = {};
+  if (value.charts != null) {
+    if (!Array.isArray(value.charts) || value.charts.length > 16 || value.charts.some(item => !item || typeof item !== 'object' || Array.isArray(item) || Object.keys(item).sort().join(',') !== 'family,type' || typeof item.family !== 'string' || !/^[a-zA-Z0-9:_-]{1,80}$/.test(item.family) || !['bar','line','pie'].includes(item.type)) || new Set(value.charts.map(item=>item.family)).size !== value.charts.length) invalid();
+    result.charts = value.charts.map(({family,type})=>({family,type}));
+  }
+  if (value.reportLayout != null) { if (!['executive','evidence','full'].includes(value.reportLayout)) invalid(); result.reportLayout=value.reportLayout; }
+  return result;
+}
 export function validateRequest(body) {
   if (!body || typeof body.question !== 'string' || !body.question.trim() || body.question.length > 2000) throw new Error('Question must contain 1–2000 characters');
   const scope = scopeOf(body.scope);
@@ -113,7 +142,10 @@ export function validateRequest(body) {
   }
   const history = body.history ?? [];
   if (!Array.isArray(history) || history.length > 24 || history.some(x => !x || !['user', 'assistant'].includes(x.role) || typeof x.text !== 'string' || x.text.length > 2000)) throw new Error('Invalid history');
-  return { question: body.question.trim(), scope, context, history: history.map(({ role, text }) => ({ role, text })), ...(Object.keys(mentions).length ? { mentions } : {}), ...(window ? { window } : {}) };
+  const viewContext = validateViewContext(body.viewContext);
+  const reportContext = validateReportContext(body.reportContext);
+  const presentationPreferences = validatePresentationPreferences(body.presentationPreferences);
+  return { question: body.question.trim(), scope, context, history: history.map(({ role, text }) => ({ role, text })), ...(viewContext ? { viewContext } : {}), ...(reportContext ? { reportContext } : {}), ...(presentationPreferences ? { presentationPreferences } : {}), ...(Object.keys(mentions).length ? { mentions } : {}), ...(window ? { window } : {}) };
 }
 export function validatePlan(p) {
   const keys = p && typeof p === 'object' && !Array.isArray(p) ? Object.keys(p).sort().join(',') : '';

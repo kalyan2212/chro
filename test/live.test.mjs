@@ -38,6 +38,27 @@ test('Live explicitly delegates business-topic discovery without requiring metri
  for(const [i,question] of ['You tell me cost category for workforce','Show me everything that you have for the cost category','Show me all the cost categories because I do not remember'].entries())await live.delegate({sessionId:session.session.id,delegationId:'topic_'+i,question});
  assert.deepEqual(seen.map(value=>value.question),['You tell me cost category for workforce','Show me everything that you have for the cost category','Show me all the cost categories because I do not remember']);assert.ok(seen.every(value=>value.channel==='voice'));
 });
+
+test('Live knows chart controls and forwards validated current-view metadata without retaining a cleared selection',async t=>{
+ const selected={chartId:'cost_components',title:'Workforce costs',currentType:'bar',availableTypes:['bar','line','pie'],sourceVersion:'source_one'},seen=[];
+ const {live,calls}=service({ask:async value=>{seen.push(value);return governed(request);}});t.after(()=>live.shutdown());
+ await live.create({sdp:SDP,viewContext:selected});const prompt=JSON.parse(calls[0].init.body).session.instructions;
+ assert.match(prompt,/make it pie/);assert.match(prompt,/Never claim you cannot control charts/);assert.match(prompt,/before the renderer confirms/);assert.match(prompt,/cost_components/);
+ await live.delegate({sessionId:'live_1',delegationId:'chart_context',...request});assert.deepEqual(seen[0].viewContext,selected);assert.ok(Object.isFrozen(seen[0].viewContext));
+ await live.delegate({sessionId:'live_1',delegationId:'chart_cleared',...request,viewContext:null});assert.equal(seen[1].viewContext,undefined);
+ await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'chart_invalid',...request,viewContext:{...selected,currentType:'script'}}),{status:400});assert.equal(seen.length,2);
+});
+test('Live forwards selected report and presentation preferences as bounded metadata',async t=>{
+ const report={reportId:'brief_1',title:'Cost briefing',currentLayout:'full',availableLayouts:['executive','evidence','full'],sourceVersion:'source_one'},preferences={charts:[{family:'comparison',type:'line'}],reportLayout:'executive'},seen=[];
+ const {live}=service({ask:async value=>{seen.push(value);return governed(request);}});t.after(()=>live.shutdown());await live.create({sdp:SDP,reportContext:report,presentationPreferences:preferences});
+ await live.delegate({sessionId:'live_1',delegationId:'report_context',...request});assert.deepEqual(seen[0].reportContext,report);assert.deepEqual(seen[0].presentationPreferences,preferences);
+ await assert.rejects(live.delegate({sessionId:'live_1',delegationId:'report_invalid',...request,reportContext:{...report,currentLayout:'arbitrary_html'}}),{status:400});assert.equal(seen.length,1);
+});
+test('source proposals use server-held Live session identity and require confirmed persistence in the voice instructions',async t=>{
+ let identity,question;const {live,calls}=service({ask:async(value,_signal,metadata)=>{identity=metadata;question=value;return governed(request);}});t.after(()=>live.shutdown());await live.create({sdp:SDP});
+ const prompt=JSON.parse(calls[0].init.body).session.instructions;assert.match(prompt,/A proposal is not a saved change/);assert.match(prompt,/server-confirmed persistence/);
+ await live.delegate({sessionId:'live_1',delegationId:'source_proposal',...request,actor:'forged-owner',owner:'forged-owner'});assert.deepEqual(identity,{sessionId:'live_1'});assert.equal(question.actor,undefined);assert.equal(question.owner,undefined);assert.equal(question.sessionId,undefined);
+});
 test('validates SDP, source context and session capacity before contacting OpenAI',async t => {
  const {live,calls}=service({maxSessions:1}); t.after(() => live.shutdown());
   await assert.rejects(live.create({sdp:'https://attacker.invalid'}),{status:400});
@@ -248,7 +269,7 @@ test('startup cancelled after response closes the orphan session',async () => {
 });
 
 const source=readFileSync(new URL('../public/live.js',import.meta.url),'utf8');
-function browser({permissionPending=false,permissionDenied=false,playBlocked=false,playPending=false,remotePending=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null,multiBeat=false,statusCode=200,attachedImage=null,selectedAudience='chro',delegateStatus=200,home=true,hidden=false,search=''}={}) {
+function browser({permissionPending=false,permissionDenied=false,playBlocked=false,playPending=false,remotePending=false,delegatePending=false,renderPending=false,toolbar=false,sessionFailure=null,multiBeat=false,statusCode=200,attachedImage=null,selectedAudience='chro',delegateStatus=200,home=true,hidden=false,search='',selectedView=null,delegateResponse=null,replaceViewOnShow=null,selectedReport=null,preferences=null,sourceProposal=null,sourceEdit=null,sourcePending=false,sourceResult={ok:true,message:'The source update was saved and the displayed data was refreshed.',sourceVersion:'source_next'}}={}) {
  class Element {
   constructor(){this.listeners=new Map();this.attrs={};this.textContent='';this.disabled=false;this.classList={toggle(){}};this.srcObject=null;this.paused=true;}
   addEventListener(type,fn){this.listeners.set(type,fn);} fire(type,value={}){return this.listeners.get(type)?.(value);} setAttribute(k,v){this.attrs[k]=v;} focus(){this.focused=true;}
@@ -256,7 +277,7 @@ function browser({permissionPending=false,permissionDenied=false,playBlocked=fal
   appendChild(child){this.child=child;} click(){downloads.push({href:this.href,download:this.download});} remove(){this.removed=true;}
   pause(){this.paused=true;} async play(){if(playPending)await playback.promise;if(playBlocked)throw Error('autoplay');this.paused=false;}
  }
- const nodes=new Map(),host=new Element(),requests=[],peers=[],shown=[],timers=new Map(),listeners=new Map(),streams=[],downloads=[],blobs=[],emitted=[],permission=deferred(),delegation=deferred(),render=deferred(),playback=deferred(),remote=deferred(); let timerId=0;
+ const nodes=new Map(),host=new Element(),requests=[],peers=[],shown=[],timers=new Map(),listeners=new Map(),streams=[],downloads=[],blobs=[],emitted=[],chartChanges=[],permission=deferred(),delegation=deferred(),render=deferred(),playback=deferred(),remote=deferred(); let timerId=0;
  const connectionReport={schema:'workforce-connection-report.v1',appVersion:'2.0.1',recentErrors:[],lastConnectionCheck:{status:'metadata_reachable',message:'Metadata endpoint reached. Voice still needs a session test.'}};
  const anchor={before(button){this.inserted=button;}},root={querySelector:selector=>selector==='#wi-present'?anchor:null};
  const stream=()=>{const track={enabled:true,readyState:'live',addEventListener(){},stop(){this.readyState='ended';}};const s={getTracks:()=>[track],getAudioTracks:()=>[track]};streams.push(s);return s;};
@@ -267,7 +288,11 @@ function browser({permissionPending=false,permissionDenied=false,playBlocked=fal
   close(){this.connectionState='closed';} addEventListener(){} removeEventListener(){}
  }
  const scope={function:'all',region:'all',period:'quarter'};
- const window={location:{search},RTCPeerConnection:Peer,addEventListener:(type,fn)=>listeners.set(type,fn),dispatchEvent:e=>{emitted.push(e);return listeners.get(e.type)?.(e);},WI_STUDIO:{isHome:()=>home,getImage:()=>attachedImage,getAudience:()=>selectedAudience},WI_CONVERSATION:{cancel(){},getScope:()=>scope,getContext:()=>({}),getHistory:()=>[],async showResponse(data,options){if(renderPending)await render.promise;if(options?.isCurrent&&!options.isCurrent())return false;shown.push(data);return true;}}};
+ const window={location:{search},RTCPeerConnection:Peer,addEventListener:(type,fn)=>listeners.set(type,fn),dispatchEvent:e=>{emitted.push(e);return listeners.get(e.type)?.(e);},WI_STUDIO:{isHome:()=>home,getImage:()=>attachedImage,getAudience:()=>selectedAudience,getViewContext:()=>selectedView,applyViewAction(action,options){if(!options.isCurrent())return null;chartChanges.push(structuredClone(action));if(!selectedView||action.chartId!==selectedView.chartId||action.sourceVersion!==selectedView.sourceVersion)return {ok:false,message:'The selected chart changed. Ask again using the chart now on screen.'};if(!selectedView.availableTypes.includes(action.chartType))return {ok:false,message:'A pie cannot represent this signed change. Bar and line views are available.'};const changed=selectedView.currentType!==action.chartType;selectedView={...selectedView,currentType:action.chartType};return {ok:true,changed,chartId:action.chartId,type:action.chartType,message:'The chart is now a '+action.chartType+' view. Its evidence values and scope are unchanged.'};}},WI_CONVERSATION:{cancel(){},getScope:()=>scope,getContext:()=>({}),getHistory:()=>[],async showResponse(data,options){if(renderPending)await render.promise;if(options?.isCurrent&&!options.isCurrent())return false;shown.push(data);if(replaceViewOnShow)selectedView=replaceViewOnShow;return true;}}};
+ const sourceWrites=deferred(),sourceCalls=[],proposalsShown=[];let sourceCommitted=0;
+ const mutateSource=async(kind,options)=>{sourceCalls.push({kind,options});if(sourcePending)await sourceWrites.promise;if(!options.isCurrent())return {ok:false,message:'The source operation was cancelled.'};const edit=kind==='apply'?sourceProposal:sourceEdit;if((kind==='apply'?options.proposalId:options.editId)!==edit?.id||options.expectedSourceVersion!==edit?.sourceVersion)return {ok:false,message:'The identified source revision changed. Review the latest proposal.'};if(sourceResult.ok){sourceCommitted++;sourceProposal=null;sourceEdit={id:'edit_committed',sourceVersion:sourceResult.sourceVersion};window.dispatchEvent({type:'wi-source-updated',detail:{origin:options.origin,operationId:options.operationId}});}return sourceResult;};
+ const applyChart=window.WI_STUDIO.applyViewAction;
+ Object.assign(window.WI_STUDIO,{getReportContext:()=>selectedReport,getPresentationPreferences:()=>preferences,getPendingEdit:()=>sourceProposal,getLastSourceEdit:()=>sourceEdit,showSourceEditProposal(proposal,options){if(!options.isCurrent())return {ok:false};proposalsShown.push(proposal);sourceProposal=proposal;return {ok:true,message:'Review this proposed change before applying it.'};},applyPendingEdit:options=>mutateSource('apply',options),undoSourceEdit:options=>mutateSource('undo',options),applyViewAction(action,options){if(action.type!=='change_report_view')return applyChart(action,options);if(!options.isCurrent())return null;chartChanges.push(structuredClone(action));if(action.reportId!==selectedReport?.reportId||action.sourceVersion!==selectedReport?.sourceVersion)return {ok:false,message:'The report changed. Request this view again.'};selectedReport={...selectedReport,currentLayout:action.layout};return {ok:true,message:'The report is now in '+action.layout+' layout. Its evidence is unchanged.'};}});
  const documentListeners=new Map();
  const document={visibilityState:hidden?'hidden':'visible',addEventListener:(type,fn)=>documentListeners.set(type,fn),getElementById:id=>id==='wi-live'?host:id==='wi-app'&&toolbar?root:null,createElement:()=>new Element(),body:new Element()};
  const fetch=async(url,init)=>{
@@ -278,7 +303,7 @@ function browser({permissionPending=false,permissionDenied=false,playBlocked=fal
   if(url==='/api/live/close')return {ok:true};
   if(url==='/api/live/delegate'){
    if(delegateStatus!==200)return {ok:false,status:delegateStatus,json:async()=>({error:'Controlled evidence error'})};
-   const body=JSON.parse(init.body); const data=await governed(validateRequest(body));
+   const body=JSON.parse(init.body); const data=delegateResponse||await governed(validateRequest(body));
    const value={sessionId:body.sessionId,delegationId:body.delegationId,...(body.recovery?{recovery:true}:{}),response:data,event:{type:'session.commentary.append',event_id:'result_mock',delegation_id:body.recovery?null:body.delegationId,content:data.answer}};
    if(multiBeat){value.event.content='Synthetic data. The validated result is ready.';value.events=[value.event,{...value.event,event_id:'result_mock_2',content:'First-year exits use a mature cohort denominator.'},{...value.event,event_id:'result_mock_3',content:'This is an association, not a causal conclusion.'}];value.narration={beats:value.events.map((_,index)=>({index,panelId:'cohort',title:'Cohort evidence',kind:'finding'}))};}
    if(delegatePending)await delegation.promise; return {ok:true,json:async()=>value};
@@ -288,7 +313,7 @@ function browser({permissionPending=false,permissionDenied=false,playBlocked=fal
  vm.runInNewContext(source,{window,document,navigator:{mediaDevices:{getUserMedia:()=>permissionDenied?Promise.reject(Object.assign(Error('Permission denied'),{name:'NotAllowedError'})):permissionPending?permission.promise:Promise.resolve(stream())},sendBeacon:(url,body)=>{requests.push({url,body,beacon:true});return true;}},RTCPeerConnection:Peer,MediaStream:class{},Event:class{constructor(type){this.type=type;}},CustomEvent:class{constructor(type,{detail}){this.type=type;this.detail=detail;}},TextEncoder,fetch,Blob,URL:{createObjectURL:blob=>{blobs.push(blob);return 'blob:report-'+blobs.length;},revokeObjectURL(){}},AbortController,AbortSignal,structuredClone,crypto:webcrypto,setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)});
  const event=value=>peers.at(-1).channel.onmessage?.({data:JSON.stringify(value)});
  const fireTimers=async ms=>{for(const [id,t]of [...timers])if(t.ms===ms){timers.delete(id);await t.fn();}await tick();};
- return {window,scope,requests,peers,shown,timers,streams,host,downloads,blobs,emitted,toolbar:anchor.inserted,node:s=>host.querySelector(s),event,fireTimers,setStatus:value=>{statusCode=value;},setImage:value=>{attachedImage=value;},setAudience:value=>{selectedAudience=value;},setSessionFailure:value=>{sessionFailure=value;},setPlayBlocked:value=>{playBlocked=value;},setPermissionDenied:value=>{permissionDenied=value;},setHome:value=>{home=value;},setHidden:value=>{document.visibilityState=value?'hidden':'visible';documentListeners.get('visibilitychange')?.();},resolvePermission:()=>permission.resolve(stream()),resolveDelegate:()=>delegation.resolve(),resolveRender:()=>render.resolve(),resolveRemote:()=>remote.resolve(),resolvePlayback:()=>{playPending=false;playback.resolve();},async start(){await tick();window.WI_LIVE.open();await host.querySelector('#wl-start').fire('click');await peers.at(-1).ontrack({track:{stop(){}},streams:[{}]});event({type:'session.started',session:{id:'live_browser'}});await tick();}};
+ return {window,scope,requests,peers,shown,timers,streams,host,downloads,blobs,emitted,chartChanges,sourceCalls,proposalsShown,getSourceCommitted:()=>sourceCommitted,setSourceProposal:value=>{sourceProposal=value;},resolveSource:()=>sourceWrites.resolve(),toolbar:anchor.inserted,node:s=>host.querySelector(s),event,fireTimers,setViewContext:value=>{selectedView=value;},setStatus:value=>{statusCode=value;},setImage:value=>{attachedImage=value;},setAudience:value=>{selectedAudience=value;},setSessionFailure:value=>{sessionFailure=value;},setPlayBlocked:value=>{playBlocked=value;},setPermissionDenied:value=>{permissionDenied=value;},setHome:value=>{home=value;},setHidden:value=>{document.visibilityState=value?'hidden':'visible';documentListeners.get('visibilitychange')?.();},resolvePermission:()=>permission.resolve(stream()),resolveDelegate:()=>delegation.resolve(),resolveRender:()=>render.resolve(),resolveRemote:()=>remote.resolve(),resolvePlayback:()=>{playPending=false;playback.resolve();},async start(){await tick();window.WI_LIVE.open();await host.querySelector('#wl-start').fire('click');await peers.at(-1).ontrack({track:{stop(){}},streams:[{}]});event({type:'session.started',session:{id:'live_browser'}});await tick();}};
 }
 test('voice startup failure releases media, exposes connection help, exports safe context and permits a retry',async()=>{
  const failure={error:'The server could not verify the API certificate.',code:'TLS_TRUST',diagnosticId:'22222222-2222-4222-8222-222222222222'};
@@ -335,6 +360,116 @@ test('discovery detection covers business catalogue requests but leaves greeting
  const {discoveryRequest}=browser().window.WI_LIVE_PROTOCOL;
  for(const question of ['You tell me cost category for workforce','Show me everything that you have for the cost category','Show me all the cost categories because I do not remember','What workforce data do you have?','What do you have?','Show me everything','Which capability metrics are available?'])assert.equal(discoveryRequest(question),true,question);
  for(const question of ['Hello','Okay thanks','What can you do?','Tell me a joke','List available recipes','Do not show the cost categories'])assert.equal(discoveryRequest(question),false,question);
+});
+
+const chartContext={chartId:'cost_components',title:'Workforce costs',currentType:'bar',availableTypes:['bar','line','pie'],sourceVersion:'source_one'};
+test('source confirmation parsing accepts explicit apply or undo commands, not conversational agreement or new edits',()=>{
+ const {sourceEditCommand}=browser().window.WI_LIVE_PROTOCOL;
+ for(const text of ['Apply these changes','Apply the these changes','Apply those changes','Please confirm update.','Save the proposed changes','Could you apply the source update?'])assert.equal(sourceEditCommand(text),'apply',text);
+ for(const text of ['Undo that source change','Revert the last source update'])assert.equal(sourceEditCommand(text),'undo',text);
+ for(const text of ['Yes','Okay','Update headcount to 100','Apply these changes and increase overtime','Do not apply these changes','Do not apply the these changes','Apply the these changes but wait','Explain how to apply these changes','Undo that chart'])assert.equal(sourceEditCommand(text),null,text);
+});
+test('local chart parser accepts complete view changes and leaves business questions and compound requests to the analyst',()=>{
+ const {chartCommand}=browser().window.WI_LIVE_PROTOCOL;
+ for(const [question,type]of [['Change bar to line','line'],['Make it pie','pie'],['Can you change the bar chart to a line chart?','line'],['Show the current chart as a pie chart.','pie'],['Please switch to bar','bar'],['I would like a line chart','line'],['Show me a pie chart','pie']])assert.equal(chartCommand(question),type,question);
+ for(const question of ['Show headcount as a line chart','Change to line and compare Sales with Engineering','Why is the line falling?','Do not change the bar to pie','Tell me about pie charts','Make it pie and explain the costs','Change bar to','I want higher retention'])assert.equal(chartCommand(question),null,question);
+});
+
+test('simple voice chart changes apply locally before acknowledgement, including a clean follow-up',async()=>{
+ const h=browser({selectedView:chartContext});await h.start();
+ for(const [i,question,type]of [[0,'Change bar to line','line'],[1,'Make it pie','pie']]){
+  h.event({type:'session.input_transcript.delta',delta:question,start_ms:100+i*1200,end_ms:500+i*1200});assert.equal(h.chartChanges.length,i);
+  await h.fireTimers(650);assert.equal(h.chartChanges.length,i+1);assert.equal(h.window.WI_STUDIO.getViewContext().currentType,type);assert.match(h.peers[0].channel.sent.at(-1).content,new RegExp('now a '+type));assert.equal(h.peers[0].channel.sent.at(-1).delegation_id,null);
+ }
+ assert.equal(h.requests.some(r=>r.url==='/api/live/delegate'),false);assert.equal(h.shown.length,0);assert.equal(h.emitted.filter(e=>e.type==='wi-voice-view-action').length,2);h.event({type:'session.closed',usage:{seconds:1}});assert.equal(h.timers.size,0);
+});
+
+test('a provider delegation races safely with the local chart timer and changes the view once',async()=>{
+ const h=browser({selectedView:chartContext});await h.start();h.event({type:'session.input_transcript.delta',delta:'Make it pie',start_ms:100,end_ms:300});h.event({type:'session.delegation.created',offset_ms:400,delegation:{id:'chart_provider',target:'client'}});
+ await h.fireTimers(650);assert.equal(h.chartChanges.length,0);await h.fireTimers(300);assert.equal(h.chartChanges.length,1);assert.equal(h.peers[0].channel.sent.at(-1).delegation_id,'chart_provider');assert.equal(h.requests.some(r=>r.url==='/api/live/delegate'),false);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('compound speech continuation and cancelled or changed selections never apply a pending local chart command',async()=>{
+ for(const action of ['continuation','stop','context','selection']){
+  const h=browser({selectedView:chartContext});await h.start();h.event({type:'session.input_transcript.delta',delta:'Change bar to line',start_ms:100,end_ms:300});
+  if(action==='continuation')h.event({type:'session.input_transcript.delta',delta:' and compare Sales with Engineering.',start_ms:310,end_ms:700});
+  if(action==='stop')h.window.WI_LIVE.stop();if(action==='context')h.window.dispatchEvent({type:'wi-context-changed'});if(action==='selection')h.setViewContext({...chartContext,chartId:'new_chart'});
+  await h.fireTimers(650);assert.equal(h.chartChanges.length,0,action);
+  if(action==='continuation'){h.event({type:'session.delegation.created',offset_ms:800,delegation:{id:'compound_chart',target:'client'}});await h.fireTimers(300);const body=JSON.parse(h.requests.find(r=>r.url==='/api/live/delegate').init.body);assert.match(body.question,/compare Sales with Engineering/);assert.deepEqual(body.viewContext,chartContext);}
+  h.event({type:'session.closed',usage:{seconds:1}});
+ }
+});
+
+test('an invalid pie keeps the selected view and speaks the actual reason and alternatives',async()=>{
+ const selected={...chartContext,availableTypes:['bar','line']},h=browser({selectedView:selected});await h.start();h.event({type:'session.input_transcript.delta',delta:'Make it pie',start_ms:100,end_ms:300});await h.fireTimers(650);
+ assert.equal(h.window.WI_STUDIO.getViewContext().currentType,'bar');assert.match(h.node('#wl-result').textContent,/signed change/);assert.match(h.peers[0].channel.sent.at(-1).content,/Bar and line views/);assert.equal(h.emitted.filter(e=>e.type==='wi-voice-state').at(-1).detail.reason,'chart-unavailable');assert.equal(h.requests.some(r=>r.url==='/api/live/delegate'),false);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('backend presentation-only narration is replaced by actual controller feedback without rebuilding evidence',async()=>{
+ const pending={title:'Pending chart change',answer:'UNVERIFIED_MODEL_CLAIM',facts:[],evidence:[],action:{type:'clarify'},presentationOnly:true,viewActions:[{type:'change_chart',chartId:chartContext.chartId,chartType:'pie',sourceVersion:chartContext.sourceVersion}]};
+ const h=browser({selectedView:{...chartContext,availableTypes:['bar','line']},delegateResponse:pending});await h.start();h.event({type:'session.input_transcript.delta',delta:'Could you visualize the same evidence differently?',start_ms:100,end_ms:500});h.event({type:'session.delegation.created',offset_ms:600,delegation:{id:'backend_chart',target:'client'}});await h.fireTimers(300);
+ assert.equal(h.shown.length,0);assert.equal(h.chartChanges.length,1);assert.equal(h.window.WI_STUDIO.getViewContext().currentType,'bar');assert.equal(h.peers[0].channel.sent.some(e=>e.content?.includes('UNVERIFIED_MODEL_CLAIM')),false);assert.match(h.peers[0].channel.sent.at(-1).content,/signed change/);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('manual chart controls abort pending analysis and a silently changed view also rejects stale results',async()=>{
+ for(const notify of [true,false]){
+  const h=browser({selectedView:chartContext,delegatePending:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'Explain these costs.',start_ms:100,end_ms:300});h.event({type:'session.delegation.created',offset_ms:400,delegation:{id:'stale_chart',target:'client'}});const work=h.fireTimers(300);await tick();
+  h.setViewContext({...chartContext,currentType:'line'});if(notify)h.window.dispatchEvent({type:'wi-chart-type-changed',detail:{origin:'control'}});h.resolveDelegate();await work;assert.equal(h.shown.length,0);assert.equal(h.peers[0].channel.sent.some(e=>e.event_id==='result_mock'),false);if(notify)assert.equal(h.requests.find(r=>r.url==='/api/live/delegate').init.signal.aborted,true);h.event({type:'session.closed',usage:{seconds:1}});
+ }
+});
+
+test('combined analytical answers render before strict view actions and append a verified stale-target refusal',async()=>{
+ const response={title:'Cost comparison',answer:'Verified synthetic cost comparison.',facts:[],evidence:[],action:{type:'clarify'},viewActions:[{type:'change_chart',chartId:chartContext.chartId,chartType:'pie',sourceVersion:chartContext.sourceVersion}]};
+ const replacement={...chartContext,chartId:'new_analysis_chart'},h=browser({selectedView:chartContext,replaceViewOnShow:replacement,delegateResponse:response});await h.start();h.event({type:'session.input_transcript.delta',delta:'Compare costs and show a pie chart.',start_ms:100,end_ms:500});h.event({type:'session.delegation.created',offset_ms:600,delegation:{id:'compound_presentation',target:'client'}});await h.fireTimers(300);
+ assert.equal(h.shown.length,1);assert.equal(h.window.WI_STUDIO.getViewContext().chartId,replacement.chartId);assert.equal(h.window.WI_STUDIO.getViewContext().currentType,'bar');assert.equal(h.chartChanges.length,1);assert.equal(h.peers[0].channel.sent.at(-1).event_id,'result_mock');h.event({type:'session.commentary.appended',client_event_id:'result_mock'});assert.match(h.peers[0].channel.sent.at(-1).content,/selected chart changed/);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('combined chart and report presentation actions use confirmed feedback beats without rebuilding the scene',async()=>{
+ const report={reportId:'brief_1',title:'Costs',currentLayout:'full',availableLayouts:['executive','evidence','full'],sourceVersion:'source_one'},preferences={charts:[{family:'composition',type:'bar'}],reportLayout:'full'};
+ const response={title:'Pending views',answer:'UNVERIFIED_VIEWS',facts:[],evidence:[],action:{type:'clarify'},presentationOnly:true,viewActions:[{type:'change_chart',chartId:chartContext.chartId,chartType:'pie',sourceVersion:'source_one'},{type:'change_report_view',reportId:'brief_1',layout:'executive',sourceVersion:'source_one'}]};
+ const h=browser({selectedView:chartContext,selectedReport:report,preferences,delegateResponse:response});await h.start();h.event({type:'session.input_transcript.delta',delta:'Make the chart pie and give me the executive report view.',start_ms:100,end_ms:500});h.event({type:'session.delegation.created',offset_ms:600,delegation:{id:'view_pair',target:'client'}});await h.fireTimers(300);
+ const body=JSON.parse(h.requests.find(r=>r.url==='/api/live/delegate').init.body);assert.deepEqual(body.reportContext,report);assert.deepEqual(body.presentationPreferences,preferences);assert.equal(h.shown.length,0);assert.equal(h.window.WI_STUDIO.getViewContext().currentType,'pie');assert.equal(h.window.WI_STUDIO.getReportContext().currentLayout,'executive');
+ const first=h.peers[0].channel.sent.at(-1);assert.match(first.content,/now a pie/);h.event({type:'session.commentary.appended',client_event_id:first.event_id});assert.match(h.peers[0].channel.sent.at(-1).content,/executive layout/);assert.equal(h.peers[0].channel.sent.some(e=>e.content?.includes('UNVERIFIED_VIEWS')),false);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+const sourceProposal={id:'proposal_one',status:'proposed',sourceVersion:'source_one',reason:'User requested a correction',changes:[{month:'2026-09',function:'Engineering',region:'North America',path:'headcount',before:100,after:105,derived:false}],createdAt:'2026-10-03T00:00:00Z'};
+test('a source proposal is displayed for review without writing or speaking unconfirmed model claims',async()=>{
+ const response={title:'Proposed source correction',answer:'UNVERIFIED_SAVED_CLAIM',facts:[],evidence:[],action:{type:'clarify'},sourceEditProposal:sourceProposal},h=browser({delegateResponse:response});await h.start();h.event({type:'session.input_transcript.delta',delta:'Correct that source headcount to 105.',start_ms:100,end_ms:400});h.event({type:'session.delegation.created',offset_ms:500,delegation:{id:'propose_source',target:'client'}});await h.fireTimers(300);
+ assert.equal(h.proposalsShown.length,1);assert.equal(h.shown.length,0);assert.equal(h.sourceCalls.length,0);assert.match(h.peers[0].channel.sent.at(-1).content,/has not been applied/);assert.equal(h.peers[0].channel.sent.some(e=>e.content?.includes('UNVERIFIED_SAVED_CLAIM')),false);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('exact spoken source confirmation applies one identified proposal, survives its own refresh, then acknowledges persistence',async()=>{
+ const h=browser({sourceProposal,sourcePending:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'Apply these changes.',start_ms:100,end_ms:400});await h.fireTimers(650);
+ assert.equal(h.sourceCalls.length,1);assert.equal(h.getSourceCommitted(),0);const options=h.sourceCalls[0].options;assert.equal(options.proposalId,sourceProposal.id);assert.equal(options.expectedSourceVersion,sourceProposal.sourceVersion);assert.match(options.operationId,/^source_/);assert.equal(h.requests.some(r=>r.url==='/api/live/delegate'),false);assert.equal(h.peers[0].channel.sent.some(e=>e.type==='session.commentary.append'),false);
+ h.event({type:'session.delegation.created',offset_ms:500,delegation:{id:'late_source_duplicate',target:'client'}});await h.fireTimers(300);assert.equal(options.signal.aborted,false);assert.equal(h.sourceCalls.length,1);
+ h.resolveSource();await tick();assert.equal(h.getSourceCommitted(),1);assert.equal(h.window.WI_LIVE.isActive(),true);assert.match(h.peers[0].channel.sent.at(-1).content,/was saved/);assert.ok(h.peers[0].channel.sent.some(e=>e.type==='session.instructions.append'&&e.content.includes('Earlier-source observations are superseded')));h.event({type:'session.closed',usage:{seconds:1}});assert.equal(h.timers.size,0);
+});
+
+test('recognition with a repeated article applies the identified proposal exactly once without analytical delegation',async()=>{
+ const h=browser({sourceProposal,sourcePending:true});await h.start();
+ for(const [delta,start_ms,end_ms]of [['Apply',100,200],[' the',200,300],[' these',500,600],[' changes',600,800]])h.event({type:'session.input_transcript.delta',delta,start_ms,end_ms});
+ h.event({type:'session.delegation.created',offset_ms:850,delegation:{id:'spoken_article_confirmation',target:'client'}});await h.fireTimers(300);await h.fireTimers(650);
+ assert.equal(h.sourceCalls.length,1);assert.equal(h.sourceCalls[0].options.proposalId,sourceProposal.id);assert.equal(h.requests.some(r=>r.url==='/api/live/delegate'),false);assert.equal(h.getSourceCommitted(),0);
+ h.resolveSource();await tick();assert.equal(h.getSourceCommitted(),1);assert.match(h.peers[0].channel.sent.at(-1).content,/was saved/);h.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('source confirmation refuses missing or replaced proposals and explicit undo binds the exact edit revision',async()=>{
+ const missing=browser();await missing.start();missing.event({type:'session.input_transcript.delta',delta:'Confirm update',start_ms:100,end_ms:300});await missing.fireTimers(650);assert.equal(missing.sourceCalls.length,0);assert.match(missing.node('#wl-result').textContent,/no source update awaiting confirmation/);missing.event({type:'session.closed',usage:{seconds:1}});
+ const replaced=browser({sourceProposal});await replaced.start();replaced.event({type:'session.input_transcript.delta',delta:'Apply these changes',start_ms:100,end_ms:300});replaced.setSourceProposal({...sourceProposal,id:'new_proposal'});await replaced.fireTimers(650);assert.equal(replaced.sourceCalls.length,0);replaced.event({type:'session.closed',usage:{seconds:1}});
+ const undo=browser({sourceEdit:{id:'edit_one',sourceVersion:'source_two'},sourceResult:{ok:true,message:'The source edit was undone and the source was refreshed.',sourceVersion:'source_three'}});await undo.start();undo.event({type:'session.input_transcript.delta',delta:'Undo that source change',start_ms:100,end_ms:300});await undo.fireTimers(650);assert.equal(undo.sourceCalls[0].options.editId,'edit_one');assert.equal(undo.sourceCalls[0].options.expectedSourceVersion,'source_two');assert.equal(undo.getSourceCommitted(),1);assert.match(undo.peers[0].channel.sent.at(-1).content,/was undone/);undo.event({type:'session.closed',usage:{seconds:1}});
+});
+
+test('Stop, continued speech and an unrelated source refresh cancel a pending source confirmation without a stale success claim',async()=>{
+ for(const action of ['stop','speech','external-refresh']){
+  const h=browser({sourceProposal,sourcePending:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'Apply these changes',start_ms:100,end_ms:300});await h.fireTimers(650);
+  if(action==='stop')h.window.WI_LIVE.stop();if(action==='speech')h.event({type:'session.input_transcript.delta',delta:'Wait, review the existing data first.',start_ms:600,end_ms:900});if(action==='external-refresh')h.window.dispatchEvent({type:'wi-source-updated',detail:{origin:'voice',operationId:'different_operation'}});
+  assert.equal(h.sourceCalls[0].options.signal.aborted,true,action);h.resolveSource();await tick();assert.equal(h.getSourceCommitted(),0);assert.equal(h.peers[0].channel.sent.some(e=>e.content?.includes('was saved')),false);h.event({type:'session.closed',usage:{seconds:1}});assert.equal(h.timers.size,0);
+ }
+});
+
+test('a source operation timeout remains visibly unconfirmed and keeps working voice Stop controls',async()=>{
+ const h=browser({sourceProposal,sourcePending:true});await h.start();h.event({type:'session.input_transcript.delta',delta:'Apply these changes',start_ms:100,end_ms:300});await h.fireTimers(650);await h.fireTimers(60000);
+ assert.equal(h.sourceCalls[0].options.signal.aborted,true);assert.match(h.node('#wl-result').textContent,/timed out before confirmation/);assert.match(h.peers[0].channel.sent.at(-1).content,/may already have reached the server/);assert.equal(h.emitted.filter(e=>e.type==='wi-voice-state').at(-1).detail.phase,'listening');assert.equal(h.node('#wl-stop').disabled,false);h.resolveSource();await tick();h.event({type:'session.closed',usage:{seconds:1}});assert.equal(h.timers.size,0);
 });
 
 test('explicit discovery quietly reaches the governed backend even when Live never delegates it',async()=>{
@@ -624,6 +759,12 @@ test('recoverable evidence errors retain listening controls while rejected close
  const h=browser({delegateStatus:502});await h.start();h.event({type:'session.input_transcript.delta',delta:'What is retention?',start_ms:100,end_ms:200});h.event({type:'session.delegation.created',offset_ms:300,delegation:{id:'item_error',target:'client'}});await h.fireTimers(300);
  assert.equal(h.emitted.filter(event=>event.type==='wi-voice-state').at(-1).detail.phase,'listening');assert.match(h.node('#wl-result').textContent,/Controlled evidence error/);assert.equal(h.node('#wl-stop').disabled,false);
  h.node('#wl-stop').fire('click');h.event({type:'error',error:{type:'invalid_request_error',code:'invalid_event'}});assert.equal(h.window.WI_LIVE.isActive(),false);assert.equal(h.streams[0].getTracks()[0].readyState,'ended');assert.match(h.node('#wl-state').textContent,/did not acknowledge the close command/);assert.equal(h.timers.size,0);
+});
+test('application validation and stale-context failures speak their actual bounded reason instead of an unexplained retry',async()=>{
+ for(const delegateStatus of [400,409]){
+  const h=browser({delegateStatus});await h.start();h.event({type:'session.input_transcript.delta',delta:'Inspect the source records.',start_ms:100,end_ms:300});h.event({type:'session.delegation.created',offset_ms:400,delegation:{id:'validation_reason',target:'client'}});await h.fireTimers(300);
+  assert.equal(h.peers[0].channel.sent.at(-1).content,'Controlled evidence error');assert.equal(h.emitted.filter(e=>e.type==='wi-voice-state').at(-1).detail.phase,'listening');assert.equal(h.node('#wl-stop').disabled,false);h.event({type:'session.closed',usage:{seconds:1}});
+ }
 });
 
 test('null commentary requires an explicit requested recovery and its own HTTP correlation',()=>{

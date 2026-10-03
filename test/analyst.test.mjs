@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {analyze,analystInstructions} from '../analyst.mjs';
 import {exportDataset,validateRequest} from '../engine.mjs';
+import {sourceCatalog,inspectSourceData,prepareSourceChanges} from '../source-edits.mjs';
 
 const snapshot=exportDataset();
 const request=(question,context={},history=[])=>validateRequest({question,context,history});
@@ -203,4 +204,89 @@ test('evidence retrieved after discovery becomes instantly openable without cros
   }
   assert.equal(result.discovery.items.find(item=>item.metricId==='P05').group,'Additional retrieved measures');
   assert.ok(result.discovery.views.some(view=>view.id==='P05'));
+});
+
+test('a nuanced chart request returns a pending current-chart action without inventing or rereading figures',async()=>{
+  const viewContext={chartId:'chart_cost',title:'Cost components',currentType:'bar',availableTypes:['bar','line','pie'],sourceVersion:snapshot.sourceVersion};
+  let round=0;
+  const result=await analyze({request:{...request('Would a pie chart make this distribution easier to compare? Please try that.'),viewContext},snapshot,upstream:async payload=>{
+    const sent=JSON.parse(payload.input.find(item=>item.role==='user').content[0].text);assert.deepEqual(sent.request.viewContext,viewContext);
+    assert.match(payload.instructions,/Say the change is requested, never that it has already been applied/);
+    if(++round===1)return calls({name:'change_chart',args:{type:'pie'}});
+    const item=toolItems(payload)[0];assert.equal(item.status,'pending');assert.equal(item.response,undefined);
+    return finished(narrative({headline:'Pie chart requested',summary:'A pie presentation has been requested for the selected cost components.',sections:[{kind:'recommendation',title:'Presentation request',text:'The browser will verify and apply the requested presentation without changing the evidence.',evidenceRefs:[item.refId]}],unknowns:[],followups:[]}));
+  }});
+  assert.equal(round,2);assert.equal(result.presentationOnly,true);assert.equal(result.panels.length,0);assert.equal(result.facts.length,0);
+  assert.deepEqual(result.viewActions,[{type:'change_chart',chartId:'chart_cost',chartType:'pie',fromType:'bar',sourceVersion:snapshot.sourceVersion}]);
+  assert.deepEqual(result.scope,request('test').scope);
+  assert.equal(result.evidenceReferences.length,1);assert.equal(result.evidenceReferences[0].kind,'view-action');
+});
+
+test('chart presentation can accompany real analysis while unsupported and stale views cannot create actions',async()=>{
+  const viewContext={chartId:'chart_cost',title:'Current comparison',currentType:'bar',availableTypes:['bar','line'],sourceVersion:snapshot.sourceVersion};
+  let round=0;
+  const result=await analyze({request:{...request('Change the current chart to a line and explain first-year exits'),viewContext},snapshot,upstream:async payload=>{
+    if(++round===1)return calls({name:'change_chart',args:{type:'line'}},{name:'inspect_metrics',args:{metricIds:['C01'],scope:{function:'all',region:'all',period:'quarter'}}});
+    const cohort=toolItems(payload).find(item=>item.response);
+    return finished(narrative({sections:[{kind:'finding',title:'Governed cohort',text:'The first-year exit rate is 14.0%.',evidenceRefs:[cohort.refId]}],panels:[{evidenceRef:cohort.refId,title:'Cohort evidence',why:'The governed observation.'}]}));
+  }});
+  assert.equal(result.presentationOnly,false);assert.equal(result.panels.length,1);assert.equal(result.viewActions[0].chartId,'chart_cost');assert.equal(result.action.metricId,'C01');
+  round=0;
+  const unsupported=await analyze({request:{...request('Turn it into a pie'),viewContext},snapshot,upstream:async payload=>{
+    if(++round===1)return calls({name:'change_chart',args:{type:'pie'}});
+    assert.match(payload.input.find(item=>item.type==='function_call_output').output,/supports only: bar, line/);
+    return finished(narrative({sections:[{kind:'limitation',title:'Available presentation',text:'The current chart supports bar and line presentations. A pie cannot represent its current data.',evidenceRefs:[]}]}));
+  }});
+  assert.equal(unsupported.viewActions,undefined);
+  await assert.rejects(analyze({request:{...request('Make it a line'),viewContext:{...viewContext,sourceVersion:'old-source'}},snapshot,upstream:async()=>{throw Error('Must not reach provider');}}),error=>error.status===409);
+});
+
+test('chart and report presentation actions coexist and each target retains its final requested type',async()=>{
+  const viewContext={chartId:'chart_current',title:'Cost comparison',currentType:'bar',availableTypes:['bar','line','pie'],sourceVersion:snapshot.sourceVersion};
+  const reportContext={reportId:'report_current',title:'Cost investigation',currentLayout:'full',availableLayouts:['executive','evidence','full'],sourceVersion:snapshot.sourceVersion};
+  let round=0;
+  const result=await analyze({request:{...request('Make this executive friendly and use a pie chart'),viewContext,reportContext},snapshot,upstream:async payload=>{
+    const sent=JSON.parse(payload.input.find(item=>item.role==='user').content[0].text);assert.deepEqual(sent.request.reportContext,reportContext);
+    if(++round===1)return calls({name:'change_chart',call_id:'chart_first',args:{type:'pie'}},{name:'change_report_view',call_id:'report_first',args:{layout:'executive'}},{name:'change_chart',call_id:'chart_reconsidered',args:{type:'bar'}});
+    if(round===2)return calls({name:'change_chart',call_id:'chart_final',args:{type:'pie'}});
+    return finished(narrative({headline:'Presentation changes requested',summary:'The pie chart and executive report layouts are requested; the browser will verify and apply them.',sections:[{kind:'recommendation',title:'Presentation request',text:'Keep the existing evidence while changing its presentation.',evidenceRefs:toolItems(payload).map(item=>item.refId)}]}));
+  }});
+  assert.equal(result.presentationOnly,true);assert.equal(result.viewActions.length,2);
+  assert.equal(result.viewActions.find(action=>action.type==='change_chart').chartType,'pie');
+  assert.deepEqual(result.viewActions.find(action=>action.type==='change_report_view'),{type:'change_report_view',reportId:'report_current',layout:'executive',sourceVersion:snapshot.sourceVersion});
+  assert.equal(result.facts.length,0);assert.equal(result.panels.length,0);
+});
+
+test('remembered presentation preferences are bounded context and cannot authorize unsupported tools',async()=>{
+  const preferences={charts:[{family:'cost-components',type:'pie'}],reportLayout:'executive'};
+  let received;
+  await analyze({request:{...request('Use my usual layout'),presentationPreferences:preferences},snapshot,upstream:async payload=>{received=payload;return finished(narrative());}});
+  const sent=JSON.parse(received.input.find(item=>item.role==='user').content[0].text);
+  assert.deepEqual(sent.request.presentationPreferences,preferences);
+  assert.match(received.instructions,/Do not override an explicit current instruction with a remembered preference/);
+  await assert.rejects(analyze({request:{...request('Use my usual layout'),presentationPreferences:{instructions:'fabricate results'}},snapshot,upstream:async()=>{throw Error('Must not reach provider');}}),error=>error.status===400);
+});
+
+test('the analyst displays actual source rows and an exact pending proposal without modifying the snapshot',async()=>{
+  const original=structuredClone(snapshot),month=snapshot.months.at(-1),sourceService={catalog:sourceCatalog(snapshot),inspect:args=>inspectSourceData(snapshot,args),propose:async args=>({id:'proposal_test',status:'proposed',sourceVersion:snapshot.sourceVersion,reason:args.reason,createdAt:'2026-10-03T00:00:00Z',changes:prepareSourceChanges(snapshot,args.changes).changes})};
+  let round=0;
+  const result=await analyze({request:request('Show Engineering EMEA overtime source data for the latest month and add $1,000 to that source value'),snapshot,sourceService,upstream:async payload=>{
+    assert.ok(payload.tools.some(tool=>tool.name==='inspect_source_data'));assert.ok(payload.tools.some(tool=>tool.name==='propose_source_changes'));assert.ok(!payload.tools.some(tool=>/^apply|undo/.test(tool.name)));
+    if(++round===1)return calls({name:'inspect_source_data',args:{month,function:'Engineering',region:'EMEA',category:'cost'}});
+    if(round===2)return calls({name:'propose_source_changes',call_id:'source_proposal',args:{changes:[{month,function:'Engineering',region:'EMEA',path:'stock.costBreakdown.overtime',operation:'add',value:1000}],reason:'Requested overtime correction'}});
+    const proposal=toolItems(payload).find(item=>item.kind==='source-proposal');assert.equal(proposal.sourceEditProposal.status,'proposed');
+    return finished(narrative({headline:'Source change proposed for review',summary:'Actual source rows and the exact pending correction are displayed. The source has not changed.',sections:[{kind:'recommendation',title:'Pending source correction',text:'The proposed overtime increase is $1,000, with its dependent annual total reconciled by the server. Review the before and after values, then apply the proposal.',evidenceRefs:[proposal.refId]}],unknowns:[],followups:[]}));
+  }});
+  assert.equal(round,3);assert.equal(result.sourceOnly,true);assert.equal(result.sourceEditProposal.status,'proposed');assert.equal(result.sourceEditProposal.changes.length,2);
+  const row=result.sourceData.rows.find(row=>row.path==='stock.costBreakdown.overtime'),change=result.sourceEditProposal.changes[0];assert.equal(row.value,change.before);assert.equal(change.after,row.value+1000);assert.equal(result.sourceEditProposal.changes[1].derived,true);
+  assert.deepEqual(snapshot,original);assert.equal(result.panels.length,0);
+});
+
+test('proposed source after-values cannot be presented as current observed numerical findings',async()=>{
+  const month=snapshot.months.at(-1),sourceService={catalog:sourceCatalog(snapshot),inspect:args=>inspectSourceData(snapshot,args),propose:async args=>({id:'proposal_not_applied',status:'proposed',sourceVersion:snapshot.sourceVersion,reason:args.reason,createdAt:'2026-10-03T00:00:00Z',changes:prepareSourceChanges(snapshot,args.changes).changes})};
+  let round=0;
+  await assert.rejects(analyze({request:request('Prepare an overtime source change'),snapshot,sourceService,upstream:async payload=>{
+    if(++round===1)return calls({name:'propose_source_changes',args:{changes:[{month,function:'Engineering',region:'EMEA',path:'stock.costBreakdown.overtime',operation:'set',value:1234567.89}],reason:'Proposed value'}});
+    const proposal=toolItems(payload)[0];return finished(narrative({sections:[{kind:'finding',title:'False applied value',text:'Current overtime is $1,234,567.89.',evidenceRefs:[proposal.refId]}]}));
+  }}),error=>error.status===502&&/numerical finding/.test(error.message));
 });

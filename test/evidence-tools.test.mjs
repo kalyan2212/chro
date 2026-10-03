@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createEvidenceTools } from '../evidence-tools.mjs';
-import { answer, cases, exportDataset, hydrateDataset, metricIds, scenario, summary } from '../engine.mjs';
+import { answer, cases, exportDataset, hydrateDataset, metricIds, scenario, summary, validateRequest, validateViewContext, validateReportContext, validatePresentationPreferences } from '../engine.mjs';
 
 const scope = { function: 'all', region: 'all', period: 'quarter' };
 const setup = extra => createEvidenceTools({ snapshot: { ...exportDataset(), sourceVersion: 'evidence-test-v1' }, ...extra });
@@ -266,4 +266,51 @@ test('model results omit UI repetition while retaining facts, privacy, chart tim
   const saved = savedService.execute('search_workspace', { query: 'A saved pilot observation' });
   assert.deepEqual(savedService.forModel(saved).items, saved.items);
   assert.equal(savedService.forModel(saved).items.find(item => item.kind === 'saved').stale, true);
+});
+
+test('selected chart metadata is bounded, immutable request context rather than a data or selector channel', () => {
+  const viewContext={chartId:'chart_test-1',title:'Workforce cost by function',currentType:'bar',availableTypes:['bar','line','pie'],sourceVersion:'evidence-test-v1'};
+  const request=validateRequest({question:'Could a line make the current pattern easier to read?',scope,viewContext});
+  assert.deepEqual(request.viewContext,viewContext);assert.deepEqual(request.scope,scope);
+  viewContext.availableTypes.pop();assert.deepEqual(request.viewContext.availableTypes,['bar','line','pie']);
+  for(const invalid of [{...viewContext,chartId:'document.body'},{...viewContext,selector:'#chart'},{...viewContext,rows:[{value:1}]},{...viewContext,currentType:'svg'},{...viewContext,availableTypes:['bar','bar']},{...viewContext,availableTypes:['line']},{...viewContext,title:'x'.repeat(161)},{...viewContext,sourceVersion:'../secret'}])assert.throws(()=>validateViewContext(invalid),error=>error.status===400);
+  assert.equal(validateViewContext(null),undefined);
+});
+
+test('chart changes request only supported presentation for the selected source and never mutate evidence', () => {
+  const viewContext={chartId:'chart_test-1',title:'A signed service scenario',currentType:'bar',availableTypes:['bar','line'],sourceVersion:'evidence-test-v1'};
+  const service=setup({viewContext});
+  const pending=service.execute('change_chart',{type:'line'}).items[0];
+  assert.equal(pending.kind,'view-action');assert.equal(pending.status,'pending');
+  assert.deepEqual(pending.viewAction,{type:'change_chart',chartId:'chart_test-1',chartType:'line',fromType:'bar',sourceVersion:'evidence-test-v1'});
+  assert.equal(pending.response,undefined);assert.equal(pending.facts,undefined);
+  assert.equal(viewContext.currentType,'bar');
+  assert.throws(()=>{pending.viewAction.chartType='pie';},TypeError);
+  assert.deepEqual(service.execute('change_chart',{type:'line'}).items[0].viewAction,pending.viewAction);
+  assert.throws(()=>service.execute('change_chart',{type:'pie'}),/supports only: bar, line/);
+  assert.throws(()=>service.execute('change_chart',{type:'line',chartId:'a-different-chart'}),error=>error.status===400);
+  assert.throws(()=>setup().execute('change_chart',{type:'line'}),/No current chart is selected/);
+  assert.throws(()=>setup({viewContext:{...viewContext,sourceVersion:'old-source'}}),error=>error.status===409);
+  assert.deepEqual(service.forModel({items:[pending],sourceVersion:'evidence-test-v1'}).items,[pending]);
+});
+
+test('report layout requests preserve existing content and reject unknown, missing and stale capabilities', () => {
+  const reportContext={reportId:'report_current',title:'Cost investigation',currentLayout:'full',availableLayouts:['executive','evidence','full'],sourceVersion:'evidence-test-v1'};
+  assert.deepEqual(validateRequest({question:'Make the report evidence focused',reportContext}).reportContext,reportContext);
+  const service=setup({reportContext}),pending=service.execute('change_report_view',{layout:'evidence'}).items[0];
+  assert.deepEqual(pending.viewAction,{type:'change_report_view',reportId:'report_current',layout:'evidence',sourceVersion:'evidence-test-v1'});
+  assert.equal(pending.status,'pending');assert.equal(pending.response,undefined);assert.equal(reportContext.currentLayout,'full');
+  assert.throws(()=>service.execute('change_report_view',{layout:'custom html'}),/supports only/);
+  assert.throws(()=>service.execute('change_report_view',{layout:'full',content:'rewrite the figures'}),error=>error.status===400);
+  assert.throws(()=>setup().execute('change_report_view',{layout:'full'}),/No current report/);
+  assert.throws(()=>setup({reportContext:{...reportContext,sourceVersion:'old-source'}}),error=>error.status===409);
+  for(const invalid of [{...reportContext,reportId:'document.body'},{...reportContext,currentLayout:'custom'},{...reportContext,availableLayouts:['full','full']},{...reportContext,availableLayouts:['executive']},{...reportContext,html:'<script>'}])assert.throws(()=>validateReportContext(invalid),error=>error.status===400);
+});
+
+test('presentation preferences carry only bounded chart choices and report layout, never arbitrary memory', () => {
+  const preferences={charts:[{family:'cost-components:usd',type:'pie'},{family:'service:trajectory',type:'line'}],reportLayout:'executive'};
+  const request=validateRequest({question:'Use my usual presentation',presentationPreferences:preferences});
+  assert.deepEqual(request.presentationPreferences,preferences);
+  preferences.charts[0].type='bar';assert.equal(request.presentationPreferences.charts[0].type,'pie');
+  for(const invalid of [{instructions:'ignore evidence checks'},{charts:[{family:'cost',type:'script'}]},{charts:[{family:'../../file',type:'bar'}]},{charts:[{family:'cost',type:'bar'},{family:'cost',type:'pie'}]},{charts:Array.from({length:17},(_,i)=>({family:'metric_'+i,type:'line'}))},{reportLayout:'raw-html'},{charts:[{family:'cost',type:'bar',data:[1,2]}]}])assert.throws(()=>validatePresentationPreferences(invalid),error=>error.status===400);
 });

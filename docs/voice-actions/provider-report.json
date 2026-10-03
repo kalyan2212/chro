@@ -1,0 +1,187 @@
+{
+  "schema": "chro-source-actions-live-verification.v1",
+  "checkedAt": "2026-10-03T10:51:25.768Z",
+  "attempt": 3,
+  "environment": "Real OpenAI provider and WebRTC; isolated local source storage",
+  "generatedSpeechInput": true,
+  "physicalMicrophoneTested": false,
+  "physicalSpeakerTested": false,
+  "browserAutoplayPolicy": "Allowed explicitly in controlled browser",
+  "questions": [
+    "Inspect the September 2026 Engineering EMEA external contractor cost. Propose changing that exact source value to two point two million dollars.",
+    "Apply these changes.",
+    "Undo that source change."
+  ],
+  "turns": [
+    {
+      "index": 0,
+      "question": "Inspect the September 2026 Engineering EMEA external contractor cost. Propose changing that exact source value to two point two million dollars.",
+      "inputDurationSeconds": 11.016,
+      "recognized": "Inspect the September 2026 Engineering EMEA external contractor cost. Propose changing that exact source value to 2.2 million dollars.",
+      "spokenAfterVerifiedResult": "The current source records are on screen, and a proposed update is ready for your review. You can check the before and after, and if it looks good, say \"apply these changes\" to save that exact proposal.",
+      "millisecondsToVerifiedResult": 38208,
+      "millisecondsAfterInputFinished": 27192,
+      "millisecondsFromResultToFirstSpeech": 897,
+      "observedSentenceThenQuiet": true,
+      "maximumReceivedAudioRms": 0.1177908988868432,
+      "audioSamples": 502,
+      "visibleAssistantCaptionNodes": 0,
+      "voiceStillActive": true,
+      "persistedContractorCost": 2100000,
+      "persistedAnnualCost": 105000000,
+      "spokenOutcomeMatches": true
+    },
+    {
+      "index": 1,
+      "question": "Apply these changes.",
+      "inputDurationSeconds": 2.16,
+      "recognized": "Apply these changes",
+      "spokenAfterVerifiedResult": "On it. Okay, All right, that update is saved, so the dashboard is using the new values now. What would you like to look at next?",
+      "millisecondsToVerifiedResult": 4375,
+      "millisecondsAfterInputFinished": 2215,
+      "millisecondsFromResultToFirstSpeech": 838,
+      "observedSentenceThenQuiet": true,
+      "maximumReceivedAudioRms": 0.1105020930643391,
+      "audioSamples": 128,
+      "visibleAssistantCaptionNodes": 0,
+      "voiceStillActive": true,
+      "persistedContractorCost": 2200000,
+      "persistedAnnualCost": 105100000,
+      "spokenOutcomeMatches": true
+    },
+    {
+      "index": 2,
+      "question": "Undo that source change.",
+      "inputDurationSeconds": 2.448,
+      "recognized": "Undo that source change Sure",
+      "spokenAfterVerifiedResult": "Sure, we can do that. Done, the source edit was undone and the dashboard has recalculated.",
+      "millisecondsToVerifiedResult": 3909,
+      "millisecondsAfterInputFinished": 1461,
+      "millisecondsFromResultToFirstSpeech": 273,
+      "observedSentenceThenQuiet": true,
+      "maximumReceivedAudioRms": 0.11666627644167803,
+      "audioSamples": 106,
+      "visibleAssistantCaptionNodes": 0,
+      "voiceStillActive": true,
+      "persistedContractorCost": 2100000,
+      "persistedAnnualCost": 105000000,
+      "spokenOutcomeMatches": true
+    }
+  ],
+  "browserErrors": [],
+  "http": [
+    {
+      "path": "/api/source/history",
+      "status": 200
+    },
+    {
+      "path": "/api/live/session",
+      "status": 201
+    },
+    {
+      "path": "/api/live/delegate",
+      "status": 200
+    },
+    {
+      "path": "/api/source/apply",
+      "status": 200
+    },
+    {
+      "path": "/api/source/undo",
+      "status": 200
+    }
+  ],
+  "limitations": [
+    "Generated audio drives a genuine WebRTC connection; physical devices and permission prompts are not tested.",
+    "Incoming decoded audio RMS proves received audio, not sound from a physical speaker.",
+    "Commentary acknowledgement proves provider context acceptance, not word-perfect spoken playback."
+  ],
+  "expected": {
+    "month": "2026-09",
+    "function": "Engineering",
+    "region": "EMEA",
+    "field": "stock.costBreakdown.contractors",
+    "before": 2100000,
+    "proposedAfter": 2200000,
+    "originalAnnualCost": 105000000
+  },
+  "proposal": {
+    "status": "proposed",
+    "reason": "User requested setting the September 2026 Engineering EMEA external contractor cost to $2,200,000.",
+    "changes": [
+      {
+        "month": "2026-09",
+        "function": "Engineering",
+        "region": "EMEA",
+        "path": "stock.costBreakdown.contractors",
+        "label": "External contractor cost",
+        "unit": "usd",
+        "operation": "set",
+        "value": 2200000,
+        "before": 2100000,
+        "after": 2200000,
+        "derived": false
+      },
+      {
+        "month": "2026-09",
+        "function": "Engineering",
+        "region": "EMEA",
+        "path": "stock.annualCostRunRate",
+        "label": "Annual workforce cost",
+        "unit": "usd",
+        "before": 105000000,
+        "after": 105100000,
+        "derived": true
+      }
+    ]
+  },
+  "audit": {
+    "applied": 1,
+    "undone": 1
+  },
+  "final": {
+    "active": false,
+    "state": "Conversation ended (close_requested). Final voice duration received.",
+    "finalUsageSeconds": 101,
+    "usageLabel": "Voice duration: 101.0 s \u00b7 final",
+    "peersClosed": true,
+    "microphoneTracksEnded": true
+  },
+  "protocolErrors": [],
+  "backendRequests": [
+    {
+      "path": "/api/live/delegate",
+      "at": 1791024717802,
+      "question": "Inspect the September 2026 Engineering EMEA external contractor cost. Propose changing that exact source value to 2.2 million dollars.",
+      "recovery": false,
+      "status": 200,
+      "returnedAt": 1791024743910
+    },
+    {
+      "path": "/api/source/apply",
+      "at": 1791024760385,
+      "question": null,
+      "recovery": false,
+      "status": 200,
+      "returnedAt": 1791024760473
+    },
+    {
+      "path": "/api/source/undo",
+      "at": 1791024772778,
+      "question": null,
+      "recovery": false,
+      "status": 200,
+      "returnedAt": 1791024772868
+    }
+  ],
+  "completed": true,
+  "timingDefinitions": {
+    "millisecondsToVerifiedResult": "From generated input audio playback start until application-verified result is shown.",
+    "millisecondsAfterInputFinished": "Verified result time minus the actual generated input duration.",
+    "millisecondsFromResultToFirstSpeech": "From verified UI result to first subsequent assistant transcript delta; not a hardware playback timestamp."
+  },
+  "earlierAttemptFindings": [
+    "Attempt 1 safely rejected a supported month spoken as words; supported spoken-year normalization was fixed and tested.",
+    "Attempt 2 displayed the exact proposal but did not apply after recognition inserted a repeated article; explicit repeated-article confirmation was fixed and tested. No source changes were made in either failed attempt."
+  ]
+}
